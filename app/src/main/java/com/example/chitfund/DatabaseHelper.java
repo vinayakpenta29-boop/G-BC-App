@@ -27,7 +27,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COL_GROUP_ID = "group_id";
     public static final String COL_MONTH_NUMBER = "month_number";
     public static final String COL_WINNER_NAME = "winner_name";
-    public static final String COL_WINNING_BID = "winning_bid"; // The discount amount offered
+    public static final String COL_WINNING_BID = "winning_bid"; 
     public static final String COL_DIVIDEND_PER_MEMBER = "dividend_per_member";
 
     public DatabaseHelper(Context context) {
@@ -57,8 +57,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(CREATE_AUCTIONS_TABLE);
     }
 
+    // FIX: Changed from 'upgrade' to 'onUpgrade' to properly match the superclass method
     @Override
-    public void upgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_AUCTIONS);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_GROUPS);
         onCreate(db);
@@ -71,7 +72,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COL_GROUP_NAME, name);
         values.put(COL_TOTAL_VALUE, totalValue);
         values.put(COL_MONTHS, months);
-        values.put(COL_MIN_CONTRIBUTION, totalValue / months); // Base contribution before dividend
+        values.put(COL_MIN_CONTRIBUTION, totalValue / months); 
 
         return db.insert(TABLE_GROUPS, null, values);
     }
