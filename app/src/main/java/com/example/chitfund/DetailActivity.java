@@ -49,7 +49,7 @@ public class DetailActivity extends AppCompatActivity {
         tabLayout.addTab(tabLayout.newTab().setText("Installment"));
         tabLayout.addTab(tabLayout.newTab().setText("Fund"));
 
-        // Setup UI content data views information
+        // Setup UI data views information
         loadChitDetailsData();
         refreshFundTable();
 
@@ -57,7 +57,8 @@ public class DetailActivity extends AppCompatActivity {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 if (tab.getPosition() == 0) {
-                    containerInstallment.setVisibility(View.getVisualVoicemailActivity::VISIBLE == 0 ? View.VISIBLE : View.VISIBLE);
+                    // FIX: Cleared out the corrupted method reference visibility line
+                    containerInstallment.setVisibility(View.VISIBLE);
                     containerFund.setVisibility(View.GONE);
                 } else {
                     containerInstallment.setVisibility(View.GONE);
@@ -101,7 +102,7 @@ public class DetailActivity extends AppCompatActivity {
             ArrayList<String> members = dbHelper.getMembers(chitId);
             spMembers.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, members));
 
-            // Populate Installment list numbers string sequences drops
+            // Populate Installment list numbers
             ArrayList<String> options = new ArrayList<>();
             for (int i = 1; i <= installmentsCount; i++) {
                 options.add("Installment " + i + " - ₹" + baseAmount);
@@ -124,7 +125,7 @@ public class DetailActivity extends AppCompatActivity {
         TextView h3 = new TextView(this); h3.setText("Member Name"); h3.setPadding(8, 4, 8, 4); headerRow.addView(h3);
         tlFundTable.addView(headerRow);
 
-        // Populate items row components arrays strings entries sets 
+        // Populate items row components arrays
         Cursor cursor = dbHelper.getPayments(chitId);
         while (cursor.moveToNext()) {
             TableRow row = new TableRow(this);
