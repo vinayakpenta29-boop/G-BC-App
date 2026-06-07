@@ -5,7 +5,7 @@
         android:allowBackup="true"
         android:label="Chit Fund Manager"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
+        android:theme="@style/Theme.MaterialComponents.Light.DarkActionBar">
         
         <activity
             android:name=".MainActivity"
