@@ -62,8 +62,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.insert("payments", null, v);
     }
 
+    // FIX: Aliased 'id' to '_id' explicitly so SimpleCursorAdapter stops crashing on lookup
     public Cursor getAllChits() {
-        return this.getReadableDatabase().rawQuery("SELECT * FROM chits ORDER BY id DESC", null);
+        return this.getReadableDatabase().rawQuery("SELECT id AS _id, name, amount, installments FROM chits ORDER BY id DESC", null);
     }
 
     public ArrayList<String> getMembers(long chitId) {
