@@ -4,6 +4,7 @@ import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -16,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.tabs.TabLayout;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
@@ -26,7 +28,9 @@ public class DetailActivity extends AppCompatActivity {
     private Spinner spMembers, spInstallmentOptions;
     private TableLayout tlFundTable;
     private TextView tvFundTitle;
-    private double baseAmount;
+    private int totalInstallmentsCount;
+    private String frequencyType;
+    private String firstInstallmentDateStr;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,21 +53,18 @@ public class DetailActivity extends AppCompatActivity {
         tabLayout.addTab(tabLayout.newTab().setText("Installment"));
         tabLayout.addTab(tabLayout.newTab().setText("Fund"));
 
-        // Setup UI data views information
-        loadChitDetailsData();
-        refreshFundTable();
+        loadChitMetaData();
 
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 if (tab.getPosition() == 0) {
-                    // FIX: Cleared out the corrupted method reference visibility line
                     containerInstallment.setVisibility(View.VISIBLE);
                     containerFund.setVisibility(View.GONE);
                 } else {
                     containerInstallment.setVisibility(View.GONE);
                     containerFund.setVisibility(View.VISIBLE);
-                    refreshFundTable();
+                    refreshFundMatrixTable();
                 }
             }
             @Override
@@ -78,65 +79,107 @@ public class DetailActivity extends AppCompatActivity {
                 if(spMembers.getSelectedItem() == null || spInstallmentOptions.getSelectedItem() == null) return;
                 
                 String selectedMember = spMembers.getSelectedItem().toString();
-                String selectedOption = spInstallmentOptions.getSelectedItem().toString();
-                int installmentNum = Integer.parseInt(selectedOption.split(" ")[1]);
+                int instNum = spInstallmentOptions.getSelectedItemPosition() + 1;
+                double currentTargetAmount = dbHelper.getInstallmentAmount(chitId, instNum);
 
                 String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-                dbHelper.insertPayment(chitId, installmentNum, currentDate, selectedMember, baseAmount);
+                dbHelper.insertPayment(chitId, instNum, currentDate, selectedMember, currentTargetAmount);
 
-                Toast.makeText(DetailActivity.this, "Installment Added Successfully", Toast.LENGTH_SHORT).show();
+                Toast.makeText(DetailActivity.this, "Installment Saved!", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void loadChitDetailsData() {
-        Cursor c = dbHelper.getReadableDatabase().rawQuery("SELECT name, amount, installments FROM chits WHERE id = ?", new String[]{String.valueOf(chitId)});
+    private void loadChitMetaData() {
+        Cursor c = dbHelper.getReadableDatabase().rawQuery("SELECT name, frequency, installments, start_date FROM chits WHERE id = ?", new String[]{String.valueOf(chitId)});
         if (c.moveToFirst()) {
             String chitName = c.getString(0);
-            baseAmount = c.getDouble(1);
-            int installmentsCount = c.getInt(2);
+            frequencyType = c.getString(1);
+            totalInstallmentsCount = c.getInt(2);
+            firstInstallmentDateStr = c.getString(3);
+
             setTitle(chitName);
             tvFundTitle.setText("Chit Fund: " + chitName);
 
-            // Populate Members list Spinner drop-down
             ArrayList<String> members = dbHelper.getMembers(chitId);
             spMembers.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, members));
 
-            // Populate Installment list numbers
-            ArrayList<String> options = new ArrayList<>();
-            for (int i = 1; i <= installmentsCount; i++) {
-                options.add("Installment " + i + " - ₹" + baseAmount);
+            ArrayList<String> optionsList = new ArrayList<>();
+            for (int i = 1; i <= totalInstallmentsCount; i++) {
+                double amt = dbHelper.getInstallmentAmount(chitId, i);
+                optionsList.add("Installment " + i + " - ₹" + amt);
             }
-            spInstallmentOptions.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, options));
+            spInstallmentOptions.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, optionsList));
         }
         c.close();
     }
 
-    private void refreshFundTable() {
+    private void refreshFundMatrixTable() {
         tlFundTable.removeAllViews();
 
-        // Create Grid Header row strings dynamically 
-        TableRow headerRow = new TableRow(this);
-        headerRow.setBackgroundColor(Color.LTGRAY);
-        headerRow.setPadding(4, 8, 4, 8);
+        // Calculate dynamic dates row keys array lists
+        ArrayList<String> calculatedDatesHeaders = new ArrayList<>();
+        SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        SimpleDateFormat sdfOutput = new SimpleDateFormat("d - MMM - yy", Locale.getDefault());
 
-        TextView h1 = new TextView(this); h1.setText("Inst No."); h1.setPadding(8, 4, 8, 4); headerRow.addView(h1);
-        TextView h2 = new TextView(this); h2.setText("Installment Date"); h2.setPadding(8, 4, 8, 4); headerRow.addView(h2);
-        TextView h3 = new TextView(this); h3.setText("Member Name"); h3.setPadding(8, 4, 8, 4); headerRow.addView(h3);
+        try {
+            Date startDate = sdfInput.parse(firstInstallmentDateStr);
+            Calendar cal = Calendar.getInstance();
+            
+            for (int i = 0; i < totalInstallmentsCount; i++) {
+                cal.setTime(startDate);
+                if (frequencyType.equals("Monthly")) {
+                    cal.add(Calendar.MONTH, i);
+                } else {
+                    cal.add(Calendar.DATE, i * 7); // Adds exactly 7 days per installment interval
+                }
+                calculatedDatesHeaders.add(sdfOutput.format(cal.getTime()));
+            }
+        } catch (Exception e) {
+            calculatedDatesHeaders.add(firstInstallmentDateStr);
+        }
+
+        // Build the Header row dynamically
+        TableRow headerRow = new TableRow(this);
+        headerRow.setBackgroundColor(Color.parseColor("#E0E0E0"));
+        headerRow.setPadding(6, 12, 6, 12);
+
+        TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(12, 6, 12, 6); hNo.setTextSize(14); headerRow.addView(hNo);
+        TextView hName = new TextView(this); hName.setText("Name"); hName.setPadding(12, 6, 12, 6); hName.setTextSize(14); headerRow.addView(hName);
+
+        for (String dateStr : calculatedDatesHeaders) {
+            TextView hDate = new TextView(this);
+            hDate.setText(dateStr);
+            hDate.setPadding(12, 6, 12, 6);
+            hDate.setTextSize(14);
+            headerRow.addView(hDate);
+        }
         tlFundTable.addView(headerRow);
 
-        // Populate items row components arrays
-        Cursor cursor = dbHelper.getPayments(chitId);
-        while (cursor.moveToNext()) {
-            TableRow row = new TableRow(this);
-            row.setPadding(4, 6, 4, 6);
+        // Build records rows for members entries list
+        ArrayList<String> totalMembersList = dbHelper.getMembers(chitId);
+        int serialCounter = 1;
 
-            TextView t1 = new TextView(this); t1.setText(String.valueOf(cursor.getInt(0))); t1.setPadding(8, 4, 8, 4); row.addView(t1);
-            TextView t2 = new TextView(this); t2.setText(cursor.getString(1)); t2.setPadding(8, 4, 8, 4); row.addView(t2);
-            TextView t3 = new TextView(this); t3.setText(cursor.getString(2)); t3.setPadding(8, 4, 8, 4); row.addView(t3);
+        for (String name : totalMembersList) {
+            TableRow memberRow = new TableRow(this);
+            memberRow.setPadding(6, 10, 6, 10);
 
-            tlFundTable.addView(row);
+            TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(12, 6, 12, 6); memberRow.addView(tvSerial);
+            TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(12, 6, 12, 6); memberRow.addView(tvName);
+
+            // Populate intersections status states blocks
+            for (int i = 1; i <= totalInstallmentsCount; i++) {
+                TextView tvStatusCell = new TextView(this);
+                tvStatusCell.setPadding(12, 6, 12, 6);
+                
+                if (dbHelper.isPaymentMade(chitId, name, i)) {
+                    tvStatusCell.setText("✅");
+                } else {
+                    tvStatusCell.setText("");
+                }
+                memberRow.addView(tvStatusCell);
+            }
+            tlFundTable.addView(memberRow);
         }
-        cursor.close();
     }
 }
