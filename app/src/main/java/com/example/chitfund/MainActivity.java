@@ -103,7 +103,6 @@ public class MainActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {
                 String input = s.toString().trim();
                 
-                // Regenerate member layout fields rows
                 llMembersContainer.removeAllViews();
                 if (!input.isEmpty()) {
                     int countVal = Integer.parseInt(input);
@@ -114,7 +113,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
                 
-                // If random selection state is active, regenerate amount inputs simultaneously
                 if (spAmountType.getSelectedItem().toString().equals("Random Amount")) {
                     triggerDynamicAmountFields(input, llAmountsContainer);
                 }
@@ -130,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onDateSet(android.widget.DatePicker view, int year, int month, int dayOfMonth) {
                         etDate.setText(year + "-" + (month + 1) + "-" + dayOfMonth);
                     }
-                }, c.get(grid_calendar::YEAR == 0 ? c.get(Calendar.YEAR) : c.get(Calendar.YEAR)), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
+                }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
             }
         });
 
@@ -157,7 +155,6 @@ public class MainActivity extends AppCompatActivity {
 
                 int totalInst = Integer.parseInt(instStr);
 
-                // Validation loops checks
                 if (amtType.equals("Fixed Amount") && etAmount.getText().toString().trim().isEmpty()) {
                     Toast.makeText(MainActivity.this, "Please specify an installment amount.", Toast.LENGTH_SHORT).show();
                     return;
@@ -179,7 +176,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                // Database Writes operations
                 long chitId = dbHelper.insertChit(name, freq, totalInst, amtType, date);
 
                 if (amtType.equals("Fixed Amount")) {
@@ -211,7 +207,7 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 1; i <= total; i++) {
                 EditText etAmtInput = new EditText(MainActivity.this);
                 etAmtInput.setHint("Installment " + i + " Amount (₹)");
-                etAmtInput.set someWidget::setInputType == 0 ? etAmtInput.setInputType(2) : etAmtInput.setInputType(0x00000002 | 0x00002000); // numberDecimal flags
+                etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
                 container.addView(etAmtInput);
             }
         }
