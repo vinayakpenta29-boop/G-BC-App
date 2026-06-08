@@ -2,7 +2,6 @@ package com.example.chitfund;
 
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -71,14 +70,57 @@ public class MainActivity extends AppCompatActivity {
         final EditText etInstallmentsCount = view.findViewById(R.id.etInstallmentsCount);
         final Spinner spAmountType = view.findViewById(R.id.spAmountType);
         final EditText etAmount = view.findViewById(R.id.etAmount);
+        final LinearLayout llAmountsContainer = view.findViewById(R.id.llAmountsContainer);
         final EditText etDate = view.findViewById(R.id.etDate);
         final LinearLayout llMembersContainer = view.findViewById(R.id.llMembersContainer);
 
-        // Configure Spinners
         spFrequency.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Monthly", "Weekly"}));
         spAmountType.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Fixed Amount", "Random Amount"}));
 
-        // Date Picker Setup
+        spAmountType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selected = parent.getItemAtPosition(position).toString();
+                if (selected.equals("Fixed Amount")) {
+                    etAmount.setVisibility(View.VISIBLE);
+                    llAmountsContainer.setVisibility(View.GONE);
+                } else {
+                    etAmount.setVisibility(View.GONE);
+                    llAmountsContainer.setVisibility(View.VISIBLE);
+                    triggerDynamicAmountFields(etInstallmentsCount.getText().toString(), llAmountsContainer);
+                }
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        etInstallmentsCount.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                String input = s.toString().trim();
+                
+                // Regenerate member layout fields rows
+                llMembersContainer.removeAllViews();
+                if (!input.isEmpty()) {
+                    int countVal = Integer.parseInt(input);
+                    for (int i = 1; i <= countVal; i++) {
+                        EditText etMember = new EditText(MainActivity.this);
+                        etMember.setHint("Member Name " + i);
+                        llMembersContainer.addView(etMember);
+                    }
+                }
+                
+                // If random selection state is active, regenerate amount inputs simultaneously
+                if (spAmountType.getSelectedItem().toString().equals("Random Amount")) {
+                    triggerDynamicAmountFields(input, llAmountsContainer);
+                }
+            }
+        });
+
         etDate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -88,28 +130,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onDateSet(android.widget.DatePicker view, int year, int month, int dayOfMonth) {
                         etDate.setText(year + "-" + (month + 1) + "-" + dayOfMonth);
                     }
-                }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
-            }
-        });
-
-        // Watch installment input count to dynamically inflate member input boxes
-        etInstallmentsCount.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                llMembersContainer.removeAllViews();
-                String input = s.toString().trim();
-                if (!input.isEmpty()) {
-                    int countVal = Integer.parseInt(input);
-                    for (int i = 1; i <= countVal; i++) {
-                        EditText etMember = new EditText(MainActivity.this);
-                        etMember.setHint("Member Name " + i);
-                        llMembersContainer.addView(etMember);
-                    }
-                }
+                }, c.get(grid_calendar::YEAR == 0 ? c.get(Calendar.YEAR) : c.get(Calendar.YEAR)), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
             }
         });
 
@@ -127,30 +148,54 @@ public class MainActivity extends AppCompatActivity {
                 String freq = spFrequency.getSelectedItem().toString();
                 String instStr = etInstallmentsCount.getText().toString().trim();
                 String amtType = spAmountType.getSelectedItem().toString();
-                String amtStr = etAmount.getText().toString().trim();
                 String date = etDate.getText().toString().trim();
 
-                if (name.isEmpty() || instStr.isEmpty() || amtStr.isEmpty() || date.isEmpty()) {
-                    Toast.makeText(MainActivity.this, "Fill in all parameters.", Toast.LENGTH_SHORT).show();
+                if (name.isEmpty() || instStr.isEmpty() || date.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Fill in all basic fields.", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
                 int totalInst = Integer.parseInt(instStr);
-                double baseAmt = Double.parseDouble(amtStr);
 
-                // Validation to check if all dynamic members names fields have text
+                // Validation loops checks
+                if (amtType.equals("Fixed Amount") && etAmount.getText().toString().trim().isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Please specify an installment amount.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                if (amtType.equals("Random Amount")) {
+                    for (int i = 0; i < llAmountsContainer.getChildCount(); i++) {
+                        if (((EditText) llAmountsContainer.getChildAt(i)).getText().toString().trim().isEmpty()) {
+                            Toast.makeText(MainActivity.this, "Fill all dynamic amount rows.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                    }
+                }
+
                 for (int i = 0; i < llMembersContainer.getChildCount(); i++) {
-                    EditText field = (EditText) llMembersContainer.getChildAt(i);
-                    if (field.getText().toString().trim().isEmpty()) {
-                        Toast.makeText(MainActivity.this, "Fill all member name lines.", Toast.LENGTH_SHORT).show();
+                    if (((EditText) llMembersContainer.getChildAt(i)).getText().toString().trim().isEmpty()) {
+                        Toast.makeText(MainActivity.this, "Fill all member name listings.", Toast.LENGTH_SHORT).show();
                         return;
                     }
                 }
 
-                long chitId = dbHelper.insertChit(name, freq, totalInst, amtType, baseAmt, date);
+                // Database Writes operations
+                long chitId = dbHelper.insertChit(name, freq, totalInst, amtType, date);
+
+                if (amtType.equals("Fixed Amount")) {
+                    double fixAmt = Double.parseDouble(etAmount.getText().toString().trim());
+                    for (int i = 1; i <= totalInst; i++) {
+                        dbHelper.insertInstallmentAmount(chitId, i, fixAmt);
+                    }
+                } else {
+                    for (int i = 0; i < llAmountsContainer.getChildCount(); i++) {
+                        double randAmt = Double.parseDouble(((EditText) llAmountsContainer.getChildAt(i)).getText().toString().trim());
+                        dbHelper.insertInstallmentAmount(chitId, (i + 1), randAmt);
+                    }
+                }
+
                 for (int i = 0; i < llMembersContainer.getChildCount(); i++) {
-                    EditText field = (EditText) llMembersContainer.getChildAt(i);
-                    dbHelper.insertMember(chitId, field.getText().toString().trim());
+                    dbHelper.insertMember(chitId, ((EditText) llMembersContainer.getChildAt(i)).getText().toString().trim());
                 }
 
                 dialog.dismiss();
@@ -159,20 +204,40 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void triggerDynamicAmountFields(String countStr, LinearLayout container) {
+        container.removeAllViews();
+        if (!countStr.trim().isEmpty()) {
+            int total = Integer.parseInt(countStr.trim());
+            for (int i = 1; i <= total; i++) {
+                EditText etAmtInput = new EditText(MainActivity.this);
+                etAmtInput.setHint("Installment " + i + " Amount (₹)");
+                etAmtInput.set someWidget::setInputType == 0 ? etAmtInput.setInputType(2) : etAmtInput.setInputType(0x00000002 | 0x00002000); // numberDecimal flags
+                container.addView(etAmtInput);
+            }
+        }
+    }
+
     private void displayChits() {
         Cursor c = dbHelper.getAllChits();
-        String[] from = new String[]{"name", "amount", "installments"};
-        int[] to = new int[]{android.R.id.text1, android.R.id.text2, android.R.id.text2};
+        String[] from = new String[]{"name", "id"};
+        int[] to = new int[]{android.R.id.text1, android.R.id.text2};
 
         SimpleCursorAdapter adapter = new SimpleCursorAdapter(this, android.R.layout.simple_list_item_2, c, from, to, 0) {
             @Override
             public void setViewText(android.widget.TextView v, String text) {
                 if (v.getId() == android.R.id.text2) {
-                    // Pull explicit variables manually to properly construct layout description items string
                     Cursor cur = getCursor();
-                    double amt = cur.getDouble(cur.getColumnIndexOrThrow("amount"));
                     int inst = cur.getInt(cur.getColumnIndexOrThrow("installments"));
-                    v.setText("Amount: ₹" + amt + " | Installments: " + inst);
+                    String type = cur.getString(cur.getColumnIndexOrThrow("amount_type"));
+                    
+                    long cId = cur.getLong(cur.getColumnIndexOrThrow("_id"));
+                    double displayedAmt = dbHelper.getInstallmentAmount(cId, 1);
+
+                    if(type.equals("Fixed Amount")) {
+                        v.setText("Amount: ₹" + displayedAmt + " | Installments: " + inst);
+                    } else {
+                        v.setText("Amount: [Variable/Random] | Installments: " + inst);
+                    }
                 } else {
                     super.setViewText(v, text);
                 }
