@@ -77,7 +77,6 @@ public class MainActivity extends AppCompatActivity {
         spFrequency.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Monthly", "Weekly"}));
         spAmountType.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Fixed Amount", "Random Amount"}));
 
-        // CHANGE: Instantly initialize exactly one Member Name input box right at startup
         EditText etSingleMember = new EditText(MainActivity.this);
         etSingleMember.setHint("Member Name");
         llMembersContainer.addView(etSingleMember);
@@ -107,9 +106,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void afterTextChanged(Editable s) {
                 String input = s.toString().trim();
-                
-                // CHANGE: Removed the dynamic member loop logic from here entirely
-                
                 if (spAmountType.getSelectedItem().toString().equals("Random Amount")) {
                     triggerDynamicAmountFields(input, llAmountsContainer);
                 }
@@ -212,7 +208,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void displayChits() {
         Cursor c = dbHelper.getAllChits();
-        String[] from = new String[]{"name", "id"};
+        // FIX: Changed "id" to "_id" here to line up with the database column modification
+        String[] from = new String[]{"name", "_id"};
         int[] to = new int[]{android.R.id.text1, android.R.id.text2};
 
         SimpleCursorAdapter adapter = new SimpleCursorAdapter(this, android.R.layout.simple_list_item_2, c, from, to, 0) {
