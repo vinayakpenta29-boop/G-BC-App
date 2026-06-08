@@ -77,6 +77,11 @@ public class MainActivity extends AppCompatActivity {
         spFrequency.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Monthly", "Weekly"}));
         spAmountType.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Fixed Amount", "Random Amount"}));
 
+        // CHANGE: Instantly initialize exactly one Member Name input box right at startup
+        EditText etSingleMember = new EditText(MainActivity.this);
+        etSingleMember.setHint("Member Name");
+        llMembersContainer.addView(etSingleMember);
+
         spAmountType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -103,15 +108,7 @@ public class MainActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {
                 String input = s.toString().trim();
                 
-                llMembersContainer.removeAllViews();
-                if (!input.isEmpty()) {
-                    int countVal = Integer.parseInt(input);
-                    for (int i = 1; i <= countVal; i++) {
-                        EditText etMember = new EditText(MainActivity.this);
-                        etMember.setHint("Member Name " + i);
-                        llMembersContainer.addView(etMember);
-                    }
-                }
+                // CHANGE: Removed the dynamic member loop logic from here entirely
                 
                 if (spAmountType.getSelectedItem().toString().equals("Random Amount")) {
                     triggerDynamicAmountFields(input, llAmountsContainer);
@@ -171,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
 
                 for (int i = 0; i < llMembersContainer.getChildCount(); i++) {
                     if (((EditText) llMembersContainer.getChildAt(i)).getText().toString().trim().isEmpty()) {
-                        Toast.makeText(MainActivity.this, "Fill all member name listings.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Fill in the member name field.", Toast.LENGTH_SHORT).show();
                         return;
                     }
                 }
