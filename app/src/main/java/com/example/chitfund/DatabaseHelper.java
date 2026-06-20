@@ -33,6 +33,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
+    public long getLatestChitId() {
+        long id = -1;
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT id FROM chits ORDER BY id DESC LIMIT 1", null);
+        if (c.moveToFirst()) {
+            id = c.getLong(0);
+        }
+        c.close();
+        return id;
+    }
+
     public long insertChit(String name, String frequency, int installments, String amountType, String date) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues v = new ContentValues();
