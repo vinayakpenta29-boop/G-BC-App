@@ -12,6 +12,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "ChitFundMatrix.db";
     private static final int DATABASE_VERSION = 1;
 
+    // Helper class to store clean ID-Name pairs for the dropdown selector
+    public static class ChitItem {
+        public long id;
+        public String name;
+        public ChitItem(long id, String name) { this.id = id; this.name = name; }
+        @Override public String toString() { return name; } // Container uses this to render text
+    }
+
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -31,6 +39,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("DROP TABLE IF EXISTS members");
         db.execSQL("DROP TABLE IF EXISTS chits");
         onCreate(db);
+    }
+
+    public ArrayList<ChitItem> getChitList() {
+        ArrayList<ChitItem> list = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT id, name FROM chits ORDER BY id DESC", null);
+        while (c.moveToNext()) {
+            list.add(new ChitItem(c.getLong(0), c.getString(1)));
+        }
+        c.close();
+        return list;
     }
 
     public long getLatestChitId() {
