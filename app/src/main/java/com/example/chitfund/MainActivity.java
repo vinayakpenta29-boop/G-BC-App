@@ -22,6 +22,7 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.AutoCompleteTextView;
 import androidx.appcompat.app.AppCompatActivity;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -35,14 +36,13 @@ public class MainActivity extends AppCompatActivity {
     private DatabaseHelper dbHelper;
     private long chitId = -1;
 
-    private Spinner spChitSelector;
-    private Spinner spMembers;
+    private AutoCompleteTextView spChitSelector;
+    private AutoCompleteTextView spMembers;
     private Button btnSelectInstallments;
     private TableLayout tlFundTable;
     private TextView tvFundTitle;
-    private LinearLayout llFormContainer;
+    private View llFormContainer;
     
-    // History View Component nodes
     private TextView tvHistorySummary;
     private TableLayout tlHistoryTable;
     
@@ -53,6 +53,9 @@ public class MainActivity extends AppCompatActivity {
     private String[] installmentOptionsArray;
     private boolean[] checkedInstallments;
     private ArrayList<Integer> selectedInstallmentsList = new ArrayList<>();
+    
+    private ArrayList<DatabaseHelper.ChitItem> globalChitsList = new ArrayList<>();
+    private ArrayList<String> globalMembersList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,18 +74,17 @@ public class MainActivity extends AppCompatActivity {
         tvHistorySummary = findViewById(R.id.tvHistorySummary);
         tlHistoryTable = findViewById(R.id.tlHistoryTable);
 
-        spChitSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        // Premium Exposed AutoComplete Click Actions
+        spChitSelector.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                DatabaseHelper.ChitItem selected = (DatabaseHelper.ChitItem) parent.getItemAtPosition(position);
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                DatabaseHelper.ChitItem selected = globalChitsList.get(position);
                 if (selected != null && selected.id != chitId) {
                     chitId = selected.id;
                     loadChitMetaData();
                     refreshFundMatrixTable();
                 }
             }
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
         });
 
         btnSelectInstallments.setOnClickListener(new View.OnClickListener() {
@@ -102,13 +104,16 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Please create a Chit Fund group first!", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                if (spMembers.getSelectedItem() == null) return;
+                String selectedMember = spMembers.getText().toString().trim();
+                if (selectedMember.isEmpty() || !globalMembersList.contains(selectedMember)) {
+                    Toast.makeText(MainActivity.this, "Please select a valid member!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 if (selectedInstallmentsList.isEmpty()) {
                     Toast.makeText(MainActivity.this, "Please select at least one installment!", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 
-                String selectedMember = spMembers.getSelectedItem().toString();
                 String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
                 for (int instNum : selectedInstallmentsList) {
@@ -128,11 +133,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void populateChitSelector(long targetChitId) {
-        ArrayList<DatabaseHelper.ChitItem> chits = dbHelper.getChitList();
-        ArrayAdapter<DatabaseHelper.ChitItem> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, chits);
+        globalChitsList = dbHelper.getChitList();
+        ArrayAdapter<DatabaseHelper.ChitItem> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, globalChitsList);
         spChitSelector.setAdapter(adapter);
 
-        if (chits.isEmpty()) {
+        if (globalChitsList.isEmpty()) {
             chitId = -1;
             tvFundTitle.setText("No active Chit Fund found. Create one using the menu!");
             tlFundTable.removeAllViews();
@@ -144,22 +149,19 @@ public class MainActivity extends AppCompatActivity {
 
         int selectIndex = 0;
         if (targetChitId != -1) {
-            for (int i = 0; i < chits.size(); i++) {
-                if (chits.get(i).id == targetChitId) {
+            for (int i = 0; i < globalChitsList.size(); i++) {
+                if (globalChitsList.get(i).id == targetChitId) {
                     selectIndex = i;
                     break;
                 }
             }
         }
         
-        spChitSelector.setSelection(selectIndex);
-        
-        DatabaseHelper.ChitItem selected = (DatabaseHelper.ChitItem) spChitSelector.getSelectedItem();
-        if (selected != null) {
-            chitId = selected.id;
-            loadChitMetaData();
-            refreshFundMatrixTable();
-        }
+        DatabaseHelper.ChitItem targetItem = globalChitsList.get(selectIndex);
+        spChitSelector.setText(targetItem.name, false);
+        chitId = targetItem.id;
+        loadChitMetaData();
+        refreshFundMatrixTable();
     }
 
     private void loadChitMetaData() {
@@ -171,10 +173,16 @@ public class MainActivity extends AppCompatActivity {
             firstInstallmentDateStr = c.getString(3);
 
             setTitle(chitName);
-            tvFundTitle.setText("Chit Fund: " + chitName);
+            tvFundTitle.setText("Chit Fund Matrix: " + chitName);
 
-            ArrayList<String> members = dbHelper.getMembers(chitId);
-            spMembers.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, members));
+            globalMembersList = dbHelper.getMembers(chitId);
+            ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, globalMembersList);
+            spMembers.setAdapter(membersAdapter);
+            if(!globalMembersList.isEmpty()) {
+                spMembers.setText(globalMembersList.get(0), false);
+            } else {
+                spMembers.setText("", false);
+            }
 
             installmentOptionsArray = new String[totalInstallmentsCount];
             checkedInstallments = new boolean[totalInstallmentsCount];
@@ -241,7 +249,7 @@ public class MainActivity extends AppCompatActivity {
 
         ArrayList<String> calculatedDatesHeaders = new ArrayList<>();
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        SimpleDateFormat sdfOutput = new SimpleDateFormat("d - MMM - yy", Locale.getDefault());
+        SimpleDateFormat sdfOutput = new SimpleDateFormat("d - MMM", Locale.getDefault());
 
         try {
             Date startDate = sdfInput.parse(firstInstallmentDateStr);
@@ -260,40 +268,43 @@ public class MainActivity extends AppCompatActivity {
             calculatedDatesHeaders.add(firstInstallmentDateStr);
         }
 
+        // Header Structure Blueprint Initialization
         TableRow headerRow = new TableRow(this);
-        headerRow.setBackgroundColor(Color.parseColor("#E0E0E0"));
-        headerRow.setPadding(6, 12, 6, 12);
+        headerRow.setBackgroundColor(Color.parseColor("#ECEFF1"));
+        headerRow.setPadding(4, 10, 4, 10);
 
-        TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(12, 6, 12, 6); hNo.setTextSize(14); headerRow.addView(hNo);
-        TextView hName = new TextView(this); hName.setText("Name"); hName.setPadding(12, 6, 12, 6); hName.setTextSize(14); headerRow.addView(hName);
+        TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(16, 12, 16, 12); hNo.setTextSize(14); hNo.setTypeface(null, android.graphics.Typeface.BOLD); hNo.setTextColor(Color.parseColor("#37474F")); headerRow.addView(hNo);
+        TextView hName = new TextView(this); hName.setText("Name"); hName.setPadding(16, 12, 16, 12); hName.setTextSize(14); hName.setTypeface(null, android.graphics.Typeface.BOLD); hName.setTextColor(Color.parseColor("#37474F")); headerRow.addView(hName);
 
         for (String dateStr : calculatedDatesHeaders) {
             TextView hDate = new TextView(this);
             hDate.setText(dateStr);
-            hDate.setPadding(12, 6, 12, 6);
+            hDate.setPadding(16, 12, 16, 12);
             hDate.setTextSize(14);
+            hDate.setTypeface(null, android.graphics.Typeface.BOLD);
+            hDate.setTextColor(Color.parseColor("#37474F"));
             headerRow.addView(hDate);
         }
         tlFundTable.addView(headerRow);
 
-        ArrayList<String> totalMembersList = dbHelper.getMembers(chitId);
         int serialCounter = 1;
-
-        for (String name : totalMembersList) {
+        for (String name : globalMembersList) {
             TableRow memberRow = new TableRow(this);
-            memberRow.setPadding(6, 10, 6, 10);
+            memberRow.setPadding(4, 6, 4, 6);
 
-            TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(12, 6, 12, 6); memberRow.addView(tvSerial);
-            TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(12, 6, 12, 6); memberRow.addView(tvName);
+            TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(16, 12, 16, 12); tvSerial.setTextColor(Color.parseColor("#555555")); memberRow.addView(tvSerial);
+            TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(16, 12, 16, 12); tvName.setTypeface(null, android.graphics.Typeface.BOLD); tvName.setTextColor(Color.parseColor("#263238")); memberRow.addView(tvName);
 
             for (int i = 1; i <= totalInstallmentsCount; i++) {
                 TextView tvStatusCell = new TextView(this);
-                tvStatusCell.setPadding(12, 6, 12, 6);
+                tvStatusCell.setPadding(16, 12, 16, 12);
+                tvStatusCell.setGravity(android.view.Gravity.CENTER);
                 
                 if (dbHelper.isPaymentMade(chitId, name, i)) {
                     tvStatusCell.setText("✅");
                 } else {
-                    tvStatusCell.setText("");
+                    tvStatusCell.setText("—");
+                    tvStatusCell.setTextColor(Color.parseColor("#B0BEC5"));
                 }
                 memberRow.addView(tvStatusCell);
             }
@@ -308,23 +319,22 @@ public class MainActivity extends AppCompatActivity {
         double runningCashTotal = 0;
         int transactionEntriesCount = 0;
 
-        // Header Structure Blueprint Initialization
         TableRow headRow = new TableRow(this);
-        headRow.setBackgroundColor(Color.parseColor("#CFD8DC"));
-        headRow.setPadding(6, 10, 6, 10);
+        headRow.setBackgroundColor(Color.parseColor("#ECEFF1"));
+        headRow.setPadding(4, 10, 4, 10);
 
-        String[] headers = {"Date", "Chit Group", "Member Name", "Inst. No", "Amount Paid"};
+        String[] headers = {"Date", "Chit Group", "Member Name", "Inst.", "Amount Paid"};
         for (String headerText : headers) {
             TextView tvHead = new TextView(this);
             tvHead.setText(headerText);
-            tvHead.setPadding(14, 8, 14, 8);
+            tvHead.setPadding(16, 12, 16, 12);
             tvHead.setTextSize(14);
             tvHead.setTypeface(null, android.graphics.Typeface.BOLD);
+            tvHead.setTextColor(Color.parseColor("#37474F"));
             headRow.addView(tvHead);
         }
         tlHistoryTable.addView(headRow);
 
-        // Populate database record items lines rows
         while (cursor.moveToNext()) {
             String entryDate = cursor.getString(0);
             String chitGroupName = cursor.getString(1);
@@ -336,13 +346,19 @@ public class MainActivity extends AppCompatActivity {
             transactionEntriesCount++;
 
             TableRow tr = new TableRow(this);
-            tr.setPadding(6, 8, 6, 8);
+            tr.setPadding(4, 6, 4, 6);
 
-            TextView tvDate = new TextView(this); tvDate.setText(entryDate); tvDate.setPadding(14, 6, 14, 6); tr.addView(tvDate);
-            TextView tvChit = new TextView(this); tvChit.setText(chitGroupName); tvChit.setPadding(14, 6, 14, 6); tr.addView(tvChit);
-            TextView tvMem = new TextView(this); tvMem.setText(memberName); tvMem.setPadding(14, 6, 14, 6); tr.addView(tvMem);
-            TextView tvInst = new TextView(this); tvInst.setText("#" + installmentNum); tvInst.setPadding(14, 6, 14, 6); tr.addView(tvInst);
-            TextView tvAmt = new TextView(this); tvAmt.setText("₹" + amountPaid); tvAmt.setPadding(14, 6, 14, 6); tr.addView(tvAmt);
+            TextView tvDate = new TextView(this); tvDate.setText(entryDate); tvDate.setPadding(16, 12, 16, 12); tvDate.setTextColor(Color.parseColor("#555555")); tr.addView(tvDate);
+            TextView tvChit = new TextView(this); tvChit.setText(chitGroupName); tvChit.setPadding(16, 12, 16, 12); tvChit.setTextColor(Color.parseColor("#263238")); tr.addView(tvChit);
+            TextView tvMem = new TextView(this); tvMem.setText(memberName); tvMem.setPadding(16, 12, 16, 12); tvMem.setTextColor(Color.parseColor("#263238")); tr.addView(tvMem);
+            TextView tvInst = new TextView(this); tvInst.setText("#" + installmentNum); tvInst.setPadding(16, 12, 16, 12); tvInst.setTextColor(Color.parseColor("#555555")); tr.addView(tvInst);
+            
+            TextView tvAmt = new TextView(this); 
+            tvAmt.setText("₹" + amountPaid); 
+            tvAmt.setPadding(16, 12, 16, 12); 
+            tvAmt.setTypeface(null, android.graphics.Typeface.BOLD);
+            tvAmt.setTextColor(Color.parseColor("#2E7D32")); // Premium green tint for cash flows
+            tr.addView(tvAmt);
 
             tlHistoryTable.addView(tr);
         }
