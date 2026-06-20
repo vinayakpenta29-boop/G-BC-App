@@ -2,6 +2,7 @@ package com.example.chitfund;
 
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
+import android.content.DialogInterface;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -24,6 +25,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
@@ -34,13 +36,20 @@ public class MainActivity extends AppCompatActivity {
     private long chitId = -1;
 
     private Spinner spChitSelector;
-    private Spinner spMembers, spInstallmentOptions;
+    private Spinner spMembers;
+    private Button btnSelectInstallments;
     private TableLayout tlFundTable;
     private TextView tvFundTitle;
     private LinearLayout llFormContainer;
+    
     private int totalInstallmentsCount;
     private String frequencyType;
     private String firstInstallmentDateStr;
+
+    // Multi-choice state array trackers
+    private String[] installmentOptionsArray;
+    private boolean[] checkedInstallments;
+    private ArrayList<Integer> selectedInstallmentsList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,13 +59,12 @@ public class MainActivity extends AppCompatActivity {
 
         spChitSelector = findViewById(R.id.spChitSelector);
         spMembers = findViewById(R.id.spMembers);
-        spInstallmentOptions = findViewById(R.id.spInstallmentOptions);
+        btnSelectInstallments = findViewById(R.id.btnSelectInstallments);
         Button btnAddInstallment = findViewById(R.id.btnAddInstallment);
         tlFundTable = findViewById(R.id.tlFundTable);
         tvFundTitle = findViewById(R.id.tvFundTitle);
         llFormContainer = findViewById(R.id.llFormContainer);
 
-        // Listen for user switching between different chit groups
         spChitSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -71,7 +79,13 @@ public class MainActivity extends AppCompatActivity {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        // Load complete selector records on launch
+        btnSelectInstallments.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showMultiSelectInstallmentsDialog();
+            }
+        });
+
         populateChitSelector(-1);
 
         btnAddInstallment.setOnClickListener(new View.OnClickListener() {
@@ -81,16 +95,27 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Please create a Chit Fund group first!", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                if (spMembers.getSelectedItem() == null || spInstallmentOptions.getSelectedItem() == null) return;
+                if (spMembers.getSelectedItem() == null) return;
+                if (selectedInstallmentsList.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Please select at least one installment!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 
                 String selectedMember = spMembers.getSelectedItem().toString();
-                int instNum = spInstallmentOptions.getSelectedItemPosition() + 1;
-                double currentTargetAmount = dbHelper.getInstallmentAmount(chitId, instNum);
-
                 String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-                dbHelper.insertPayment(chitId, instNum, currentDate, selectedMember, currentTargetAmount);
 
-                Toast.makeText(MainActivity.this, "Installment Saved!", Toast.LENGTH_SHORT).show();
+                // Loop through and insert all selected installments
+                for (int instNum : selectedInstallmentsList) {
+                    if (!dbHelper.isPaymentMade(chitId, selectedMember, instNum)) {
+                        double currentTargetAmount = dbHelper.getInstallmentAmount(chitId, instNum);
+                        dbHelper.insertPayment(chitId, instNum, currentDate, selectedMember, currentTargetAmount);
+                    }
+                }
+
+                Toast.makeText(MainActivity.this, "Installments Saved!", Toast.LENGTH_SHORT).show();
+                
+                // Reset fields selection state
+                resetInstallmentSelection();
                 refreshFundMatrixTable();
             }
         });
@@ -111,7 +136,6 @@ public class MainActivity extends AppCompatActivity {
 
         llFormContainer.setVisibility(View.VISIBLE);
 
-        // Figure out which item position index matches our selection goal
         int selectIndex = 0;
         if (targetChitId != -1) {
             for (int i = 0; i < chits.size(); i++) {
@@ -124,7 +148,6 @@ public class MainActivity extends AppCompatActivity {
         
         spChitSelector.setSelection(selectIndex);
         
-        // Explicitly trigger render pass updates for target focus
         DatabaseHelper.ChitItem selected = (DatabaseHelper.ChitItem) spChitSelector.getSelectedItem();
         if (selected != null) {
             chitId = selected.id;
@@ -147,14 +170,64 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<String> members = dbHelper.getMembers(chitId);
             spMembers.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, members));
 
-            ArrayList<String> optionsList = new ArrayList<>();
+            // Setup structured array sizes matching the total installment counts
+            installmentOptionsArray = new String[totalInstallmentsCount];
+            checkedInstallments = new boolean[totalInstallmentsCount];
+            resetInstallmentSelection();
+
             for (int i = 1; i <= totalInstallmentsCount; i++) {
                 double amt = dbHelper.getInstallmentAmount(chitId, i);
-                optionsList.add("Installment " + i + " - ₹" + amt);
+                installmentOptionsArray[i - 1] = "Installment " + i + " - ₹" + amt;
             }
-            spInstallmentOptions.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, optionsList));
         }
         c.close();
+    }
+
+    private void showMultiSelectInstallmentsDialog() {
+        if (chitId == -1 || installmentOptionsArray == null) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("Select Installments");
+        
+        builder.setMultiChoiceItems(installmentOptionsArray, checkedInstallments, new DialogInterface.OnMultiChoiceClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                checkedInstallments[which] = isChecked;
+            }
+        });
+
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                selectedInstallmentsList.clear();
+                StringBuilder sb = new StringBuilder();
+                
+                for (int i = 0; i < checkedInstallments.length; i++) {
+                    if (checkedInstallments[i]) {
+                        selectedInstallmentsList.add(i + 1); // 1-indexed installment matching
+                        if (sb.length() > 0) sb.append(", ");
+                        sb.append(i + 1);
+                    }
+                }
+
+                if (selectedInstallmentsList.isEmpty()) {
+                    btnSelectInstallments.setText("Tap to Select Installments");
+                } else {
+                    btnSelectInstallments.setText("Selected Installments: " + sb.toString());
+                }
+            }
+        });
+
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    private void resetInstallmentSelection() {
+        if (checkedInstallments != null) {
+            Arrays.fill(checkedInstallments, false);
+        }
+        selectedInstallmentsList.clear();
+        btnSelectInstallments.setText("Tap to Select Installments");
     }
 
     private void refreshFundMatrixTable() {
@@ -365,7 +438,6 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 dialog.dismiss();
-                // Pass the new ID to load and focus on it automatically
                 populateChitSelector(newChitId);
             }
         });
