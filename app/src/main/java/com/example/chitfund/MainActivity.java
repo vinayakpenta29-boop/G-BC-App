@@ -24,6 +24,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AutoCompleteTextView;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.textfield.TextInputEditText;
@@ -201,7 +202,6 @@ public class MainActivity extends AppCompatActivity {
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == -1 || installmentOptionsArray == null) return;
 
-        // Upgrade instantiation chain to specialized premium Material modal architectures
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
         builder.setTitle("Select Installments");
         
@@ -398,23 +398,20 @@ public class MainActivity extends AppCompatActivity {
         final TextInputEditText etDate = view.findViewById(R.id.etDate);
         final LinearLayout llMembersContainer = view.findViewById(R.id.llMembersContainer);
 
-        // Tracker lists to gather field data cleanly without view traversal crashes
         final ArrayList<TextInputEditText> dynamicAmountFields = new ArrayList<>();
         final ArrayList<TextInputEditText> dynamicMemberFields = new ArrayList<>();
 
         spFrequency.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Monthly", "Weekly"}));
         spAmountType.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Fixed Amount", "Random Amount"}));
 
-        // Build first default premium membership row field
-        TextInputLayout tlMemberWrap = new TextInputLayout(MainActivity.this, null, app.checkin.chip.R.attr.textInputStyle);
+        // Premium Membership layout element generation
+        TextInputLayout tlMemberWrap = new TextInputLayout(MainActivity.this);
         tlMemberWrap.setHint("Primary Member Name");
-        tlMemberWrap.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINED);
-        tlMemberWrap.setBoxCornerRadius(8f, 8f, 8f, 8f);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.setMargins(0, 0, 0, 16);
         tlMemberWrap.setLayoutParams(lp);
 
-        TextInputEditText etSingleMember = new TextInputEditText(tlMemberWrap.getContext());
+        TextInputEditText etSingleMember = new TextInputEditText(MainActivity.this);
         tlMemberWrap.addView(etSingleMember);
         llMembersContainer.addView(tlMemberWrap);
         dynamicMemberFields.add(etSingleMember);
@@ -468,7 +465,7 @@ public class MainActivity extends AppCompatActivity {
         final AlertDialog dialog = builder.create();
         dialog.show();
 
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String name = etChitName.getText().toString().trim();
@@ -540,15 +537,13 @@ public class MainActivity extends AppCompatActivity {
         if (!countStr.trim().isEmpty()) {
             int total = Integer.parseInt(countStr.trim());
             for (int i = 1; i <= total; i++) {
-                TextInputLayout wrap = new TextInputLayout(MainActivity.this, null, app.checkin.chip.R.attr.textInputStyle);
+                TextInputLayout wrap = new TextInputLayout(MainActivity.this);
                 wrap.setHint("Installment " + i + " Amount (₹)");
-                wrap.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINED);
-                wrap.setBoxCornerRadius(8f, 8f, 8f, 8f);
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 lp.setMargins(0, 0, 0, 12);
                 wrap.setLayoutParams(lp);
 
-                TextInputEditText etAmtInput = new TextInputEditText(wrap.getContext());
+                TextInputEditText etAmtInput = new TextInputEditText(MainActivity.this);
                 etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
                 
                 wrap.addView(etAmtInput);
