@@ -42,11 +42,14 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvFundTitle;
     private LinearLayout llFormContainer;
     
+    // History View Component nodes
+    private TextView tvHistorySummary;
+    private TableLayout tlHistoryTable;
+    
     private int totalInstallmentsCount;
     private String frequencyType;
     private String firstInstallmentDateStr;
 
-    // Multi-choice state array trackers
     private String[] installmentOptionsArray;
     private boolean[] checkedInstallments;
     private ArrayList<Integer> selectedInstallmentsList = new ArrayList<>();
@@ -64,6 +67,9 @@ public class MainActivity extends AppCompatActivity {
         tlFundTable = findViewById(R.id.tlFundTable);
         tvFundTitle = findViewById(R.id.tvFundTitle);
         llFormContainer = findViewById(R.id.llFormContainer);
+        
+        tvHistorySummary = findViewById(R.id.tvHistorySummary);
+        tlHistoryTable = findViewById(R.id.tlHistoryTable);
 
         spChitSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -87,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         populateChitSelector(-1);
+        refreshTransactionHistory();
 
         btnAddInstallment.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -104,7 +111,6 @@ public class MainActivity extends AppCompatActivity {
                 String selectedMember = spMembers.getSelectedItem().toString();
                 String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-                // Loop through and insert all selected installments
                 for (int instNum : selectedInstallmentsList) {
                     if (!dbHelper.isPaymentMade(chitId, selectedMember, instNum)) {
                         double currentTargetAmount = dbHelper.getInstallmentAmount(chitId, instNum);
@@ -114,9 +120,9 @@ public class MainActivity extends AppCompatActivity {
 
                 Toast.makeText(MainActivity.this, "Installments Saved!", Toast.LENGTH_SHORT).show();
                 
-                // Reset fields selection state
                 resetInstallmentSelection();
                 refreshFundMatrixTable();
+                refreshTransactionHistory(); // Instantly cascades data values into history ledger panel
             }
         });
     }
@@ -170,7 +176,6 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<String> members = dbHelper.getMembers(chitId);
             spMembers.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, members));
 
-            // Setup structured array sizes matching the total installment counts
             installmentOptionsArray = new String[totalInstallmentsCount];
             checkedInstallments = new boolean[totalInstallmentsCount];
             resetInstallmentSelection();
@@ -204,7 +209,7 @@ public class MainActivity extends AppCompatActivity {
                 
                 for (int i = 0; i < checkedInstallments.length; i++) {
                     if (checkedInstallments[i]) {
-                        selectedInstallmentsList.add(i + 1); // 1-indexed installment matching
+                        selectedInstallmentsList.add(i + 1);
                         if (sb.length() > 0) sb.append(", ");
                         sb.append(i + 1);
                     }
@@ -294,6 +299,59 @@ public class MainActivity extends AppCompatActivity {
             }
             tlFundTable.addView(memberRow);
         }
+    }
+
+    // Compiles global history analytics dashboard and matrix row list summaries
+    private void refreshTransactionHistory() {
+        tlHistoryTable.removeAllViews();
+        
+        Cursor cursor = dbHelper.getTransactionHistoryCursor();
+        double runningCashTotal = 0;
+        int transactionEntriesCount = 0;
+
+        // Header Structure Blueprint Initialization
+        TableRow headRow = new TableRow(this);
+        headRow.setBackgroundColor(Color.parseColor("#CFD8DC"));
+        headRow.setPadding(6, 10, 6, 10);
+
+        String[] headers = {"Date", "Chit Group", "Member Name", "Inst. No", "Amount Paid"};
+        for (String headerText : headers) {
+            TextView tvHead = new TextView(this);
+            tvHead.setText(headerText);
+            tvHead.setPadding(14, 8, 14, 8);
+            tvHead.setTextSize(14);
+            tvHead.setStyle(null); // Clear style
+            tvHead.setTypeface(null, android.graphics.Typeface.BOLD);
+            headRow.addView(tvHead);
+        }
+        tlHistoryTable.addView(headRow);
+
+        // Populate database record items lines rows
+        while (cursor.moveToNext()) {
+            String entryDate = cursor.getString(0);
+            String chitGroupName = cursor.getString(1);
+            String memberName = cursor.getString(2);
+            int installmentNum = cursor.getInt(3);
+            double amountPaid = cursor.getDouble(4);
+
+            runningCashTotal += amountPaid;
+            transactionEntriesCount++;
+
+            TableRow tr = new TableRow(this);
+            tr.setPadding(6, 8, 6, 8);
+
+            TextView tvDate = new TextView(this); tvDate.setText(entryDate); tvDate.setPadding(14, 6, 14, 6); tr.addView(tvDate);
+            TextView tvChit = new TextView(this); tvChit.setText(chitGroupName); tvChit.setPadding(14, 6, 14, 6); tr.addView(tvChit);
+            TextView tvMem = new TextView(this); tvMem.setText(memberName); tvMem.setPadding(14, 6, 14, 6); tr.addView(tvMem);
+            TextView tvInst = new TextView(this); tvInst.setText("#" + installmentNum); tvInst.setPadding(14, 6, 14, 6); tr.addView(tvInst);
+            TextView tvAmt = new TextView(this); tvAmt.setText("₹" + amountPaid); tvAmt.setPadding(14, 6, 14, 6); tr.addView(tvAmt);
+
+            tlHistoryTable.addView(tr);
+        }
+        cursor.close();
+
+        // Render Summary block calculations view info banner
+        tvHistorySummary.setText("Total Funds Collected: ₹" + runningCashTotal + "  |  Total Transactions: " + transactionEntriesCount);
     }
 
     @Override
@@ -439,6 +497,7 @@ public class MainActivity extends AppCompatActivity {
 
                 dialog.dismiss();
                 populateChitSelector(newChitId);
+                refreshTransactionHistory();
             }
         });
     }
