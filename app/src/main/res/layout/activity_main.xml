@@ -9,45 +9,76 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- Active Group Selector Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Select Member Name:"
-            android:textStyle="bold" />
+            android:text="Select Active Chit Group:"
+            android:textStyle="bold"
+            android:textColor="@android:color/holo_blue_dark" />
             
         <Spinner
-            android:id="@+id/spMembers"
+            android:id="@+id/spChitSelector"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Select Installment &amp; Amount:"
-            android:textStyle="bold" />
-            
-        <Spinner
-            android:id="@+id/spInstallmentOptions"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="16dp"/>
-
-        <Button
-            android:id="@+id/btnAddInstallment"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Add Installment"
-            android:layout_marginBottom="24dp"/>
+            android:layout_marginBottom="20dp" />
 
         <View
             android:layout_width="match_parent"
-            android:layout_height="1dp"
+            android:layout_height="2dp"
             android:background="@android:color/darker_gray"
-            android:layout_marginBottom="24dp"/>
+            android:layout_marginBottom="20dp"/>
 
+        <!-- Master Interactive Container Context -->
+        <LinearLayout
+            android:id="@+id/llFormContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Form Management Panel -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Select Member Name:"
+                android:textStyle="bold" />
+                
+            <Spinner
+                android:id="@+id/spMembers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Select Installment &amp; Amount:"
+                android:textStyle="bold" />
+                
+            <Spinner
+                android:id="@+id/spInstallmentOptions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"/>
+
+            <Button
+                android:id="@+id/btnAddInstallment"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Add Installment"
+                android:layout_marginBottom="24dp"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@android:color/darker_gray"
+                android:layout_marginBottom="24dp"/>
+        </LinearLayout>
+
+        <!-- Display Matrix Grid Panel -->
         <TextView
             android:id="@+id/tvFundTitle"
             android:layout_width="match_parent"
