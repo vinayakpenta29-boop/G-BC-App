@@ -9,7 +9,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Active Group Selector Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -30,14 +29,12 @@
             android:background="@android:color/darker_gray"
             android:layout_marginBottom="20dp"/>
 
-        <!-- Master Interactive Container Context -->
         <LinearLayout
             android:id="@+id/llFormContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Form Management Panel -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -54,15 +51,20 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Select Installment &amp; Amount:"
+                android:text="Select Installments &amp; Amounts:"
                 android:textStyle="bold" />
                 
-            <Spinner
-                android:id="@+id/spInstallmentOptions"
+            <Button
+                android:id="@+id/btnSelectInstallments"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"/>
+                android:layout_marginBottom="16dp"
+                android:text="Tap to Select Installments"
+                style="?android:attr/spinnerStyle"
+                android:gravity="start|center_vertical"
+                android:paddingStart="12dp"
+                android:textAllCaps="false" />
 
             <Button
                 android:id="@+id/btnAddInstallment"
@@ -78,7 +80,6 @@
                 android:layout_marginBottom="24dp"/>
         </LinearLayout>
 
-        <!-- Display Matrix Grid Panel -->
         <TextView
             android:id="@+id/tvFundTitle"
             android:layout_width="match_parent"
