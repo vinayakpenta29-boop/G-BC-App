@@ -1,6 +1,5 @@
 package com.example.chitfund;
 
-import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.content.DialogInterface;
 import android.database.Cursor;
@@ -12,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -24,6 +24,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AutoCompleteTextView;
 import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.material.textfield.TextInputEditText;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -74,7 +77,6 @@ public class MainActivity extends AppCompatActivity {
         tvHistorySummary = findViewById(R.id.tvHistorySummary);
         tlHistoryTable = findViewById(R.id.tlHistoryTable);
 
-        // Premium Exposed AutoComplete Click Actions
         spChitSelector.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -199,7 +201,8 @@ public class MainActivity extends AppCompatActivity {
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == -1 || installmentOptionsArray == null) return;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        // Upgrade instantiation chain to specialized premium Material modal architectures
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
         builder.setTitle("Select Installments");
         
         builder.setMultiChoiceItems(installmentOptionsArray, checkedInstallments, new DialogInterface.OnMultiChoiceClickListener() {
@@ -268,7 +271,6 @@ public class MainActivity extends AppCompatActivity {
             calculatedDatesHeaders.add(firstInstallmentDateStr);
         }
 
-        // Header Structure Blueprint Initialization
         TableRow headerRow = new TableRow(this);
         headerRow.setBackgroundColor(Color.parseColor("#ECEFF1"));
         headerRow.setPadding(4, 10, 4, 10);
@@ -357,7 +359,7 @@ public class MainActivity extends AppCompatActivity {
             tvAmt.setText("₹" + amountPaid); 
             tvAmt.setPadding(16, 12, 16, 12); 
             tvAmt.setTypeface(null, android.graphics.Typeface.BOLD);
-            tvAmt.setTextColor(Color.parseColor("#2E7D32")); // Premium green tint for cash flows
+            tvAmt.setTextColor(Color.parseColor("#2E7D32"));
             tr.addView(tvAmt);
 
             tlHistoryTable.addView(tr);
@@ -383,40 +385,53 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showNewChitDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_new_chit, null);
 
-        final EditText etChitName = view.findViewById(R.id.etChitName);
-        final Spinner spFrequency = view.findViewById(R.id.spFrequency);
-        final EditText etInstallmentsCount = view.findViewById(R.id.etInstallmentsCount);
-        final Spinner spAmountType = view.findViewById(R.id.spAmountType);
-        final EditText etAmount = view.findViewById(R.id.etAmount);
+        final TextInputEditText etChitName = view.findViewById(R.id.etChitName);
+        final AutoCompleteTextView spFrequency = view.findViewById(R.id.spFrequency);
+        final TextInputEditText etInstallmentsCount = view.findViewById(R.id.etInstallmentsCount);
+        final AutoCompleteTextView spAmountType = view.findViewById(R.id.spAmountType);
+        final TextInputEditText etAmount = view.findViewById(R.id.etAmount);
+        final View tlAmountWrapper = view.findViewById(R.id.tlAmountWrapper);
         final LinearLayout llAmountsContainer = view.findViewById(R.id.llAmountsContainer);
-        final EditText etDate = view.findViewById(R.id.etDate);
+        final TextInputEditText etDate = view.findViewById(R.id.etDate);
         final LinearLayout llMembersContainer = view.findViewById(R.id.llMembersContainer);
+
+        // Tracker lists to gather field data cleanly without view traversal crashes
+        final ArrayList<TextInputEditText> dynamicAmountFields = new ArrayList<>();
+        final ArrayList<TextInputEditText> dynamicMemberFields = new ArrayList<>();
 
         spFrequency.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Monthly", "Weekly"}));
         spAmountType.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Fixed Amount", "Random Amount"}));
 
-        EditText etSingleMember = new EditText(MainActivity.this);
-        etSingleMember.setHint("Member Name");
-        llMembersContainer.addView(etSingleMember);
+        // Build first default premium membership row field
+        TextInputLayout tlMemberWrap = new TextInputLayout(MainActivity.this, null, app.checkin.chip.R.attr.textInputStyle);
+        tlMemberWrap.setHint("Primary Member Name");
+        tlMemberWrap.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINED);
+        tlMemberWrap.setBoxCornerRadius(8f, 8f, 8f, 8f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, 0, 0, 16);
+        tlMemberWrap.setLayoutParams(lp);
 
-        spAmountType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        TextInputEditText etSingleMember = new TextInputEditText(tlMemberWrap.getContext());
+        tlMemberWrap.addView(etSingleMember);
+        llMembersContainer.addView(tlMemberWrap);
+        dynamicMemberFields.add(etSingleMember);
+
+        spAmountType.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 String selected = parent.getItemAtPosition(position).toString();
                 if (selected.equals("Fixed Amount")) {
-                    etAmount.setVisibility(View.VISIBLE);
+                    tlAmountWrapper.setVisibility(View.VISIBLE);
                     llAmountsContainer.setVisibility(View.GONE);
                 } else {
-                    etAmount.setVisibility(View.GONE);
+                    tlAmountWrapper.setVisibility(View.GONE);
                     llAmountsContainer.setVisibility(View.VISIBLE);
-                    triggerDynamicAmountFields(etInstallmentsCount.getText().toString(), llAmountsContainer);
+                    triggerDynamicAmountFields(etInstallmentsCount.getText().toString(), llAmountsContainer, dynamicAmountFields);
                 }
             }
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
         });
 
         etInstallmentsCount.addTextChangedListener(new TextWatcher() {
@@ -427,8 +442,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void afterTextChanged(Editable s) {
                 String input = s.toString().trim();
-                if (spAmountType.getSelectedItem().toString().equals("Random Amount")) {
-                    triggerDynamicAmountFields(input, llAmountsContainer);
+                if (spAmountType.getText().toString().equals("Random Amount")) {
+                    triggerDynamicAmountFields(input, llAmountsContainer, dynamicAmountFields);
                 }
             }
         });
@@ -447,7 +462,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         builder.setView(view);
-        builder.setPositiveButton("Add", null);
+        builder.setPositiveButton("Create Group", null);
         builder.setNegativeButton("Cancel", null);
 
         final AlertDialog dialog = builder.create();
@@ -457,12 +472,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 String name = etChitName.getText().toString().trim();
-                String freq = spFrequency.getSelectedItem().toString();
+                String freq = spFrequency.getText().toString();
                 String instStr = etInstallmentsCount.getText().toString().trim();
-                String amtType = spAmountType.getSelectedItem().toString();
+                String amtType = spAmountType.getText().toString();
                 String date = etDate.getText().toString().trim();
 
-                if (name.isEmpty() || instStr.isEmpty() || date.isEmpty()) {
+                if (name.isEmpty() || instStr.isEmpty() || date.isEmpty() || freq.isEmpty() || amtType.isEmpty()) {
                     Toast.makeText(MainActivity.this, "Fill in all basic fields.", Toast.LENGTH_SHORT).show();
                     return;
                 }
@@ -475,16 +490,20 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (amtType.equals("Random Amount")) {
-                    for (int i = 0; i < llAmountsContainer.getChildCount(); i++) {
-                        if (((EditText) llAmountsContainer.getChildAt(i)).getText().toString().trim().isEmpty()) {
-                            Toast.makeText(MainActivity.this, "Fill all dynamic amount rows.", Toast.LENGTH_SHORT).show();
+                    if(dynamicAmountFields.size() < totalInst) {
+                        Toast.makeText(MainActivity.this, "Generate tracking amounts completely first.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    for (TextInputEditText field : dynamicAmountFields) {
+                        if (field.getText().toString().trim().isEmpty()) {
+                            Toast.makeText(MainActivity.this, "Fill all dynamic amount fields.", Toast.LENGTH_SHORT).show();
                             return;
                         }
                     }
                 }
 
-                for (int i = 0; i < llMembersContainer.getChildCount(); i++) {
-                    if (((EditText) llMembersContainer.getChildAt(i)).getText().toString().trim().isEmpty()) {
+                for (TextInputEditText field : dynamicMemberFields) {
+                    if (field.getText().toString().trim().isEmpty()) {
                         Toast.makeText(MainActivity.this, "Fill in the member name field.", Toast.LENGTH_SHORT).show();
                         return;
                     }
@@ -498,14 +517,14 @@ public class MainActivity extends AppCompatActivity {
                         dbHelper.insertInstallmentAmount(newChitId, i, fixAmt);
                     }
                 } else {
-                    for (int i = 0; i < llAmountsContainer.getChildCount(); i++) {
-                        double randAmt = Double.parseDouble(((EditText) llAmountsContainer.getChildAt(i)).getText().toString().trim());
+                    for (int i = 0; i < dynamicAmountFields.size(); i++) {
+                        double randAmt = Double.parseDouble(dynamicAmountFields.get(i).getText().toString().trim());
                         dbHelper.insertInstallmentAmount(newChitId, (i + 1), randAmt);
                     }
                 }
 
-                for (int i = 0; i < llMembersContainer.getChildCount(); i++) {
-                    dbHelper.insertMember(newChitId, ((EditText) llMembersContainer.getChildAt(i)).getText().toString().trim());
+                for (TextInputEditText field : dynamicMemberFields) {
+                    dbHelper.insertMember(newChitId, field.getText().toString().trim());
                 }
 
                 dialog.dismiss();
@@ -515,15 +534,26 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void triggerDynamicAmountFields(String countStr, LinearLayout container) {
+    private void triggerDynamicAmountFields(String countStr, LinearLayout container, ArrayList<TextInputEditText> fieldTrackerList) {
         container.removeAllViews();
+        fieldTrackerList.clear();
         if (!countStr.trim().isEmpty()) {
             int total = Integer.parseInt(countStr.trim());
             for (int i = 1; i <= total; i++) {
-                EditText etAmtInput = new EditText(MainActivity.this);
-                etAmtInput.setHint("Installment " + i + " Amount (₹)");
+                TextInputLayout wrap = new TextInputLayout(MainActivity.this, null, app.checkin.chip.R.attr.textInputStyle);
+                wrap.setHint("Installment " + i + " Amount (₹)");
+                wrap.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINED);
+                wrap.setBoxCornerRadius(8f, 8f, 8f, 8f);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                lp.setMargins(0, 0, 0, 12);
+                wrap.setLayoutParams(lp);
+
+                TextInputEditText etAmtInput = new TextInputEditText(wrap.getContext());
                 etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-                container.addView(etAmtInput);
+                
+                wrap.addView(etAmtInput);
+                container.addView(wrap);
+                fieldTrackerList.add(etAmtInput);
             }
         }
     }
