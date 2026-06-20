@@ -33,9 +33,11 @@ public class MainActivity extends AppCompatActivity {
     private DatabaseHelper dbHelper;
     private long chitId = -1;
 
+    private Spinner spChitSelector;
     private Spinner spMembers, spInstallmentOptions;
     private TableLayout tlFundTable;
     private TextView tvFundTitle;
+    private LinearLayout llFormContainer;
     private int totalInstallmentsCount;
     private String frequencyType;
     private String firstInstallmentDateStr;
@@ -46,14 +48,31 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         dbHelper = new DatabaseHelper(this);
 
+        spChitSelector = findViewById(R.id.spChitSelector);
         spMembers = findViewById(R.id.spMembers);
         spInstallmentOptions = findViewById(R.id.spInstallmentOptions);
         Button btnAddInstallment = findViewById(R.id.btnAddInstallment);
         tlFundTable = findViewById(R.id.tlFundTable);
         tvFundTitle = findViewById(R.id.tvFundTitle);
+        llFormContainer = findViewById(R.id.llFormContainer);
 
-        // Load the latest chit group tracked on launch
-        refreshMainWorkspace();
+        // Listen for user switching between different chit groups
+        spChitSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                DatabaseHelper.ChitItem selected = (DatabaseHelper.ChitItem) parent.getItemAtPosition(position);
+                if (selected != null && selected.id != chitId) {
+                    chitId = selected.id;
+                    loadChitMetaData();
+                    refreshFundMatrixTable();
+                }
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        // Load complete selector records on launch
+        populateChitSelector(-1);
 
         btnAddInstallment.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -77,14 +96,40 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void refreshMainWorkspace() {
-        chitId = dbHelper.getLatestChitId();
-        if (chitId != -1) {
-            loadChitMetaData();
-            refreshFundMatrixTable();
-        } else {
+    private void populateChitSelector(long targetChitId) {
+        ArrayList<DatabaseHelper.ChitItem> chits = dbHelper.getChitList();
+        ArrayAdapter<DatabaseHelper.ChitItem> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, chits);
+        spChitSelector.setAdapter(adapter);
+
+        if (chits.isEmpty()) {
+            chitId = -1;
             tvFundTitle.setText("No active Chit Fund found. Create one using the menu!");
             tlFundTable.removeAllViews();
+            llFormContainer.setVisibility(View.GONE);
+            return;
+        }
+
+        llFormContainer.setVisibility(View.VISIBLE);
+
+        // Figure out which item position index matches our selection goal
+        int selectIndex = 0;
+        if (targetChitId != -1) {
+            for (int i = 0; i < chits.size(); i++) {
+                if (chits.get(i).id == targetChitId) {
+                    selectIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        spChitSelector.setSelection(selectIndex);
+        
+        // Explicitly trigger render pass updates for target focus
+        DatabaseHelper.ChitItem selected = (DatabaseHelper.ChitItem) spChitSelector.getSelectedItem();
+        if (selected != null) {
+            chitId = selected.id;
+            loadChitMetaData();
+            refreshFundMatrixTable();
         }
     }
 
@@ -320,7 +365,8 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 dialog.dismiss();
-                refreshMainWorkspace();
+                // Pass the new ID to load and focus on it automatically
+                populateChitSelector(newChitId);
             }
         });
     }
