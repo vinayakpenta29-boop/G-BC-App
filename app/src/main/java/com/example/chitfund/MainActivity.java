@@ -122,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
                 
                 resetInstallmentSelection();
                 refreshFundMatrixTable();
-                refreshTransactionHistory(); // Instantly cascades data values into history ledger panel
+                refreshTransactionHistory();
             }
         });
     }
@@ -301,7 +301,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // Compiles global history analytics dashboard and matrix row list summaries
     private void refreshTransactionHistory() {
         tlHistoryTable.removeAllViews();
         
@@ -320,7 +319,6 @@ public class MainActivity extends AppCompatActivity {
             tvHead.setText(headerText);
             tvHead.setPadding(14, 8, 14, 8);
             tvHead.setTextSize(14);
-            tvHead.setStyle(null); // Clear style
             tvHead.setTypeface(null, android.graphics.Typeface.BOLD);
             headRow.addView(tvHead);
         }
@@ -350,7 +348,6 @@ public class MainActivity extends AppCompatActivity {
         }
         cursor.close();
 
-        // Render Summary block calculations view info banner
         tvHistorySummary.setText("Total Funds Collected: ₹" + runningCashTotal + "  |  Total Transactions: " + transactionEntriesCount);
     }
 
