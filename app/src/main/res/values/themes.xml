@@ -1,11 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.ChitFundManager" parent="Theme.MaterialComponents.Light.DarkActionBar">
+        <!-- Core Brand Palette Colors -->
         <item name="colorPrimary">#1A237E</item>
         <item name="colorPrimaryDark">#0D1137</item>
         <item name="colorAccent">#00E676</item>
         
+        <!-- Component Background Surface Context -->
         <item name="android:windowBackground">#F4F6F9</item>
         <item name="cardBackgroundColor">#FFFFFF</item>
+
+        <!-- Dynamic Modal Window Shape Binding Overrides -->
+        <item name="materialAlertDialogTheme">@style/PremiumRoundedAlertDialogTheme</item>
+    </style>
+
+    <!-- Enforces curved profile sheets directly onto modal overlays -->
+    <style name="PremiumRoundedAlertDialogTheme" parent="Theme.MaterialComponents.Light.Dialog.Alert">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Premium.MediumComponent</item>
+        <item name="backgroundTint">#FFFFFF</item>
+    </style>
+
+    <style name="ShapeAppearance.Premium.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerSize">16dp</item>
     </style>
 </resources>
