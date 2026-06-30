@@ -63,8 +63,8 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<String> globalMembersList = new ArrayList<>();
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    protected void onCreate(Bundle Bundle) {
+        super.onCreate(Bundle);
         setContentView(R.layout.activity_main);
         dbHelper = new DatabaseHelper(this);
 
@@ -411,7 +411,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showNewChitDialog() {
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        // FIX: Instantiated with explicit resource design style context reference
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this, R.style.PremiumRoundedAlertDialogTheme);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_new_chit, null);
 
         final TextInputEditText etChitName = view.findViewById(R.id.etChitName);
