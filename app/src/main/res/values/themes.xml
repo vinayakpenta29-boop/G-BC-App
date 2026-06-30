@@ -1,24 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.ChitFundManager" parent="Theme.MaterialComponents.Light.DarkActionBar">
+        <!-- Core Brand Palette Colors -->
         <item name="colorPrimary">#1A237E</item>
         <item name="colorPrimaryDark">#0D1137</item>
         <item name="colorAccent">#00E676</item>
         
+        <!-- Component Background Surface Context -->
         <item name="android:windowBackground">#F4F6F9</item>
         <item name="cardBackgroundColor">#FFFFFF</item>
-
-        <item name="alertDialogTheme">@style/PremiumRoundedAlertDialogTheme</item>
-        <item name="materialAlertDialogTheme">@style/PremiumRoundedAlertDialogTheme</item>
         
+        <!-- Dropdown Menu List Popup Overlay Binding -->
         <item name="shapeAppearanceSmallComponent">@style/PremiumRoundedComponentsSmall</item>
     </style>
 
+    <!-- Enforces curved profiles directly onto action selectors and dropdown choices -->
     <style name="PremiumRoundedComponentsSmall" parent="ShapeAppearance.MaterialComponents.SmallComponent">
         <item name="cornerSize">12dp</item>
-    </style>
-
-    <style name="PremiumRoundedAlertDialogTheme" parent="Theme.MaterialComponents.Light.Dialog.Alert">
-        <item name="android:windowBackground">@drawable/dialog_rounded_window_bg</item>
     </style>
 </resources>
