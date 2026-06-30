@@ -55,7 +55,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvHistorySummary;
     private TableLayout tlHistoryTable;
 
-    // View tracking container reference definitions
     private View tabContainerMatrix;
     private View tabContainerCollect;
     private View tabContainerLedger;
@@ -93,7 +92,6 @@ public class MainActivity extends AppCompatActivity {
         tabContainerCollect = findViewById(R.id.tabContainerCollect);
         tabContainerLedger = findViewById(R.id.tabContainerLedger);
 
-        // INITIALIZE PILL TAB VIEWS
         TabLayout tabLayout = findViewById(R.id.premiumTabLayout);
         tabLayout.addTab(tabLayout.newTab().setText("Matrix Grid"));
         tabLayout.addTab(tabLayout.newTab().setText("Collect"));
@@ -178,7 +176,8 @@ public class MainActivity extends AppCompatActivity {
 
                 for (int instNum : selectedInstallmentsList) {
                     if (!dbHelper.isPaymentMade(chitId, selectedMember, instNum)) {
-                        double currentTargetAmount = dbHelper.getInstallmentAmount(chitId, instNum);
+                        // UPDATE: Intercepts custom interest rates dynamically per member item entry context
+                        double currentTargetAmount = dbHelper.getMemberInstallmentAmount(chitId, selectedMember, instNum);
                         dbHelper.insertPayment(chitId, instNum, currentDate, selectedMember, currentTargetAmount);
                     }
                 }
@@ -270,20 +269,30 @@ public class MainActivity extends AppCompatActivity {
                 spMembers.setText("", false);
             }
 
-            installmentOptionsArray = new String[totalInstallmentsCount];
-            checkedInstallments = new boolean[totalInstallmentsCount];
             resetInstallmentSelection();
-
-            for (int i = 1; i <= totalInstallmentsCount; i++) {
-                double amt = dbHelper.getInstallmentAmount(chitId, i);
-                installmentOptionsArray[i - 1] = "Inst. " + i + " - ₹" + amt;
-            }
         }
         c.close();
     }
 
     private void showMultiSelectInstallmentsDialog() {
-        if (chitId == -1 || installmentOptionsArray == null) return;
+        if (chitId == -1) return;
+
+        String selectedMember = spMembers.getText().toString().trim();
+        if(selectedMember.isEmpty()) {
+            Toast.makeText(this, "Select a valid member first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // UPDATE: Generates the selection array dynamically based on the specific selected member's advance rules history
+        installmentOptionsArray = new String[totalInstallmentsCount];
+        if (checkedInstallments == null || checkedInstallments.length != totalInstallmentsCount) {
+            checkedInstallments = new boolean[totalInstallmentsCount];
+        }
+
+        for (int i = 1; i <= totalInstallmentsCount; i++) {
+            double amt = dbHelper.getMemberInstallmentAmount(chitId, selectedMember, i);
+            installmentOptionsArray[i - 1] = "Inst. " + i + " - ₹" + amt;
+        }
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
         builder.setTitle("Select Installments");
@@ -516,7 +525,108 @@ public class MainActivity extends AppCompatActivity {
             showNewChitDialog();
             return true;
         }
+        // ADDED: Handles launching the Advance Setup panel
+        if (item.getItemId() == R.id.menu_log_advance) {
+            showLogAdvanceDialog();
+            return true;
+        }
         return super.onOptionsItemSelected(item);
+    }
+
+    // ADDED: POPUP WINDOW FOR ASSIGNING DYNAMIC ADVANCE/AUCTION RULES BY MEMBER
+    private void showLogAdvanceDialog() {
+        if (chitId == -1) {
+            Toast.makeText(this, "Please create/select a Chit Group first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 40, 50, 40);
+
+        TextView title = new TextView(this);
+        title.setText("Log Member Advance");
+        title.setTextSize(18);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setTextColor(Color.parseColor("#0F172A"));
+        title.setPadding(0, 0, 0, 30);
+        layout.addView(title);
+
+        // Member selection dropdown picker
+        final TextInputLayout tlMem = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputStyle);
+        tlMem.setHint("Select Member Name");
+        tlMem.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINED);
+        tlMem.setBoxCornerRadius(8f, 8f, 8f, 8f);
+        final AutoCompleteTextView acMem = new AutoCompleteTextView(tlMem.getContext());
+        acMem.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList));
+        acMem.setPadding(40, 40, 40, 40);
+        acMem.setInputType(0);
+        tlMem.addView(acMem);
+        layout.addView(tlMem);
+
+        // Installment checkpoint entry field
+        final TextInputLayout tlInst = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputStyle);
+        tlInst.setHint("Advance Taken on Installment No.");
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, 30, 0, 30);
+        tlInst.setLayoutParams(lp);
+        tlInst.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINED);
+        tlInst.setBoxCornerRadius(8f, 8f, 8f, 8f);
+        final TextInputEditText etInst = new TextInputEditText(tlInst.getContext());
+        etInst.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        tlInst.addView(etInst);
+        layout.addView(tlInst);
+
+        // New premium interest rule configuration field
+        final TextInputLayout tlAmt = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputStyle);
+        tlAmt.setHint("New Repayment Amount (From Next Month)");
+        tlAmt.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINED);
+        tlAmt.setBoxCornerRadius(8f, 8f, 8f, 8f);
+        final TextInputEditText etAmt = new TextInputEditText(tlAmt.getContext());
+        etAmt.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        tlAmt.addView(etAmt);
+        layout.addView(tlAmt);
+
+        builder.setView(layout);
+        builder.setPositiveButton("Save Advance Rules", null);
+        builder.setNegativeButton("Cancel", null);
+
+        final AlertDialog dialog = builder.create();
+        dialog.show();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
+        }
+
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String memName = acMem.getText().toString().trim();
+                String instStr = etInst.getText().toString().trim();
+                String amtStr = etAmt.getText().toString().trim();
+
+                if(memName.isEmpty() || instStr.isEmpty() || amtStr.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Please fill out all fields completely.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                int instNum = Integer.parseInt(instStr);
+                double newAmt = Double.parseDouble(amtStr);
+
+                if(instNum < 1 || instNum > totalInstallmentsCount) {
+                    Toast.makeText(MainActivity.this, "Invalid installment milestone number.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                dbHelper.insertAdvance(chitId, instNum, memName, newAmt);
+                Toast.makeText(MainActivity.this, "Advance configuration rules saved successfully!", Toast.LENGTH_SHORT).show();
+                
+                dialog.dismiss();
+                resetInstallmentSelection();
+                refreshFundMatrixTable();
+            }
+        });
     }
 
     private void showNewChitDialog() {
