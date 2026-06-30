@@ -40,14 +40,23 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    // Fetches master history log across all groups sorted by newest entry first
-    public Cursor getTransactionHistoryCursor() {
+    // UPDATE: Now accepts a filter ID to split records context conditionally
+    public Cursor getTransactionHistoryCursor(long filterChitId) {
         SQLiteDatabase db = this.getReadableDatabase();
-        return db.rawQuery(
-                "SELECT p.date, c.name AS chit_name, p.member_name, p.installment_num, p.amount " +
-                "FROM payments p " +
-                "JOIN chits c ON p.chit_id = c.id " +
-                "ORDER BY p.id DESC", null);
+        if (filterChitId == -1) {
+            return db.rawQuery(
+                    "SELECT p.date, c.name AS chit_name, p.member_name, p.installment_num, p.amount " +
+                    "FROM payments p " +
+                    "JOIN chits c ON p.chit_id = c.id " +
+                    "ORDER BY p.id DESC", null);
+        } else {
+            return db.rawQuery(
+                    "SELECT p.date, c.name AS chit_name, p.member_name, p.installment_num, p.amount " +
+                    "FROM payments p " +
+                    "JOIN chits c ON p.chit_id = c.id " +
+                    "WHERE p.chit_id = ? " +
+                    "ORDER BY p.id DESC", new String[]{String.valueOf(filterChitId)});
+        }
     }
 
     public ArrayList<ChitItem> getChitList() {
