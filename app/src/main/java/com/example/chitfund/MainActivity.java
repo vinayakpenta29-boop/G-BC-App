@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -137,7 +138,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void populateChitSelector(long targetChitId) {
         globalChitsList = dbHelper.getChitList();
-        ArrayAdapter<DatabaseHelper.ChitItem> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, globalChitsList);
+        // Updated to use the premium list item layout resource
+        ArrayAdapter<DatabaseHelper.ChitItem> adapter = new ArrayAdapter<>(this, R.layout.list_item_premium, globalChitsList);
         spChitSelector.setAdapter(adapter);
 
         if (globalChitsList.isEmpty()) {
@@ -179,7 +181,8 @@ public class MainActivity extends AppCompatActivity {
             tvFundTitle.setText("Chit Fund Matrix: " + chitName);
 
             globalMembersList = dbHelper.getMembers(chitId);
-            ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, globalMembersList);
+            // Updated to use the premium list item layout resource
+            ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, R.layout.list_item_premium, globalMembersList);
             spMembers.setAdapter(membersAdapter);
             if(!globalMembersList.isEmpty()) {
                 spMembers.setText(globalMembersList.get(0), false);
@@ -271,20 +274,22 @@ public class MainActivity extends AppCompatActivity {
             calculatedDatesHeaders.add(firstInstallmentDateStr);
         }
 
+        // Apply dark premium header container drawable
         TableRow headerRow = new TableRow(this);
-        headerRow.setBackgroundColor(Color.parseColor("#ECEFF1"));
-        headerRow.setPadding(4, 10, 4, 10);
+        headerRow.setBackgroundResource(R.drawable.table_header_bg);
+        headerRow.setPadding(6, 12, 6, 12);
 
-        TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(16, 12, 16, 12); hNo.setTextSize(14); hNo.setTypeface(null, android.graphics.Typeface.BOLD); hNo.setTextColor(Color.parseColor("#37474F")); headerRow.addView(hNo);
-        TextView hName = new TextView(this); hName.setText("Name"); hName.setPadding(16, 12, 16, 12); hName.setTextSize(14); hName.setTypeface(null, android.graphics.Typeface.BOLD); hName.setTextColor(Color.parseColor("#37474F")); headerRow.addView(hName);
+        TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(20, 16, 20, 16); hNo.setTextSize(14); hNo.setTypeface(null, android.graphics.Typeface.BOLD); hNo.setTextColor(Color.WHITE); hNo.setGravity(Gravity.CENTER); headerRow.addView(hNo);
+        TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextSize(14); hName.setTypeface(null, android.graphics.Typeface.BOLD); hName.setTextColor(Color.WHITE); hName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); headerRow.addView(hName);
 
         for (String dateStr : calculatedDatesHeaders) {
             TextView hDate = new TextView(this);
             hDate.setText(dateStr);
-            hDate.setPadding(16, 12, 16, 12);
+            hDate.setPadding(20, 16, 20, 16);
             hDate.setTextSize(14);
             hDate.setTypeface(null, android.graphics.Typeface.BOLD);
-            hDate.setTextColor(Color.parseColor("#37474F"));
+            hDate.setTextColor(Color.WHITE);
+            hDate.setGravity(Gravity.CENTER);
             headerRow.addView(hDate);
         }
         tlFundTable.addView(headerRow);
@@ -292,23 +297,35 @@ public class MainActivity extends AppCompatActivity {
         int serialCounter = 1;
         for (String name : globalMembersList) {
             TableRow memberRow = new TableRow(this);
-            memberRow.setPadding(4, 6, 4, 6);
+            memberRow.setPadding(6, 8, 6, 8);
 
-            TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(16, 12, 16, 12); tvSerial.setTextColor(Color.parseColor("#555555")); memberRow.addView(tvSerial);
-            TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(16, 12, 16, 12); tvName.setTypeface(null, android.graphics.Typeface.BOLD); tvName.setTextColor(Color.parseColor("#263238")); memberRow.addView(tvName);
+            TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(20, 16, 20, 16); tvSerial.setTextColor(Color.parseColor("#78909C")); tvSerial.setGravity(Gravity.CENTER); memberRow.addView(tvSerial);
+            TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(20, 16, 20, 16); tvName.setTypeface(null, android.graphics.Typeface.BOLD); tvName.setTextColor(Color.parseColor("#263238")); tvName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); memberRow.addView(tvName);
 
             for (int i = 1; i <= totalInstallmentsCount; i++) {
+                // Instantiates structural frame layouts to hold individual badge items securely
+                LinearLayout cellContainer = new LinearLayout(this);
+                cellContainer.setPadding(12, 8, 12, 8);
+                cellContainer.setGravity(Gravity.CENTER);
+
                 TextView tvStatusCell = new TextView(this);
-                tvStatusCell.setPadding(16, 12, 16, 12);
-                tvStatusCell.setGravity(android.view.Gravity.CENTER);
+                tvStatusCell.setTextSize(13sp);
+                tvStatusCell.setGravity(Gravity.CENTER);
+                tvStatusCell.setPadding(16, 6, 16, 6);
+                tvStatusCell.setTypeface(null, android.graphics.Typeface.BOLD);
                 
                 if (dbHelper.isPaymentMade(chitId, name, i)) {
-                    tvStatusCell.setText("✅");
+                    tvStatusCell.setText(" Paid ✅ ");
+                    tvStatusCell.setTextColor(Color.parseColor("#2E7D32"));
+                    tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
                 } else {
-                    tvStatusCell.setText("—");
-                    tvStatusCell.setTextColor(Color.parseColor("#B0BEC5"));
+                    tvStatusCell.setText(" Pending ");
+                    tvStatusCell.setTextColor(Color.parseColor("#78909C"));
+                    tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
                 }
-                memberRow.addView(tvStatusCell);
+                
+                cellContainer.addView(tvStatusCell);
+                memberRow.addView(cellContainer);
             }
             tlFundTable.addView(memberRow);
         }
@@ -322,17 +339,18 @@ public class MainActivity extends AppCompatActivity {
         int transactionEntriesCount = 0;
 
         TableRow headRow = new TableRow(this);
-        headRow.setBackgroundColor(Color.parseColor("#ECEFF1"));
-        headRow.setPadding(4, 10, 4, 10);
+        headRow.setBackgroundResource(R.drawable.table_header_bg);
+        headRow.setPadding(6, 12, 6, 12);
 
         String[] headers = {"Date", "Chit Group", "Member Name", "Inst.", "Amount Paid"};
         for (String headerText : headers) {
             TextView tvHead = new TextView(this);
             tvHead.setText(headerText);
-            tvHead.setPadding(16, 12, 16, 12);
+            tvHead.setPadding(20, 16, 20, 16);
             tvHead.setTextSize(14);
             tvHead.setTypeface(null, android.graphics.Typeface.BOLD);
-            tvHead.setTextColor(Color.parseColor("#37474F"));
+            tvHead.setTextColor(Color.WHITE);
+            tvHead.setGravity(Gravity.CENTER);
             headRow.addView(tvHead);
         }
         tlHistoryTable.addView(headRow);
@@ -348,18 +366,31 @@ public class MainActivity extends AppCompatActivity {
             transactionEntriesCount++;
 
             TableRow tr = new TableRow(this);
-            tr.setPadding(4, 6, 4, 6);
+            tr.setPadding(6, 8, 6, 8);
 
-            TextView tvDate = new TextView(this); tvDate.setText(entryDate); tvDate.setPadding(16, 12, 16, 12); tvDate.setTextColor(Color.parseColor("#555555")); tr.addView(tvDate);
-            TextView tvChit = new TextView(this); tvChit.setText(chitGroupName); tvChit.setPadding(16, 12, 16, 12); tvChit.setTextColor(Color.parseColor("#263238")); tr.addView(tvChit);
-            TextView tvMem = new TextView(this); tvMem.setText(memberName); tvMem.setPadding(16, 12, 16, 12); tvMem.setTextColor(Color.parseColor("#263238")); tr.addView(tvMem);
-            TextView tvInst = new TextView(this); tvInst.setText("#" + installmentNum); tvInst.setPadding(16, 12, 16, 12); tvInst.setTextColor(Color.parseColor("#555555")); tr.addView(tvInst);
+            TextView tvDate = new TextView(this); tvDate.setText(entryDate); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#546E7A")); tvDate.setGravity(Gravity.CENTER); tr.addView(tvDate);
+            TextView tvChit = new TextView(this); tvChit.setText(chitGroupName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTextColor(Color.parseColor("#263238")); tvChit.setGravity(Gravity.CENTER); tr.addView(tvChit);
+            TextView tvMem = new TextView(this); tvMem.setText(memberName); tvMem.setPadding(20, 16, 20, 16); tvMem.setTextColor(Color.parseColor("#263238")); tvMem.setGravity(Gravity.CENTER); tr.addView(tvMem);
+            
+            // Format dynamic capsule styling around transaction rows text strings
+            LinearLayout badgeWrapper = new LinearLayout(this);
+            badgeWrapper.setPadding(10, 6, 10, 6);
+            badgeWrapper.setGravity(Gravity.CENTER);
+            TextView tvInst = new TextView(this); 
+            tvInst.setText("Instalment " + installmentNum); 
+            tvInst.setPadding(14, 4, 14, 4); 
+            tvInst.setTextSize(12sp);
+            tvInst.setTextColor(Color.parseColor("#455A64"));
+            tvInst.setBackgroundResource(R.drawable.badge_unpaid_bg);
+            badgeWrapper.addView(tvInst);
+            tr.addView(badgeWrapper);
             
             TextView tvAmt = new TextView(this); 
             tvAmt.setText("₹" + amountPaid); 
-            tvAmt.setPadding(16, 12, 16, 12); 
+            tvAmt.setPadding(20, 16, 20, 16); 
             tvAmt.setTypeface(null, android.graphics.Typeface.BOLD);
             tvAmt.setTextColor(Color.parseColor("#2E7D32"));
+            tvAmt.setGravity(Gravity.CENTER);
             tr.addView(tvAmt);
 
             tlHistoryTable.addView(tr);
@@ -401,10 +432,10 @@ public class MainActivity extends AppCompatActivity {
         final ArrayList<TextInputEditText> dynamicAmountFields = new ArrayList<>();
         final ArrayList<TextInputEditText> dynamicMemberFields = new ArrayList<>();
 
-        spFrequency.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Monthly", "Weekly"}));
-        spAmountType.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Fixed Amount", "Random Amount"}));
+        // Formats dialog dropdown structures to target premium layout resources
+        spFrequency.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Monthly", "Weekly"}));
+        spAmountType.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Fixed Amount", "Random Amount"}));
 
-        // Premium Membership layout element generation
         TextInputLayout tlMemberWrap = new TextInputLayout(MainActivity.this);
         tlMemberWrap.setHint("Primary Member Name");
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
