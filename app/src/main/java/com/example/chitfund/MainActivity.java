@@ -176,7 +176,6 @@ public class MainActivity extends AppCompatActivity {
 
                 for (int instNum : selectedInstallmentsList) {
                     if (!dbHelper.isPaymentMade(chitId, selectedMember, instNum)) {
-                        // UPDATE: Intercepts custom interest rates dynamically per member item entry context
                         double currentTargetAmount = dbHelper.getMemberInstallmentAmount(chitId, selectedMember, instNum);
                         dbHelper.insertPayment(chitId, instNum, currentDate, selectedMember, currentTargetAmount);
                     }
@@ -283,7 +282,6 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // UPDATE: Generates the selection array dynamically based on the specific selected member's advance rules history
         installmentOptionsArray = new String[totalInstallmentsCount];
         if (checkedInstallments == null || checkedInstallments.length != totalInstallmentsCount) {
             checkedInstallments = new boolean[totalInstallmentsCount];
@@ -525,7 +523,6 @@ public class MainActivity extends AppCompatActivity {
             showNewChitDialog();
             return true;
         }
-        // ADDED: Handles launching the Advance Setup panel
         if (item.getItemId() == R.id.menu_log_advance) {
             showLogAdvanceDialog();
             return true;
@@ -533,7 +530,7 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // ADDED: POPUP WINDOW FOR ASSIGNING DYNAMIC ADVANCE/AUCTION RULES BY MEMBER
+    // FIX: Completely refactored from code generation to modern layout XML layout inflation mapping
     private void showLogAdvanceDialog() {
         if (chitId == -1) {
             Toast.makeText(this, "Please create/select a Chit Group first.", Toast.LENGTH_SHORT).show();
@@ -541,54 +538,15 @@ public class MainActivity extends AppCompatActivity {
         }
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 40, 50, 40);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_log_advance, null);
 
-        TextView title = new TextView(this);
-        title.setText("Log Member Advance");
-        title.setTextSize(18);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setTextColor(Color.parseColor("#0F172A"));
-        title.setPadding(0, 0, 0, 30);
-        layout.addView(title);
+        final AutoCompleteTextView acMem = view.findViewById(R.id.acMem);
+        final TextInputEditText etInst = view.findViewById(R.id.etInstNum);
+        final TextInputEditText etAmt = view.findViewById(R.id.etNewAmt);
 
-        // Member selection dropdown picker
-        final TextInputLayout tlMem = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputStyle);
-        tlMem.setHint("Select Member Name");
-        tlMem.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINED);
-        tlMem.setBoxCornerRadius(8f, 8f, 8f, 8f);
-        final AutoCompleteTextView acMem = new AutoCompleteTextView(tlMem.getContext());
         acMem.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList));
-        acMem.setPadding(40, 40, 40, 40);
-        acMem.setInputType(0);
-        tlMem.addView(acMem);
-        layout.addView(tlMem);
 
-        // Installment checkpoint entry field
-        final TextInputLayout tlInst = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputStyle);
-        tlInst.setHint("Advance Taken on Installment No.");
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(0, 30, 0, 30);
-        tlInst.setLayoutParams(lp);
-        tlInst.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINED);
-        tlInst.setBoxCornerRadius(8f, 8f, 8f, 8f);
-        final TextInputEditText etInst = new TextInputEditText(tlInst.getContext());
-        etInst.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        tlInst.addView(etInst);
-        layout.addView(tlInst);
-
-        // New premium interest rule configuration field
-        final TextInputLayout tlAmt = new TextInputLayout(this, null, com.google.android.material.R.attr.textInputStyle);
-        tlAmt.setHint("New Repayment Amount (From Next Month)");
-        tlAmt.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINED);
-        tlAmt.setBoxCornerRadius(8f, 8f, 8f, 8f);
-        final TextInputEditText etAmt = new TextInputEditText(tlAmt.getContext());
-        etAmt.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        tlAmt.addView(etAmt);
-        layout.addView(tlAmt);
-
-        builder.setView(layout);
+        builder.setView(view);
         builder.setPositiveButton("Save Advance Rules", null);
         builder.setNegativeButton("Cancel", null);
 
