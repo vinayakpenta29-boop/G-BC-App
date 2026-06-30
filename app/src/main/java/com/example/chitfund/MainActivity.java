@@ -28,6 +28,7 @@ import android.widget.AutoCompleteTextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.textfield.TextInputEditText;
 import java.text.SimpleDateFormat;
@@ -41,11 +42,11 @@ public class MainActivity extends AppCompatActivity {
 
     private DatabaseHelper dbHelper;
     private long chitId = -1;
-    private long historyFilterChitId = -1; // -1 represents "All Chits" option context
+    private long historyFilterChitId = -1;
 
     private AutoCompleteTextView spChitSelector;
     private AutoCompleteTextView spMembers;
-    private AutoCompleteTextView spHistoryFilter; // History dropdown object instance
+    private AutoCompleteTextView spHistoryFilter;
     private Button btnSelectInstallments;
     private TableLayout tlFundTable;
     private TextView tvFundTitle;
@@ -53,6 +54,11 @@ public class MainActivity extends AppCompatActivity {
     
     private TextView tvHistorySummary;
     private TableLayout tlHistoryTable;
+
+    // View tracking container reference definitions
+    private View tabContainerMatrix;
+    private View tabContainerCollect;
+    private View tabContainerLedger;
     
     private int totalInstallmentsCount;
     private String frequencyType;
@@ -83,6 +89,40 @@ public class MainActivity extends AppCompatActivity {
         tvHistorySummary = findViewById(R.id.tvHistorySummary);
         tlHistoryTable = findViewById(R.id.tlHistoryTable);
 
+        tabContainerMatrix = findViewById(R.id.tabContainerMatrix);
+        tabContainerCollect = findViewById(R.id.tabContainerCollect);
+        tabContainerLedger = findViewById(R.id.tabContainerLedger);
+
+        // INITIALIZE PILL TAB VIEWS
+        TabLayout tabLayout = findViewById(R.id.premiumTabLayout);
+        tabLayout.addTab(tabLayout.newTab().setText("Matrix Grid"));
+        tabLayout.addTab(tabLayout.newTab().setText("Collect"));
+        tabLayout.addTab(tabLayout.newTab().setText("Ledger"));
+
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                int position = tab.getPosition();
+                if (position == 0) {
+                    tabContainerMatrix.setVisibility(View.VISIBLE);
+                    tabContainerCollect.setVisibility(View.GONE);
+                    tabContainerLedger.setVisibility(View.GONE);
+                } else if (position == 1) {
+                    tabContainerMatrix.setVisibility(View.GONE);
+                    tabContainerCollect.setVisibility(View.VISIBLE);
+                    tabContainerLedger.setVisibility(View.GONE);
+                } else {
+                    tabContainerMatrix.setVisibility(View.GONE);
+                    tabContainerCollect.setVisibility(View.GONE);
+                    tabContainerLedger.setVisibility(View.VISIBLE);
+                }
+            }
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {}
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {}
+        });
+
         spChitSelector.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -95,12 +135,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // ADDED: Filters ledger tables on dropdown selections
         spHistoryFilter.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if (position == 0) {
-                    historyFilterChitId = -1; // "All Chits" chosen
+                    historyFilterChitId = -1;
                 } else {
                     historyFilterChitId = globalChitsList.get(position - 1).id;
                 }
@@ -158,7 +197,6 @@ public class MainActivity extends AppCompatActivity {
         ArrayAdapter<DatabaseHelper.ChitItem> adapter = new ArrayAdapter<>(this, R.layout.list_item_premium, globalChitsList);
         spChitSelector.setAdapter(adapter);
 
-        // Update the transaction filter options synchronously
         populateHistoryFilter();
 
         if (globalChitsList.isEmpty()) {
@@ -188,7 +226,6 @@ public class MainActivity extends AppCompatActivity {
         refreshFundMatrixTable();
     }
 
-    // ADDED: Compiles and triggers active filter datasets options
     private void populateHistoryFilter() {
         ArrayList<String> filterOptions = new ArrayList<>();
         filterOptions.add("All Chits");
@@ -199,7 +236,6 @@ public class MainActivity extends AppCompatActivity {
         ArrayAdapter<String> filterAdapter = new ArrayAdapter<>(this, R.layout.list_item_premium, filterOptions);
         spHistoryFilter.setAdapter(filterAdapter);
 
-        // Enforces maintaining safe active text display state selection passes
         if (historyFilterChitId == -1) {
             spHistoryFilter.setText("All Chits", false);
         } else {
@@ -389,7 +425,6 @@ public class MainActivity extends AppCompatActivity {
     private void refreshTransactionHistory() {
         tlHistoryTable.removeAllViews();
         
-        // UPDATE: Passes the active filter configuration variable directly into database queries
         Cursor cursor = dbHelper.getTransactionHistoryCursor(historyFilterChitId);
         double runningCashTotal = 0;
         int transactionEntriesCount = 0;
