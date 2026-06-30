@@ -25,10 +25,12 @@
         <item name="cornerSize">16dp</item>
     </style>
 
-        <style name="PremiumTabTextStyle" parent="TextAppearance.Design.Tab">
-        <item name="android:textSize">14sp</item>
+    <style name="PremiumTabTextStyle" parent="TextAppearance.Design.Tab">
+        <!-- Decreased text size to fit cleanly into sleek modern pills -->
+        <item name="android:textSize">12sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textAllCaps">false</item>
     </style>
+
     
 </resources>
