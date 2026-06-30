@@ -4,6 +4,7 @@ import android.app.DatePickerDialog;
 import android.content.DialogInterface;
 import android.database.Cursor;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -192,7 +193,6 @@ public class MainActivity extends AppCompatActivity {
             checkedInstallments = new boolean[totalInstallmentsCount];
             resetInstallmentSelection();
 
-            // UPDATE: Formats to use short-form "Inst." token text inside popup choices
             for (int i = 1; i <= totalInstallmentsCount; i++) {
                 double amt = dbHelper.getInstallmentAmount(chitId, i);
                 installmentOptionsArray[i - 1] = "Inst. " + i + " - ₹" + amt;
@@ -304,7 +304,15 @@ public class MainActivity extends AppCompatActivity {
             memberRow.setPadding(6, 8, 6, 8);
 
             TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(20, 16, 20, 16); tvSerial.setTextColor(Color.parseColor("#78909C")); tvSerial.setGravity(Gravity.CENTER); memberRow.addView(tvSerial);
-            TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(20, 16, 20, 16); tvName.setTypeface(null, android.graphics.Typeface.BOLD); tvName.setTextColor(Color.parseColor("#263238")); tvName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); memberRow.addView(tvName);
+            
+            // UPDATE: Configures Matrix list cells names string elements as monospace font profiles
+            TextView tvName = new TextView(this); 
+            tvName.setText(name); 
+            tvName.setPadding(20, 16, 20, 16); 
+            tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
+            tvName.setTextColor(Color.parseColor("#263238")); 
+            tvName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); 
+            memberRow.addView(tvName);
 
             for (int i = 1; i <= totalInstallmentsCount; i++) {
                 LinearLayout cellContainer = new LinearLayout(this);
@@ -372,8 +380,24 @@ public class MainActivity extends AppCompatActivity {
             tr.setPadding(6, 8, 6, 8);
 
             TextView tvDate = new TextView(this); tvDate.setText(entryDate); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#546E7A")); tvDate.setGravity(Gravity.CENTER); tr.addView(tvDate);
-            TextView tvChit = new TextView(this); tvChit.setText(chitGroupName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTextColor(Color.parseColor("#263238")); tvChit.setGravity(Gravity.CENTER_VERTICAL | Gravity.START); tr.addView(tvChit);
-            TextView tvMem = new TextView(this); tvMem.setText(memberName); tvMem.setPadding(20, 16, 20, 16); tvMem.setTextColor(Color.parseColor("#263238")); tvMem.setGravity(Gravity.CENTER_VERTICAL | Gravity.START); tr.addView(tvMem);
+            
+            // UPDATE: Configures Ledger Chit Names text values as monospace style font context
+            TextView tvChit = new TextView(this); 
+            tvChit.setText(chitGroupName); 
+            tvChit.setPadding(20, 16, 20, 16); 
+            tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
+            tvChit.setTextColor(Color.parseColor("#263238")); 
+            tvChit.setGravity(Gravity.CENTER_VERTICAL | Gravity.START); 
+            tr.addView(tvChit);
+            
+            // UPDATE: Configures Ledger Members Names text values as monospace style font context
+            TextView tvMem = new TextView(this); 
+            tvMem.setText(memberName); 
+            tvMem.setPadding(20, 16, 20, 16); 
+            tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
+            tvMem.setTextColor(Color.parseColor("#263238")); 
+            tvMem.setGravity(Gravity.CENTER_VERTICAL | Gravity.START); 
+            tr.addView(tvMem);
             
             LinearLayout badgeWrapper = new LinearLayout(this);
             badgeWrapper.setPadding(10, 6, 10, 6);
