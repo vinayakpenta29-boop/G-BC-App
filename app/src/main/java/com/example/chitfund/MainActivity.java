@@ -41,9 +41,11 @@ public class MainActivity extends AppCompatActivity {
 
     private DatabaseHelper dbHelper;
     private long chitId = -1;
+    private long historyFilterChitId = -1; // -1 represents "All Chits" option context
 
     private AutoCompleteTextView spChitSelector;
     private AutoCompleteTextView spMembers;
+    private AutoCompleteTextView spHistoryFilter; // History dropdown object instance
     private Button btnSelectInstallments;
     private TableLayout tlFundTable;
     private TextView tvFundTitle;
@@ -71,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
 
         spChitSelector = findViewById(R.id.spChitSelector);
         spMembers = findViewById(R.id.spMembers);
+        spHistoryFilter = findViewById(R.id.spHistoryFilter);
         btnSelectInstallments = findViewById(R.id.btnSelectInstallments);
         Button btnAddInstallment = findViewById(R.id.btnAddInstallment);
         tlFundTable = findViewById(R.id.tlFundTable);
@@ -89,6 +92,19 @@ public class MainActivity extends AppCompatActivity {
                     loadChitMetaData();
                     refreshFundMatrixTable();
                 }
+            }
+        });
+
+        // ADDED: Filters ledger tables on dropdown selections
+        spHistoryFilter.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                if (position == 0) {
+                    historyFilterChitId = -1; // "All Chits" chosen
+                } else {
+                    historyFilterChitId = globalChitsList.get(position - 1).id;
+                }
+                refreshTransactionHistory();
             }
         });
 
@@ -142,6 +158,9 @@ public class MainActivity extends AppCompatActivity {
         ArrayAdapter<DatabaseHelper.ChitItem> adapter = new ArrayAdapter<>(this, R.layout.list_item_premium, globalChitsList);
         spChitSelector.setAdapter(adapter);
 
+        // Update the transaction filter options synchronously
+        populateHistoryFilter();
+
         if (globalChitsList.isEmpty()) {
             chitId = -1;
             tvFundTitle.setText("No active Chit Fund found. Create one using the menu!");
@@ -167,6 +186,32 @@ public class MainActivity extends AppCompatActivity {
         chitId = targetItem.id;
         loadChitMetaData();
         refreshFundMatrixTable();
+    }
+
+    // ADDED: Compiles and triggers active filter datasets options
+    private void populateHistoryFilter() {
+        ArrayList<String> filterOptions = new ArrayList<>();
+        filterOptions.add("All Chits");
+        for (DatabaseHelper.ChitItem item : globalChitsList) {
+            filterOptions.add(item.name);
+        }
+
+        ArrayAdapter<String> filterAdapter = new ArrayAdapter<>(this, R.layout.list_item_premium, filterOptions);
+        spHistoryFilter.setAdapter(filterAdapter);
+
+        // Enforces maintaining safe active text display state selection passes
+        if (historyFilterChitId == -1) {
+            spHistoryFilter.setText("All Chits", false);
+        } else {
+            String activeName = "All Chits";
+            for (DatabaseHelper.ChitItem item : globalChitsList) {
+                if (item.id == historyFilterChitId) {
+                    activeName = item.name;
+                    break;
+                }
+            }
+            spHistoryFilter.setText(activeName, false);
+        }
     }
 
     private void loadChitMetaData() {
@@ -344,7 +389,8 @@ public class MainActivity extends AppCompatActivity {
     private void refreshTransactionHistory() {
         tlHistoryTable.removeAllViews();
         
-        Cursor cursor = dbHelper.getTransactionHistoryCursor();
+        // UPDATE: Passes the active filter configuration variable directly into database queries
+        Cursor cursor = dbHelper.getTransactionHistoryCursor(historyFilterChitId);
         double runningCashTotal = 0;
         int transactionEntriesCount = 0;
 
@@ -469,7 +515,6 @@ public class MainActivity extends AppCompatActivity {
         llMembersContainer.addView(tlMemberWrap);
         dynamicMemberFields.add(etSingleMember);
 
-        // FIX: Rebuilt with valid parent signatures targeting structural standard contracts cleanly
         spAmountType.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
