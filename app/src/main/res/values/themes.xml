@@ -10,7 +10,6 @@
 
         <item name="materialAlertDialogTheme">@style/PremiumRoundedAlertDialogTheme</item>
         
-        <item name="autoCompleteTextViewString">@string/app_name</item>
         <item name="shapeAppearanceSmallComponent">@style/PremiumRoundedComponentsSmall</item>
     </style>
 
