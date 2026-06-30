@@ -203,8 +203,8 @@ public class MainActivity extends AppCompatActivity {
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == -1 || installmentOptionsArray == null) return;
 
-        // Pass the explicit rounded theme overlay context reference
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this, R.style.PremiumRoundedAlertDialogTheme);
+        // FIX: Cleaned constructor reference to drop ghost styles
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
         builder.setTitle("Select Installments");
         
         builder.setMultiChoiceItems(installmentOptionsArray, checkedInstallments, new DialogInterface.OnMultiChoiceClickListener() {
@@ -238,7 +238,6 @@ public class MainActivity extends AppCompatActivity {
 
         builder.setNegativeButton("Cancel", null);
         
-        // Render and programmatically override the outer layout layer mask background bounds
         AlertDialog dialog = builder.create();
         dialog.show();
         
@@ -419,7 +418,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showNewChitDialog() {
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this, R.style.PremiumRoundedAlertDialogTheme);
+        // FIX: Cleaned constructor reference to drop ghost styles
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_new_chit, null);
 
         final TextInputEditText etChitName = view.findViewById(R.id.etChitName);
