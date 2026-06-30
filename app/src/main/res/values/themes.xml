@@ -8,21 +8,22 @@
         <item name="android:windowBackground">#F4F6F9</item>
         <item name="cardBackgroundColor">#FFFFFF</item>
 
-        <item name="materialAlertDialogStyle">@style/PremiumMaterialAlertDialog</item>
+        <item name="alertDialogTheme">@style/PremiumRoundedAlertDialogTheme</item>
+        <item name="materialAlertDialogTheme">@style/PremiumRoundedAlertDialogTheme</item>
         
         <item name="shapeAppearanceSmallComponent">@style/PremiumRoundedComponentsSmall</item>
     </style>
 
-    <style name="PremiumMaterialAlertDialog" parent="Widget.MaterialComponents.AlertDialog.MaterialComponents">
+    <style name="PremiumRoundedComponentsSmall" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="PremiumRoundedAlertDialogTheme" parent="Theme.MaterialComponents.Light.Dialog.Alert">
         <item name="shapeAppearanceOverlay">@style/PremiumAlertDialogShape</item>
         <item name="backgroundTint">#FFFFFF</item>
     </style>
 
     <style name="PremiumAlertDialogShape" parent="ShapeAppearance.MaterialComponents.MediumComponent">
         <item name="cornerSize">16dp</item>
-    </style>
-
-    <style name="PremiumRoundedComponentsSmall" parent="ShapeAppearance.MaterialComponents.SmallComponent">
-        <item name="cornerSize">12dp</item>
     </style>
 </resources>
