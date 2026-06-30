@@ -180,8 +180,6 @@ public class MainActivity extends AppCompatActivity {
             tvFundTitle.setText("Chit Fund Matrix: " + chitName);
 
             globalMembersList = dbHelper.getMembers(chitId);
-            
-            // FIX: Configured to load your specialized layout item file for members
             ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList);
             spMembers.setAdapter(membersAdapter);
             if(!globalMembersList.isEmpty()) {
@@ -194,9 +192,10 @@ public class MainActivity extends AppCompatActivity {
             checkedInstallments = new boolean[totalInstallmentsCount];
             resetInstallmentSelection();
 
+            // UPDATE: Formats to use short-form "Inst." token text inside popup choices
             for (int i = 1; i <= totalInstallmentsCount; i++) {
                 double amt = dbHelper.getInstallmentAmount(chitId, i);
-                installmentOptionsArray[i - 1] = "Installment " + i + " - ₹" + amt;
+                installmentOptionsArray[i - 1] = "Inst. " + i + " - ₹" + amt;
             }
         }
         c.close();
@@ -380,7 +379,7 @@ public class MainActivity extends AppCompatActivity {
             badgeWrapper.setPadding(10, 6, 10, 6);
             badgeWrapper.setGravity(Gravity.CENTER);
             TextView tvInst = new TextView(this); 
-            tvInst.setText("Installment " + installmentNum); 
+            tvInst.setText("Inst. " + installmentNum); 
             tvInst.setPadding(14, 4, 14, 4); 
             tvInst.setTextSize(12);
             tvInst.setTextColor(Color.parseColor("#455A64"));
