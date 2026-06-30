@@ -9,6 +9,8 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -303,7 +305,7 @@ public class MainActivity extends AppCompatActivity {
                 cellContainer.setGravity(Gravity.CENTER);
 
                 TextView tvStatusCell = new TextView(this);
-                tvStatusCell.setTextSize(13); // FIX: Removed invalid 'sp' text token
+                tvStatusCell.setTextSize(13);
                 tvStatusCell.setGravity(Gravity.CENTER);
                 tvStatusCell.setPadding(16, 6, 16, 6);
                 tvStatusCell.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -372,7 +374,7 @@ public class MainActivity extends AppCompatActivity {
             TextView tvInst = new TextView(this); 
             tvInst.setText("Installment " + installmentNum); 
             tvInst.setPadding(14, 4, 14, 4); 
-            tvInst.setTextSize(12); // FIX: Removed invalid 'sp' text token
+            tvInst.setTextSize(12);
             tvInst.setTextColor(Color.parseColor("#455A64"));
             tvInst.setBackgroundResource(R.drawable.badge_unpaid_bg);
             badgeWrapper.addView(tvInst);
