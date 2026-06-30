@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private AutoCompleteTextView spMembers;
     private AutoCompleteTextView spHistoryFilter;
     private Button btnSelectInstallments;
+    private Button btnToggleMatrixOrientation; // Transpose view button node instance
     private TableLayout tlFundTable;
     private TextView tvFundTitle;
     private View llFormContainer;
@@ -62,6 +63,8 @@ public class MainActivity extends AppCompatActivity {
     private int totalInstallmentsCount;
     private String frequencyType;
     private String firstInstallmentDateStr;
+
+    private boolean isMatrixVertical = false; // Internal tracking view state flag
 
     private String[] installmentOptionsArray;
     private boolean[] checkedInstallments;
@@ -80,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
         spMembers = findViewById(R.id.spMembers);
         spHistoryFilter = findViewById(R.id.spHistoryFilter);
         btnSelectInstallments = findViewById(R.id.btnSelectInstallments);
+        btnToggleMatrixOrientation = findViewById(R.id.btnToggleMatrixOrientation);
         Button btnAddInstallment = findViewById(R.id.btnAddInstallment);
         tlFundTable = findViewById(R.id.tlFundTable);
         tvFundTitle = findViewById(R.id.tvFundTitle);
@@ -142,6 +146,20 @@ public class MainActivity extends AppCompatActivity {
                     historyFilterChitId = globalChitsList.get(position - 1).id;
                 }
                 refreshTransactionHistory();
+            }
+        });
+
+        // ADDED: Handles flipping the structural flag state
+        btnToggleMatrixOrientation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isMatrixVertical = !isMatrixVertical;
+                if (isMatrixVertical) {
+                    btnToggleMatrixOrientation.setText("View Horizontally (Scroll Right)");
+                } else {
+                    btnToggleMatrixOrientation.setText("View Vertically (Scroll Down)");
+                }
+                refreshFundMatrixTable();
             }
         });
 
@@ -367,65 +385,126 @@ public class MainActivity extends AppCompatActivity {
             calculatedDatesHeaders.add(firstInstallmentDateStr);
         }
 
-        TableRow headerRow = new TableRow(this);
-        headerRow.setBackgroundResource(R.drawable.table_header_bg);
-        headerRow.setPadding(6, 12, 6, 12);
+        // CONDITIONAL SEPARATION PASSES: Splits grid generation based on layout orientation selection
+        if (!isMatrixVertical) {
+            // MODE A: STANDARD HORIZONTAL SCROLL MATRIX GRID DESIGN
+            TableRow headerRow = new TableRow(this);
+            headerRow.setBackgroundResource(R.drawable.table_header_bg);
+            headerRow.setPadding(6, 12, 6, 12);
 
-        TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(20, 16, 20, 16); hNo.setTextSize(14); hNo.setTypeface(null, android.graphics.Typeface.BOLD); hNo.setTextColor(Color.WHITE); hNo.setGravity(Gravity.CENTER); headerRow.addView(hNo);
-        TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextSize(14); hName.setTypeface(null, android.graphics.Typeface.BOLD); hName.setTextColor(Color.WHITE); hName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); headerRow.addView(hName);
+            TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(20, 16, 20, 16); hNo.setTextSize(14); hNo.setTypeface(null, android.graphics.Typeface.BOLD); hNo.setTextColor(Color.WHITE); hNo.setGravity(Gravity.CENTER); headerRow.addView(hNo);
+            TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextSize(14); hName.setTypeface(null, android.graphics.Typeface.BOLD); hName.setTextColor(Color.WHITE); hName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); headerRow.addView(hName);
 
-        for (String dateStr : calculatedDatesHeaders) {
-            TextView hDate = new TextView(this);
-            hDate.setText(dateStr);
-            hDate.setPadding(20, 16, 20, 16);
-            hDate.setTextSize(14);
-            hDate.setTypeface(null, android.graphics.Typeface.BOLD);
-            hDate.setTextColor(Color.WHITE);
-            hDate.setGravity(Gravity.CENTER);
-            headerRow.addView(hDate);
-        }
-        tlFundTable.addView(headerRow);
-
-        int serialCounter = 1;
-        for (String name : globalMembersList) {
-            TableRow memberRow = new TableRow(this);
-            memberRow.setPadding(6, 8, 6, 8);
-
-            TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(20, 16, 20, 16); tvSerial.setTextColor(Color.parseColor("#64748B")); tvSerial.setGravity(Gravity.CENTER); memberRow.addView(tvSerial);
-            
-            TextView tvName = new TextView(this); 
-            tvName.setText(name); 
-            tvName.setPadding(20, 16, 20, 16); 
-            tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
-            tvName.setTextColor(Color.parseColor("#1E293B")); 
-            tvName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); 
-            memberRow.addView(tvName);
-
-            for (int i = 1; i <= totalInstallmentsCount; i++) {
-                LinearLayout cellContainer = new LinearLayout(this);
-                cellContainer.setPadding(12, 8, 12, 8);
-                cellContainer.setGravity(Gravity.CENTER);
-
-                TextView tvStatusCell = new TextView(this);
-                tvStatusCell.setTextSize(13);
-                tvStatusCell.setGravity(Gravity.CENTER);
-                tvStatusCell.setPadding(16, 6, 16, 6);
-                tvStatusCell.setTypeface(null, android.graphics.Typeface.BOLD);
-                
-                if (dbHelper.isPaymentMade(chitId, name, i)) {
-                    tvStatusCell.setText(" Paid ✅ ");
-                    tvStatusCell.setTextColor(Color.parseColor("#047857")); 
-                    tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
-                } else {
-                    tvStatusCell.setText(" Pending ");
-                    tvStatusCell.setTextColor(Color.parseColor("#475569")); 
-                    tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
-                }
-                
-                cellContainer.addView(tvStatusCell);
-                memberRow.addView(cellContainer);
+            for (String dateStr : calculatedDatesHeaders) {
+                TextView hDate = new TextView(this);
+                hDate.setText(dateStr);
+                hDate.setPadding(20, 16, 20, 16);
+                hDate.setTextSize(14);
+                hDate.setTypeface(null, android.graphics.Typeface.BOLD);
+                hDate.setTextColor(Color.WHITE);
+                hDate.setGravity(Gravity.CENTER);
+                headerRow.addView(hDate);
             }
-            tlFundTable.addView(memberRow);
+            tlFundTable.addView(headerRow);
+
+            int serialCounter = 1;
+            for (String name : globalMembersList) {
+                TableRow memberRow = new TableRow(this);
+                memberRow.setPadding(6, 8, 6, 8);
+
+                TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(20, 16, 20, 16); tvSerial.setTextColor(Color.parseColor("#64748B")); tvSerial.setGravity(Gravity.CENTER); memberRow.addView(tvSerial);
+                
+                TextView tvName = new TextView(this); 
+                tvName.setText(name); 
+                tvName.setPadding(20, 16, 20, 16); 
+                tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
+                tvName.setTextColor(Color.parseColor("#1E293B")); 
+                tvName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); 
+                memberRow.addView(tvName);
+
+                for (int i = 1; i <= totalInstallmentsCount; i++) {
+                    LinearLayout cellContainer = new LinearLayout(this);
+                    cellContainer.setPadding(12, 8, 12, 8);
+                    cellContainer.setGravity(Gravity.CENTER);
+
+                    TextView tvStatusCell = new TextView(this);
+                    tvStatusCell.setTextSize(13);
+                    tvStatusCell.setGravity(Gravity.CENTER);
+                    tvStatusCell.setPadding(16, 6, 16, 6);
+                    tvStatusCell.setTypeface(null, android.graphics.Typeface.BOLD);
+                    
+                    if (dbHelper.isPaymentMade(chitId, name, i)) {
+                        tvStatusCell.setText(" Paid ✅ ");
+                        tvStatusCell.setTextColor(Color.parseColor("#047857")); 
+                        tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
+                    } else {
+                        tvStatusCell.setText(" Pending ");
+                        tvStatusCell.setTextColor(Color.parseColor("#475569")); 
+                        tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
+                    }
+                    
+                    cellContainer.addView(tvStatusCell);
+                    memberRow.addView(cellContainer);
+                }
+                tlFundTable.addView(memberRow);
+            }
+        } else {
+            // MODE B: NEW LUXURY TRANSPOSED VERTICAL MODE (Rows = Installments, Columns = Members)
+            TableRow headerRow = new TableRow(this);
+            headerRow.setBackgroundResource(R.drawable.table_header_bg);
+            headerRow.setPadding(6, 12, 6, 12);
+
+            TextView hInst = new TextView(this); hInst.setText("Inst."); hInst.setPadding(20, 16, 20, 16); hInst.setTextSize(14); hInst.setTypeface(null, Typeface.BOLD); hInst.setTextColor(Color.WHITE); hInst.setGravity(Gravity.CENTER); headerRow.addView(hInst);
+            TextView hDate = new TextView(this); hDate.setText("Due Date"); hDate.setPadding(20, 16, 20, 16); hDate.setTextSize(14); hDate.setTypeface(null, Typeface.BOLD); hDate.setTextColor(Color.WHITE); hDate.setGravity(Gravity.CENTER); headerRow.addView(hDate);
+
+            // Populates client list items into horizontal header columns dynamically
+            for (String name : globalMembersList) {
+                TextView hMemColumn = new TextView(this);
+                hMemColumn.setText(name);
+                hMemColumn.setPadding(20, 16, 20, 16);
+                hMemColumn.setTextSize(14);
+                hMemColumn.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+                hMemColumn.setTextColor(Color.WHITE);
+                hMemColumn.setGravity(Gravity.CENTER);
+                headerRow.addView(hMemColumn);
+            }
+            tlFundTable.addView(headerRow);
+
+            // Iterates down vertically from installment 1 up to installment 40
+            for (int i = 1; i <= totalInstallmentsCount; i++) {
+                TableRow instRow = new TableRow(this);
+                instRow.setPadding(6, 8, 6, 8);
+
+                TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTextColor(Color.parseColor("#64748B")); tvInstNum.setTypeface(null, Typeface.BOLD); tvInstNum.setGravity(Gravity.CENTER); instRow.addView(tvInstNum);
+                TextView tvInstDate = new TextView(this); tvInstDate.setText(calculatedDatesHeaders.get(i - 1)); tvInstDate.setPadding(20, 16, 20, 16); tvInstDate.setTextColor(Color.parseColor("#475569")); tvInstDate.setGravity(Gravity.CENTER); instRow.addView(tvInstDate);
+
+                // Appends side-by-side transaction intersections across each column layout field
+                for (String name : globalMembersList) {
+                    LinearLayout cellContainer = new LinearLayout(this);
+                    cellContainer.setPadding(12, 8, 12, 8);
+                    cellContainer.setGravity(Gravity.CENTER);
+
+                    TextView tvStatusCell = new TextView(this);
+                    tvStatusCell.setTextSize(13);
+                    tvStatusCell.setGravity(Gravity.CENTER);
+                    tvStatusCell.setPadding(16, 6, 16, 6);
+                    tvStatusCell.setTypeface(null, android.graphics.Typeface.BOLD);
+                    
+                    if (dbHelper.isPaymentMade(chitId, name, i)) {
+                        tvStatusCell.setText(" Paid ✅ ");
+                        tvStatusCell.setTextColor(Color.parseColor("#047857")); 
+                        tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
+                    } else {
+                        tvStatusCell.setText(" Pending ");
+                        tvStatusCell.setTextColor(Color.parseColor("#475569")); 
+                        tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
+                    }
+                    
+                    cellContainer.addView(tvStatusCell);
+                    instRow.addView(cellContainer);
+                }
+                tlFundTable.addView(instRow);
+            }
         }
     }
 
@@ -530,7 +609,6 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // FIX: Completely refactored from code generation to modern layout XML layout inflation mapping
     private void showLogAdvanceDialog() {
         if (chitId == -1) {
             Toast.makeText(this, "Please create/select a Chit Group first.", Toast.LENGTH_SHORT).show();
@@ -750,7 +828,7 @@ public class MainActivity extends AppCompatActivity {
                 wrap.setLayoutParams(lp);
 
                 TextInputEditText etAmtInput = new TextInputEditText(MainActivity.this);
-                etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                etAmtInput.setInputType(android.text.Typeface.BOLD);
                 
                 wrap.addView(etAmtInput);
                 container.addView(wrap);
