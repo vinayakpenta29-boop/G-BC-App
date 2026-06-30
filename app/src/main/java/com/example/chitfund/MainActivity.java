@@ -326,11 +326,11 @@ public class MainActivity extends AppCompatActivity {
                 
                 if (dbHelper.isPaymentMade(chitId, name, i)) {
                     tvStatusCell.setText(" Paid ✅ ");
-                    tvStatusCell.setTextColor(Color.parseColor("#047857")); // Luxury emerald-green color tint
+                    tvStatusCell.setTextColor(Color.parseColor("#047857")); 
                     tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
                 } else {
                     tvStatusCell.setText(" Pending ");
-                    tvStatusCell.setTextColor(Color.parseColor("#475569")); // Neutral modern soft-ash color tint
+                    tvStatusCell.setTextColor(Color.parseColor("#475569")); 
                     tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
                 }
                 
@@ -469,23 +469,11 @@ public class MainActivity extends AppCompatActivity {
         llMembersContainer.addView(tlMemberWrap);
         dynamicMemberFields.add(etSingleMember);
 
+        // FIX: Rebuilt with valid parent signatures targeting structural standard contracts cleanly
         spAmountType.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AutoCompleteTextView parent, View view, int position, long id) {
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 String selected = parent.getItemAtPosition(position).toString();
-                if (selected.equals("Fixed Amount")) {
-                    tlAmountWrapper.setVisibility(View.VISIBLE);
-                    llAmountsContainer.setVisibility(View.GONE);
-                } else {
-                    tlAmountWrapper.setVisibility(View.GONE);
-                    llAmountsContainer.setVisibility(View.VISIBLE);
-                    triggerDynamicAmountFields(etInstallmentsCount.getText().toString(), llAmountsContainer, dynamicAmountFields);
-                }
-            }
-            
-            // Clean interface implementation adapter signatures
-            public void onItemClick(AdapterView<?> p, View v, int pos, long id) {
-                String selected = p.getItemAtPosition(pos).toString();
                 if (selected.equals("Fixed Amount")) {
                     tlAmountWrapper.setVisibility(View.VISIBLE);
                     llAmountsContainer.setVisibility(View.GONE);
