@@ -303,14 +303,13 @@ public class MainActivity extends AppCompatActivity {
             TableRow memberRow = new TableRow(this);
             memberRow.setPadding(6, 8, 6, 8);
 
-            TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(20, 16, 20, 16); tvSerial.setTextColor(Color.parseColor("#78909C")); tvSerial.setGravity(Gravity.CENTER); memberRow.addView(tvSerial);
+            TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(20, 16, 20, 16); tvSerial.setTextColor(Color.parseColor("#64748B")); tvSerial.setGravity(Gravity.CENTER); memberRow.addView(tvSerial);
             
-            // UPDATE: Configures Matrix list cells names string elements as monospace font profiles
             TextView tvName = new TextView(this); 
             tvName.setText(name); 
             tvName.setPadding(20, 16, 20, 16); 
             tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
-            tvName.setTextColor(Color.parseColor("#263238")); 
+            tvName.setTextColor(Color.parseColor("#1E293B")); 
             tvName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); 
             memberRow.addView(tvName);
 
@@ -327,11 +326,11 @@ public class MainActivity extends AppCompatActivity {
                 
                 if (dbHelper.isPaymentMade(chitId, name, i)) {
                     tvStatusCell.setText(" Paid ✅ ");
-                    tvStatusCell.setTextColor(Color.parseColor("#2E7D32"));
+                    tvStatusCell.setTextColor(Color.parseColor("#047857")); // Luxury emerald-green color tint
                     tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
                 } else {
                     tvStatusCell.setText(" Pending ");
-                    tvStatusCell.setTextColor(Color.parseColor("#78909C"));
+                    tvStatusCell.setTextColor(Color.parseColor("#475569")); // Neutral modern soft-ash color tint
                     tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
                 }
                 
@@ -379,23 +378,21 @@ public class MainActivity extends AppCompatActivity {
             TableRow tr = new TableRow(this);
             tr.setPadding(6, 8, 6, 8);
 
-            TextView tvDate = new TextView(this); tvDate.setText(entryDate); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#546E7A")); tvDate.setGravity(Gravity.CENTER); tr.addView(tvDate);
+            TextView tvDate = new TextView(this); tvDate.setText(entryDate); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tvDate.setGravity(Gravity.CENTER); tr.addView(tvDate);
             
-            // UPDATE: Configures Ledger Chit Names text values as monospace style font context
             TextView tvChit = new TextView(this); 
             tvChit.setText(chitGroupName); 
             tvChit.setPadding(20, 16, 20, 16); 
             tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
-            tvChit.setTextColor(Color.parseColor("#263238")); 
+            tvChit.setTextColor(Color.parseColor("#1E293B")); 
             tvChit.setGravity(Gravity.CENTER_VERTICAL | Gravity.START); 
             tr.addView(tvChit);
             
-            // UPDATE: Configures Ledger Members Names text values as monospace style font context
             TextView tvMem = new TextView(this); 
             tvMem.setText(memberName); 
             tvMem.setPadding(20, 16, 20, 16); 
             tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
-            tvMem.setTextColor(Color.parseColor("#263238")); 
+            tvMem.setTextColor(Color.parseColor("#1E293B")); 
             tvMem.setGravity(Gravity.CENTER_VERTICAL | Gravity.START); 
             tr.addView(tvMem);
             
@@ -406,7 +403,7 @@ public class MainActivity extends AppCompatActivity {
             tvInst.setText("Inst. " + installmentNum); 
             tvInst.setPadding(14, 4, 14, 4); 
             tvInst.setTextSize(12);
-            tvInst.setTextColor(Color.parseColor("#455A64"));
+            tvInst.setTextColor(Color.parseColor("#475569"));
             tvInst.setBackgroundResource(R.drawable.badge_unpaid_bg);
             badgeWrapper.addView(tvInst);
             tr.addView(badgeWrapper);
@@ -415,7 +412,7 @@ public class MainActivity extends AppCompatActivity {
             tvAmt.setText("₹" + amountPaid); 
             tvAmt.setPadding(20, 16, 20, 16); 
             tvAmt.setTypeface(null, android.graphics.Typeface.BOLD);
-            tvAmt.setTextColor(Color.parseColor("#2E7D32"));
+            tvAmt.setTextColor(Color.parseColor("#047857"));
             tvAmt.setGravity(Gravity.CENTER);
             tr.addView(tvAmt);
 
@@ -474,8 +471,21 @@ public class MainActivity extends AppCompatActivity {
 
         spAmountType.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            public void onItemClick(AutoCompleteTextView parent, View view, int position, long id) {
                 String selected = parent.getItemAtPosition(position).toString();
+                if (selected.equals("Fixed Amount")) {
+                    tlAmountWrapper.setVisibility(View.VISIBLE);
+                    llAmountsContainer.setVisibility(View.GONE);
+                } else {
+                    tlAmountWrapper.setVisibility(View.GONE);
+                    llAmountsContainer.setVisibility(View.VISIBLE);
+                    triggerDynamicAmountFields(etInstallmentsCount.getText().toString(), llAmountsContainer, dynamicAmountFields);
+                }
+            }
+            
+            // Clean interface implementation adapter signatures
+            public void onItemClick(AdapterView<?> p, View v, int pos, long id) {
+                String selected = p.getItemAtPosition(pos).toString();
                 if (selected.equals("Fixed Amount")) {
                     tlAmountWrapper.setVisibility(View.VISIBLE);
                     llAmountsContainer.setVisibility(View.GONE);
