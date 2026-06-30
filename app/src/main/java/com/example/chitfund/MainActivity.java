@@ -180,7 +180,9 @@ public class MainActivity extends AppCompatActivity {
             tvFundTitle.setText("Chit Fund Matrix: " + chitName);
 
             globalMembersList = dbHelper.getMembers(chitId);
-            ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, R.layout.list_item_premium, globalMembersList);
+            
+            // FIX: Configured to load your specialized layout item file for members
+            ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList);
             spMembers.setAdapter(membersAdapter);
             if(!globalMembersList.isEmpty()) {
                 spMembers.setText(globalMembersList.get(0), false);
@@ -203,7 +205,6 @@ public class MainActivity extends AppCompatActivity {
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == -1 || installmentOptionsArray == null) return;
 
-        // FIX: Cleaned constructor reference to drop ghost styles
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
         builder.setTitle("Select Installments");
         
@@ -418,7 +419,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showNewChitDialog() {
-        // FIX: Cleaned constructor reference to drop ghost styles
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_new_chit, null);
 
