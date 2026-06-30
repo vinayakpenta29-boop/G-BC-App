@@ -411,8 +411,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showNewChitDialog() {
-        // FIX: Instantiated with explicit resource design style context reference
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this, R.style.PremiumRoundedAlertDialogTheme);
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_new_chit, null);
 
         final TextInputEditText etChitName = view.findViewById(R.id.etChitName);
@@ -490,6 +489,11 @@ public class MainActivity extends AppCompatActivity {
 
         final AlertDialog dialog = builder.create();
         dialog.show();
+
+        // FIX: Replaces the window background layout programmatically immediately after attachment
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
+        }
 
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
             @Override
