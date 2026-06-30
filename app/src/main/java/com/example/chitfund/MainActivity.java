@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private AutoCompleteTextView spMembers;
     private AutoCompleteTextView spHistoryFilter;
     private Button btnSelectInstallments;
-    private Button btnToggleMatrixOrientation; // Transpose view button node instance
+    private Button btnToggleMatrixOrientation;
     private TableLayout tlFundTable;
     private TextView tvFundTitle;
     private View llFormContainer;
@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
     private String frequencyType;
     private String firstInstallmentDateStr;
 
-    private boolean isMatrixVertical = false; // Internal tracking view state flag
+    private boolean isMatrixVertical = false;
 
     private String[] installmentOptionsArray;
     private boolean[] checkedInstallments;
@@ -149,7 +149,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // ADDED: Handles flipping the structural flag state
         btnToggleMatrixOrientation.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -385,9 +384,7 @@ public class MainActivity extends AppCompatActivity {
             calculatedDatesHeaders.add(firstInstallmentDateStr);
         }
 
-        // CONDITIONAL SEPARATION PASSES: Splits grid generation based on layout orientation selection
         if (!isMatrixVertical) {
-            // MODE A: STANDARD HORIZONTAL SCROLL MATRIX GRID DESIGN
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
@@ -449,7 +446,6 @@ public class MainActivity extends AppCompatActivity {
                 tlFundTable.addView(memberRow);
             }
         } else {
-            // MODE B: NEW LUXURY TRANSPOSED VERTICAL MODE (Rows = Installments, Columns = Members)
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
@@ -457,7 +453,6 @@ public class MainActivity extends AppCompatActivity {
             TextView hInst = new TextView(this); hInst.setText("Inst."); hInst.setPadding(20, 16, 20, 16); hInst.setTextSize(14); hInst.setTypeface(null, Typeface.BOLD); hInst.setTextColor(Color.WHITE); hInst.setGravity(Gravity.CENTER); headerRow.addView(hInst);
             TextView hDate = new TextView(this); hDate.setText("Due Date"); hDate.setPadding(20, 16, 20, 16); hDate.setTextSize(14); hDate.setTypeface(null, Typeface.BOLD); hDate.setTextColor(Color.WHITE); hDate.setGravity(Gravity.CENTER); headerRow.addView(hDate);
 
-            // Populates client list items into horizontal header columns dynamically
             for (String name : globalMembersList) {
                 TextView hMemColumn = new TextView(this);
                 hMemColumn.setText(name);
@@ -470,7 +465,6 @@ public class MainActivity extends AppCompatActivity {
             }
             tlFundTable.addView(headerRow);
 
-            // Iterates down vertically from installment 1 up to installment 40
             for (int i = 1; i <= totalInstallmentsCount; i++) {
                 TableRow instRow = new TableRow(this);
                 instRow.setPadding(6, 8, 6, 8);
@@ -478,7 +472,6 @@ public class MainActivity extends AppCompatActivity {
                 TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTextColor(Color.parseColor("#64748B")); tvInstNum.setTypeface(null, Typeface.BOLD); tvInstNum.setGravity(Gravity.CENTER); instRow.addView(tvInstNum);
                 TextView tvInstDate = new TextView(this); tvInstDate.setText(calculatedDatesHeaders.get(i - 1)); tvInstDate.setPadding(20, 16, 20, 16); tvInstDate.setTextColor(Color.parseColor("#475569")); tvInstDate.setGravity(Gravity.CENTER); instRow.addView(tvInstDate);
 
-                // Appends side-by-side transaction intersections across each column layout field
                 for (String name : globalMembersList) {
                     LinearLayout cellContainer = new LinearLayout(this);
                     cellContainer.setPadding(12, 8, 12, 8);
@@ -828,7 +821,8 @@ public class MainActivity extends AppCompatActivity {
                 wrap.setLayoutParams(lp);
 
                 TextInputEditText etAmtInput = new TextInputEditText(MainActivity.this);
-                etAmtInput.setInputType(android.text.Typeface.BOLD);
+                // FIX: Restores correct system keyboard configuration parameters
+                etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
                 
                 wrap.addView(etAmtInput);
                 container.addView(wrap);
