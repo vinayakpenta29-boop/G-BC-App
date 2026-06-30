@@ -6,11 +6,35 @@
     android:background="#F8FAFC"
     android:orientation="vertical">
 
-    <!-- FIXED GLOBAL ACTIVE GROUP SELECTOR -->
+    <!-- 1. PREMIUM PILL-SHAPED TAB LAYOUT COMPONENT AT THE VERY TOP -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/premiumTabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/tab_background_pill"
+        app:tabBackground="@android:color/transparent"
+        app:tabIndicator="@drawable/tab_indicator_pill"
+        app:tabIndicatorColor="#0F172A"
+        app:tabIndicatorGravity="stretch"
+        app:tabIndicatorHeight="40dp"
+        app:tabMode="fixed"
+        app:tabGravity="fill"
+        app:tabSelectedTextColor="#FFFFFF"
+        app:tabTextColor="#475569"
+        app:tabTextAppearance="@style/PremiumTabTextStyle"
+        app:tabRippleColor="@android:color/transparent"/>
+
+    <!-- 2. GLOBAL ACTIVE GROUP SELECTOR DIRECTLY BELOW THE TABS -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="12dp"
         app:cardCornerRadius="16dp"
         app:cardElevation="3dp"
         app:strokeWidth="0dp">
@@ -51,28 +75,7 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- PREMIUM PILL-SHAPED TAB LAYOUT COMPONENT -->
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/premiumTabLayout"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/tab_background_pill"
-        app:tabBackground="@android:color/transparent"
-        app:tabIndicator="@drawable/tab_indicator_pill"
-        app:tabIndicatorColor="#0F172A"
-        app:tabIndicatorGravity="stretch"
-        app:tabIndicatorHeight="48dp"
-        app:tabMode="fixed"
-        app:tabGravity="fill"
-        app:tabSelectedTextColor="#FFFFFF"
-        app:tabTextColor="#475569"
-        app:tabTextAppearance="@style/PremiumTabTextStyle"
-        app:tabRippleColor="@android:color/transparent"/>
-
-    <!-- WORKSPACE SWAN CONTAINER SHEETS -->
+    <!-- WORKSPACE SHEET FRAGMENT SHELLS CONTAINER -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -211,7 +214,7 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- TAB 3 CONTENT: Master TRANSACTION HISTORY LEDGER -->
+        <!-- TAB 3 CONTENT: MASTER TRANSACTION HISTORY LEDGER -->
         <ScrollView
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
