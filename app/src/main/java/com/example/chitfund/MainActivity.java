@@ -203,7 +203,8 @@ public class MainActivity extends AppCompatActivity {
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == -1 || installmentOptionsArray == null) return;
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
+        // Pass the explicit rounded theme overlay context reference
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this, R.style.PremiumRoundedAlertDialogTheme);
         builder.setTitle("Select Installments");
         
         builder.setMultiChoiceItems(installmentOptionsArray, checkedInstallments, new DialogInterface.OnMultiChoiceClickListener() {
@@ -236,7 +237,14 @@ public class MainActivity extends AppCompatActivity {
         });
 
         builder.setNegativeButton("Cancel", null);
-        builder.show();
+        
+        // Render and programmatically override the outer layout layer mask background bounds
+        AlertDialog dialog = builder.create();
+        dialog.show();
+        
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
+        }
     }
 
     private void resetInstallmentSelection() {
@@ -411,7 +419,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showNewChitDialog() {
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this, R.style.PremiumRoundedAlertDialogTheme);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_new_chit, null);
 
         final TextInputEditText etChitName = view.findViewById(R.id.etChitName);
@@ -490,7 +498,6 @@ public class MainActivity extends AppCompatActivity {
         final AlertDialog dialog = builder.create();
         dialog.show();
 
-        // FIX: Replaces the window background layout programmatically immediately after attachment
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
         }
