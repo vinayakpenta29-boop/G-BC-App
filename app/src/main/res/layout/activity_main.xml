@@ -12,6 +12,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- 1. ACTIVE GROUP SELECTOR CARD -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -49,11 +50,15 @@
                         android:inputType="none"
                         android:padding="16dp"
                         android:textSize="16sp"
+                        android:fontFamily="monospace"
+                        android:textStyle="bold"
+                        android:textColor="#1A237E"
                         android:popupBackground="@drawable/dropdown_popup_bg" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- 2. INTERACTIVE TRANSACTION INPUT FORM CARD -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/llFormContainer"
             android:layout_width="match_parent"
@@ -135,6 +140,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- 3. LIVE MATRIX METADATA GRID CARD -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -155,6 +161,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textSize="18sp"
+                    android:fontFamily="monospace"
                     android:textStyle="bold"
                     android:textColor="#1A237E"
                     android:layout_marginBottom="16dp" />
@@ -172,6 +179,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- 4. MASTER LEDGER HISTORY CARD -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
