@@ -96,26 +96,28 @@ public class MainActivity extends AppCompatActivity {
         tabContainerCollect = findViewById(R.id.tabContainerCollect);
         tabContainerLedger = findViewById(R.id.tabContainerLedger);
 
+        // UPDATE: Reordered the text tabs setup sequence instantiation
         TabLayout tabLayout = findViewById(R.id.premiumTabLayout);
-        tabLayout.addTab(tabLayout.newTab().setText("Matrix Grid"));
         tabLayout.addTab(tabLayout.newTab().setText("Collect"));
+        tabLayout.addTab(tabLayout.newTab().setText("Matrix Grid"));
         tabLayout.addTab(tabLayout.newTab().setText("Ledger"));
 
+        // UPDATE: Swapped view indexes conditional toggle bounds parameters mapping
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 int position = tab.getPosition();
                 if (position == 0) {
-                    tabContainerMatrix.setVisibility(View.VISIBLE);
-                    tabContainerCollect.setVisibility(View.GONE);
+                    tabContainerCollect.setVisibility(View.VISIBLE);
+                    tabContainerMatrix.setVisibility(View.GONE);
                     tabContainerLedger.setVisibility(View.GONE);
                 } else if (position == 1) {
-                    tabContainerMatrix.setVisibility(View.GONE);
-                    tabContainerCollect.setVisibility(View.VISIBLE);
+                    tabContainerCollect.setVisibility(View.GONE);
+                    tabContainerMatrix.setVisibility(View.VISIBLE);
                     tabContainerLedger.setVisibility(View.GONE);
                 } else {
-                    tabContainerMatrix.setVisibility(View.GONE);
                     tabContainerCollect.setVisibility(View.GONE);
+                    tabContainerMatrix.setVisibility(View.GONE);
                     tabContainerLedger.setVisibility(View.VISIBLE);
                 }
             }
@@ -293,8 +295,8 @@ public class MainActivity extends AppCompatActivity {
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == -1) return;
 
-        String selectedMember = spMembers.getText().toString().trim();
-        if(selectedMember.isEmpty()) {
+        String Hellomember = spMembers.getText().toString().trim();
+        if(Hellomember.isEmpty()) {
             Toast.makeText(this, "Select a valid member first.", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -305,7 +307,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         for (int i = 1; i <= totalInstallmentsCount; i++) {
-            double amt = dbHelper.getMemberInstallmentAmount(chitId, selectedMember, i);
+            double amt = dbHelper.getMemberInstallmentAmount(chitId, Hellomember, i);
             installmentOptionsArray[i - 1] = "Inst. " + i + " - ₹" + amt;
         }
 
@@ -821,7 +823,6 @@ public class MainActivity extends AppCompatActivity {
                 wrap.setLayoutParams(lp);
 
                 TextInputEditText etAmtInput = new TextInputEditText(MainActivity.this);
-                // FIX: Restores correct system keyboard configuration parameters
                 etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
                 
                 wrap.addView(etAmtInput);
