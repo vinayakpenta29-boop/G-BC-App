@@ -196,6 +196,25 @@
                     android:textColor="#0F172A"
                     android:layout_marginBottom="14dp"/>
 
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:hint="Filter Ledger by Group">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/spHistoryFilter"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:padding="16dp"
+                        android:fontFamily="monospace"
+                        android:textStyle="bold"
+                        android:textColor="#0F172A"
+                        android:popupBackground="@drawable/dropdown_popup_bg" />
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <TextView
                     android:id="@+id/tvHistorySummary"
                     android:layout_width="match_parent"
