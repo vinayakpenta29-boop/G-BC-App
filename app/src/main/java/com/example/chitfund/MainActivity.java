@@ -9,8 +9,6 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -138,7 +136,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void populateChitSelector(long targetChitId) {
         globalChitsList = dbHelper.getChitList();
-        // Updated to use the premium list item layout resource
         ArrayAdapter<DatabaseHelper.ChitItem> adapter = new ArrayAdapter<>(this, R.layout.list_item_premium, globalChitsList);
         spChitSelector.setAdapter(adapter);
 
@@ -181,7 +178,6 @@ public class MainActivity extends AppCompatActivity {
             tvFundTitle.setText("Chit Fund Matrix: " + chitName);
 
             globalMembersList = dbHelper.getMembers(chitId);
-            // Updated to use the premium list item layout resource
             ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, R.layout.list_item_premium, globalMembersList);
             spMembers.setAdapter(membersAdapter);
             if(!globalMembersList.isEmpty()) {
@@ -274,7 +270,6 @@ public class MainActivity extends AppCompatActivity {
             calculatedDatesHeaders.add(firstInstallmentDateStr);
         }
 
-        // Apply dark premium header container drawable
         TableRow headerRow = new TableRow(this);
         headerRow.setBackgroundResource(R.drawable.table_header_bg);
         headerRow.setPadding(6, 12, 6, 12);
@@ -303,13 +298,12 @@ public class MainActivity extends AppCompatActivity {
             TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(20, 16, 20, 16); tvName.setTypeface(null, android.graphics.Typeface.BOLD); tvName.setTextColor(Color.parseColor("#263238")); tvName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); memberRow.addView(tvName);
 
             for (int i = 1; i <= totalInstallmentsCount; i++) {
-                // Instantiates structural frame layouts to hold individual badge items securely
                 LinearLayout cellContainer = new LinearLayout(this);
                 cellContainer.setPadding(12, 8, 12, 8);
                 cellContainer.setGravity(Gravity.CENTER);
 
                 TextView tvStatusCell = new TextView(this);
-                tvStatusCell.setTextSize(13sp);
+                tvStatusCell.setTextSize(13); // FIX: Removed invalid 'sp' text token
                 tvStatusCell.setGravity(Gravity.CENTER);
                 tvStatusCell.setPadding(16, 6, 16, 6);
                 tvStatusCell.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -369,17 +363,16 @@ public class MainActivity extends AppCompatActivity {
             tr.setPadding(6, 8, 6, 8);
 
             TextView tvDate = new TextView(this); tvDate.setText(entryDate); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#546E7A")); tvDate.setGravity(Gravity.CENTER); tr.addView(tvDate);
-            TextView tvChit = new TextView(this); tvChit.setText(chitGroupName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTextColor(Color.parseColor("#263238")); tvChit.setGravity(Gravity.CENTER); tr.addView(tvChit);
-            TextView tvMem = new TextView(this); tvMem.setText(memberName); tvMem.setPadding(20, 16, 20, 16); tvMem.setTextColor(Color.parseColor("#263238")); tvMem.setGravity(Gravity.CENTER); tr.addView(tvMem);
+            TextView tvChit = new TextView(this); tvChit.setText(chitGroupName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTextColor(Color.parseColor("#263238")); tvChit.setGravity(Gravity.CENTER_VERTICAL | Gravity.START); tr.addView(tvChit);
+            TextView tvMem = new TextView(this); tvMem.setText(memberName); tvMem.setPadding(20, 16, 20, 16); tvMem.setTextColor(Color.parseColor("#263238")); tvMem.setGravity(Gravity.CENTER_VERTICAL | Gravity.START); tr.addView(tvMem);
             
-            // Format dynamic capsule styling around transaction rows text strings
             LinearLayout badgeWrapper = new LinearLayout(this);
             badgeWrapper.setPadding(10, 6, 10, 6);
             badgeWrapper.setGravity(Gravity.CENTER);
             TextView tvInst = new TextView(this); 
-            tvInst.setText("Instalment " + installmentNum); 
+            tvInst.setText("Installment " + installmentNum); 
             tvInst.setPadding(14, 4, 14, 4); 
-            tvInst.setTextSize(12sp);
+            tvInst.setTextSize(12); // FIX: Removed invalid 'sp' text token
             tvInst.setTextColor(Color.parseColor("#455A64"));
             tvInst.setBackgroundResource(R.drawable.badge_unpaid_bg);
             badgeWrapper.addView(tvInst);
@@ -432,7 +425,6 @@ public class MainActivity extends AppCompatActivity {
         final ArrayList<TextInputEditText> dynamicAmountFields = new ArrayList<>();
         final ArrayList<TextInputEditText> dynamicMemberFields = new ArrayList<>();
 
-        // Formats dialog dropdown structures to target premium layout resources
         spFrequency.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Monthly", "Weekly"}));
         spAmountType.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Fixed Amount", "Random Amount"}));
 
