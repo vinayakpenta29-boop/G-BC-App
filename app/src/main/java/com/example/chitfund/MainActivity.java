@@ -50,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnSelectInstallments;
     private Button btnToggleMatrixOrientation;
     private TableLayout tlFundTable;
+    private TableLayout tlAdvancesTable; // Added view element binding pointer
     private TextView tvFundTitle;
     private View llFormContainer;
     
@@ -59,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private View tabContainerMatrix;
     private View tabContainerCollect;
     private View tabContainerLedger;
+    private View tabContainerAdvances; // Added sheet container tracker flag
     
     private int totalInstallmentsCount;
     private String frequencyType;
@@ -86,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
         btnToggleMatrixOrientation = findViewById(R.id.btnToggleMatrixOrientation);
         Button btnAddInstallment = findViewById(R.id.btnAddInstallment);
         tlFundTable = findViewById(R.id.tlFundTable);
+        tlAdvancesTable = findViewById(R.id.tlAdvancesTable);
         tvFundTitle = findViewById(R.id.tvFundTitle);
         llFormContainer = findViewById(R.id.llFormContainer);
         
@@ -95,14 +98,15 @@ public class MainActivity extends AppCompatActivity {
         tabContainerMatrix = findViewById(R.id.tabContainerMatrix);
         tabContainerCollect = findViewById(R.id.tabContainerCollect);
         tabContainerLedger = findViewById(R.id.tabContainerLedger);
+        tabContainerAdvances = findViewById(R.id.tabContainerAdvances);
 
-        // UPDATE: Reordered the text tabs setup sequence instantiation
+        // UPDATE: Expanded TabLayout structure configurations mapping definitions
         TabLayout tabLayout = findViewById(R.id.premiumTabLayout);
         tabLayout.addTab(tabLayout.newTab().setText("Collect"));
         tabLayout.addTab(tabLayout.newTab().setText("Matrix Grid"));
         tabLayout.addTab(tabLayout.newTab().setText("Ledger"));
+        tabLayout.addTab(tabLayout.newTab().setText("Advances"));
 
-        // UPDATE: Swapped view indexes conditional toggle bounds parameters mapping
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
@@ -111,14 +115,23 @@ public class MainActivity extends AppCompatActivity {
                     tabContainerCollect.setVisibility(View.VISIBLE);
                     tabContainerMatrix.setVisibility(View.GONE);
                     tabContainerLedger.setVisibility(View.GONE);
+                    tabContainerAdvances.setVisibility(View.GONE);
                 } else if (position == 1) {
                     tabContainerCollect.setVisibility(View.GONE);
                     tabContainerMatrix.setVisibility(View.VISIBLE);
                     tabContainerLedger.setVisibility(View.GONE);
-                } else {
+                    tabContainerAdvances.setVisibility(View.GONE);
+                } else if (position == 2) {
                     tabContainerCollect.setVisibility(View.GONE);
                     tabContainerMatrix.setVisibility(View.GONE);
                     tabContainerLedger.setVisibility(View.VISIBLE);
+                    tabContainerAdvances.setVisibility(View.GONE);
+                } else {
+                    tabContainerCollect.setVisibility(View.GONE);
+                    tabContainerMatrix.setVisibility(View.GONE);
+                    tabContainerLedger.setVisibility(View.GONE);
+                    tabContainerAdvances.setVisibility(View.VISIBLE);
+                    refreshAdvancesTable(); // Updates the advances table data automatically when clicked
                 }
             }
             @Override
@@ -503,6 +516,53 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ADDED: RENDERS INTUITIVE MATRIX VIEW SHEET FOR ALL REGISTERED LOAN/ADVANCE MILESTONES
+    private void refreshAdvancesTable() {
+        tlAdvancesTable.removeAllViews();
+        
+        TableRow headRow = new TableRow(this);
+        headRow.setBackgroundResource(R.drawable.table_header_bg);
+        headRow.setPadding(6, 12, 6, 12);
+
+        String[] headers = {"Date Locked", "Chit Group", "Member Name", "Inst. #", "Advance Paid Out", "New Rate"};
+        for (String headerText : headers) {
+            TextView tvHead = new TextView(this);
+            tvHead.setText(headerText);
+            tvHead.setPadding(20, 16, 20, 16);
+            tvHead.setTextSize(14);
+            tvHead.setTypeface(null, Typeface.BOLD);
+            tvHead.setTextColor(Color.WHITE);
+            tvHead.setGravity(Gravity.CENTER);
+            headRow.addView(tvHead);
+        }
+        tlAdvancesTable.addView(headRow);
+
+        Cursor cursor = dbHelper.getAllAdvancesRecordsCursor();
+        while (cursor.moveToNext()) {
+            String logDate = cursor.getString(0);
+            String chitName = cursor.getString(1);
+            String clientName = cursor.getString(2);
+            int instNum = cursor.getInt(3);
+            double advAmt = cursor.getDouble(4);
+            double newRepayRate = cursor.getDouble(5);
+
+            TableRow tr = new TableRow(this);
+            tr.setPadding(6, 8, 6, 8);
+
+            TextView tvDate = new TextView(this); tvDate.setText(logDate); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tvDate.setGravity(Gravity.CENTER); tr.addView(tvDate);
+            
+            TextView tvChit = new TextView(this); tvChit.setText(chitName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tvChit.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); tr.addView(tvChit);
+            TextView tvMem = new TextView(this); tvMem.setText(clientName); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tvMem.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); tr.addView(tvMem);
+            TextView tvInst = new TextView(this); tvInst.setText("Inst. " + instNum); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tvInst.setGravity(Gravity.CENTER); tr.addView(tvInst);
+            
+            TextView tvAdv = new TextView(this); tvAdv.setText("₹" + advAmt); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tvAdv.setGravity(Gravity.CENTER); tr.addView(tvAdv);
+            TextView tvRate = new TextView(this); tvRate.setText("₹" + newRepayRate); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tvRate.setGravity(Gravity.CENTER); tr.addView(tvRate);
+
+            tlAdvancesTable.addView(tr);
+        }
+        cursor.close();
+    }
+
     private void refreshTransactionHistory() {
         tlHistoryTable.removeAllViews();
         
@@ -615,6 +675,7 @@ public class MainActivity extends AppCompatActivity {
 
         final AutoCompleteTextView acMem = view.findViewById(R.id.acMem);
         final TextInputEditText etInst = view.findViewById(R.id.etInstNum);
+        final TextInputEditText etAdvanceAmt = view.findViewById(R.id.etAdvanceAmt); // Linked the new amount field
         final TextInputEditText etAmt = view.findViewById(R.id.etNewAmt);
 
         acMem.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList));
@@ -635,14 +696,16 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 String memName = acMem.getText().toString().trim();
                 String instStr = etInst.getText().toString().trim();
+                String advAmtStr = etAdvanceAmt.getText().toString().trim();
                 String amtStr = etAmt.getText().toString().trim();
 
-                if(memName.isEmpty() || instStr.isEmpty() || amtStr.isEmpty()) {
+                if(memName.isEmpty() || instStr.isEmpty() || advAmtStr.isEmpty() || amtStr.isEmpty()) {
                     Toast.makeText(MainActivity.this, "Please fill out all fields completely.", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
                 int instNum = Integer.parseInt(instStr);
+                double advAmt = Double.parseDouble(advAmtStr);
                 double newAmt = Double.parseDouble(amtStr);
 
                 if(instNum < 1 || instNum > totalInstallmentsCount) {
@@ -650,7 +713,10 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                dbHelper.insertAdvance(chitId, instNum, memName, newAmt);
+                // Captures system time automatically during logs saving operations
+                String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+
+                dbHelper.insertAdvance(chitId, instNum, memName, advAmt, newAmt, currentDate);
                 Toast.makeText(MainActivity.this, "Advance configuration rules saved successfully!", Toast.LENGTH_SHORT).show();
                 
                 dialog.dismiss();
