@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://app.android.com/apk/res-auto"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F8FAFC"
     android:orientation="vertical">
 
-    <!-- 1. PILL TAB NAVIGATION FIXED AT THE ABSOLUTE TOP -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/premiumTabLayout"
         android:layout_width="match_parent"
@@ -28,7 +27,6 @@
         app:tabTextAppearance="@style/PremiumTabTextStyle"
         app:tabRippleColor="@android:color/transparent"/>
 
-    <!-- 2. GLOBAL ACTIVE GROUP SELECTOR CARD DIRECTLY BELOW THE TABS -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -36,14 +34,15 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="12dp"
         app:cardCornerRadius="24dp"
-        app:cardElevation="3dp"
+        app:cardElevation="4dp"
+        app:cardPreventCornerOverlap="true"
         app:strokeWidth="0dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="20dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -58,7 +57,11 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Select Active Chit Group">
+                android:hint="Select Active Chit Group"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp">
 
                 <AutoCompleteTextView
                     android:id="@+id/spChitSelector"
@@ -75,12 +78,10 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- CONTENT DISPLAY VIEWPORT WINDOWS FRAME -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- TAB POSITION 0 CONTENT: FORM TRANSACTION LOG PANEL -->
         <ScrollView
             android:id="@+id/tabContainerCollect"
             android:layout_width="match_parent"
@@ -94,14 +95,15 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
                 app:cardCornerRadius="24dp"
-                app:cardElevation="3dp"
+                app:cardElevation="4dp"
+                app:cardPreventCornerOverlap="true"
                 app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -117,7 +119,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="20dp"
-                        android:hint="Select Member Name">
+                        android:hint="Select Member Name"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusBottomEnd="12dp">
 
                         <AutoCompleteTextView
                             android:id="@+id/spMembers"
@@ -153,7 +159,7 @@
                         android:textAllCaps="false"
                         app:strokeColor="#CBD5E1"
                         app:strokeWidth="1.5dp"
-                        app:cornerRadius="10dp" />
+                        app:cornerRadius="12dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnAddInstallment"
@@ -164,12 +170,11 @@
                         android:textSize="16sp"
                         android:padding="16dp"
                         app:backgroundTint="#0F172A"
-                        app:cornerRadius="10dp" />
+                        app:cornerRadius="12dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- TAB POSITION 1 CONTENT: MATRIX DATA GRID -->
         <ScrollView
             android:id="@+id/tabContainerMatrix"
             android:layout_width="match_parent"
@@ -182,14 +187,15 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
                 app:cardCornerRadius="24dp"
-                app:cardElevation="3dp"
+                app:cardElevation="4dp"
+                app:cardPreventCornerOverlap="true"
                 app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:id="@+id/tvFundTitle"
@@ -230,7 +236,6 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- TAB POSITION 2 CONTENT: MASTER TRANSACTION HISTORY LEDGER -->
         <ScrollView
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
@@ -243,14 +248,15 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
                 app:cardCornerRadius="24dp"
-                app:cardElevation="3dp"
+                app:cardElevation="4dp"
+                app:cardPreventCornerOverlap="true"
                 app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -266,7 +272,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
-                        android:hint="Filter Ledger by Group">
+                        android:hint="Filter Ledger by Group"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusBottomEnd="12dp">
 
                         <AutoCompleteTextView
                             android:id="@+id/spHistoryFilter"
@@ -304,7 +314,6 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- ADDED: TAB POSITION 3 CONTENT SHEET WINDOW - HOUSES ADVANCE HISTORICAL LOG REGISTERS -->
         <ScrollView
             android:id="@+id/tabContainerAdvances"
             android:layout_width="match_parent"
@@ -317,14 +326,15 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
                 app:cardCornerRadius="24dp"
-                app:cardElevation="3dp"
+                app:cardElevation="4dp"
+                app:cardPreventCornerOverlap="true"
                 app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
