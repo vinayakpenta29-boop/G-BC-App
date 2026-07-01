@@ -66,10 +66,59 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
+    // ADDED: Tracks active ValueAnimator loops to safely cancel them and prevent memory leaks
+    private ArrayList<android.animation.ValueAnimator> activeSnakeAnimators = new ArrayList<>();
+
     private ArrayList<Integer> selectedInstallmentsList = new ArrayList<>();
     
     private ArrayList<DatabaseHelper.ChitItem> globalChitsList = new ArrayList<>();
     private ArrayList<String> globalMembersList = new ArrayList<>();
+
+    // ADDED: Programmatic class to draw and shift the path border like a progressive snake bar
+    private static class SnakeBorderDrawable extends android.graphics.drawable.Drawable {
+        private final android.graphics.Paint borderPaint;
+        private final android.graphics.Paint fillPaint;
+        private final android.graphics.RectF rectF;
+        private final float cornerRadius;
+        private float phase = 0f;
+
+        public SnakeBorderDrawable(int strokeColor, int baseBgColor, float cornerRadius) {
+            this.cornerRadius = cornerRadius;
+            this.rectF = new android.graphics.RectF();
+
+            fillPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            fillPaint.setStyle(android.graphics.Paint.Style.FILL);
+            fillPaint.setColor(baseBgColor);
+
+            borderPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            borderPaint.setStyle(android.graphics.Paint.Style.STROKE);
+            borderPaint.setStrokeWidth(5f); // 2.5dp width translation thickness
+            borderPaint.setColor(strokeColor);
+        }
+
+        public void setAnimatePhase(float phase) {
+            this.phase = phase;
+            invalidateSelf();
+        }
+
+        @Override
+        public void draw(android.graphics.Canvas canvas) {
+            rectF.set(getBounds());
+            float inset = borderPaint.getStrokeWidth() / 2f;
+            rectF.inset(inset, inset);
+
+            // Draw clean background first
+            canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, fillPaint);
+
+            // Calculate intervals and update dash offsets dynamically
+            borderPaint.setPathEffect(new android.graphics.DashPathEffect(new float[]{24f, 12f}, phase));
+            canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, borderPaint);
+        }
+
+        @Override public void setAlpha(int alpha) { borderPaint.setAlpha(alpha); fillPaint.setAlpha(alpha); }
+        @Override public void setColorFilter(android.graphics.ColorFilter cf) { borderPaint.setColorFilter(cf); }
+        @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
+    }
 
     @Override
     protected void onCreate(Bundle Bundle) {
@@ -378,6 +427,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshFundMatrixTable() {
+        // Clear any old active animators to prevent memory leaks or flickering
+        for (android.animation.ValueAnimator animator : activeSnakeAnimators) {
+            animator.cancel();
+        }
+        activeSnakeAnimators.clear();
+
         tlFundTable.removeAllViews();
         if (chitId == -1) return;
 
@@ -422,7 +477,6 @@ public class MainActivity extends AppCompatActivity {
             TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(20, 16, 20, 16); hNo.setTextSize(14); hNo.setTypeface(null, android.graphics.Typeface.BOLD); hNo.setTextColor(Color.WHITE); hNo.setGravity(Gravity.CENTER); headerRow.addView(hNo);
             TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextSize(14); hName.setTypeface(null, android.graphics.Typeface.BOLD); hName.setTextColor(Color.WHITE); hName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); headerRow.addView(hName);
 
-            // UPDATE: Removed month header stroke outline to isolate strictly on paid text columns
             for (String dateStr : calculatedDatesHeaders) {
                 TextView hDate = new TextView(this);
                 hDate.setText(dateStr);
@@ -455,18 +509,14 @@ public class MainActivity extends AppCompatActivity {
                     cellContainer.setPadding(12, 8, 12, 8);
                     cellContainer.setGravity(Gravity.CENTER);
 
-                    // Highlights ONLY the text cell column status block container
-                    if ((i - 1) == currentActiveIndexId) {
-                        cellContainer.setBackgroundResource(R.drawable.current_month_marker_bg);
-                    }
-
                     TextView tvStatusCell = new TextView(this);
                     tvStatusCell.setTextSize(13);
                     tvStatusCell.setGravity(Gravity.CENTER);
                     tvStatusCell.setPadding(16, 6, 16, 6);
                     tvStatusCell.setTypeface(null, android.graphics.Typeface.BOLD);
                     
-                    if (dbHelper.isPaymentMade(chitId, name, i)) {
+                    boolean isPaid = dbHelper.isPaymentMade(chitId, name, i);
+                    if (isPaid) {
                         tvStatusCell.setText(" Paid ✅ ");
                         tvStatusCell.setTextColor(Color.parseColor("#047857")); 
                         tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
@@ -474,6 +524,30 @@ public class MainActivity extends AppCompatActivity {
                         tvStatusCell.setText(" Pending ");
                         tvStatusCell.setTextColor(Color.parseColor("#475569")); 
                         tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
+                    }
+
+                    // FIX: Applies the animated snake stroke strictly around this column status cell background layer
+                    if ((i - 1) == currentActiveIndexId) {
+                        int strokeColor = Color.parseColor("#10B981"); // Premium Emerald 
+                        int baseBgTint = isPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9");
+                        
+                        final SnakeBorderDrawable snakeDrawable = new SnakeBorderDrawable(strokeColor, baseBgTint, 30f);
+                        cellContainer.setBackground(snakeDrawable);
+
+                        // Starts continuous linear loop value animator instance thread
+                        android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofFloat(0f, 36f); // Total dash cycle width distance metrics
+                        anim.setDuration(1000);
+                        anim.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+                        anim.setInterpolator(new android.view.animation.LinearInterpolator());
+                        anim.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
+                            @Override
+                            public void onAnimationUpdate(android.animation.ValueAnimator animation) {
+                                float value = (float) animation.getAnimatedValue();
+                                snakeDrawable.setAnimatePhase(value);
+                            }
+                        });
+                        anim.start();
+                        activeSnakeAnimators.add(anim);
                     }
                     
                     cellContainer.addView(tvStatusCell);
@@ -506,7 +580,6 @@ public class MainActivity extends AppCompatActivity {
                 TableRow instRow = new TableRow(this);
                 instRow.setPadding(6, 8, 6, 8);
 
-                // UPDATE: Removed row-level stroke highlight block here
                 TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTextColor(Color.parseColor("#64748B")); tvInstNum.setTypeface(null, Typeface.BOLD); tvInstNum.setGravity(Gravity.CENTER); instRow.addView(tvInstNum);
                 TextView tvInstDate = new TextView(this); tvInstDate.setText(calculatedDatesHeaders.get(i - 1)); tvInstDate.setPadding(20, 16, 20, 16); tvInstDate.setTextColor(Color.parseColor("#475569")); tvInstDate.setGravity(Gravity.CENTER); instRow.addView(tvInstDate);
 
@@ -515,18 +588,14 @@ public class MainActivity extends AppCompatActivity {
                     cellContainer.setPadding(12, 8, 12, 8);
                     cellContainer.setGravity(Gravity.CENTER);
 
-                    // UPDATE: Forces snake stroke highlight strictly on current month text cells in vertical tracking mode
-                    if ((i - 1) == currentActiveIndexId) {
-                        cellContainer.setBackgroundResource(R.drawable.current_month_marker_bg);
-                    }
-
                     TextView tvStatusCell = new TextView(this);
                     tvStatusCell.setTextSize(13);
                     tvStatusCell.setGravity(Gravity.CENTER);
                     tvStatusCell.setPadding(16, 6, 16, 6);
                     tvStatusCell.setTypeface(null, android.graphics.Typeface.BOLD);
                     
-                    if (dbHelper.isPaymentMade(chitId, name, i)) {
+                    boolean isPaid = dbHelper.isPaymentMade(chitId, name, i);
+                    if (isPaid) {
                         tvStatusCell.setText(" Paid ✅ ");
                         tvStatusCell.setTextColor(Color.parseColor("#047857")); 
                         tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
@@ -534,6 +603,29 @@ public class MainActivity extends AppCompatActivity {
                         tvStatusCell.setText(" Pending ");
                         tvStatusCell.setTextColor(Color.parseColor("#475569")); 
                         tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
+                    }
+
+                    // FIX: Applies the animated snake stroke strictly around this column status cell background layer (Vertical Mode)
+                    if ((i - 1) == currentActiveIndexId) {
+                        int strokeColor = Color.parseColor("#10B981");
+                        int baseBgTint = isPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9");
+                        
+                        final SnakeBorderDrawable snakeDrawable = new SnakeBorderDrawable(strokeColor, baseBgTint, 30f);
+                        cellContainer.setBackground(snakeDrawable);
+
+                        android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofFloat(0f, 36f);
+                        anim.setDuration(1000);
+                        anim.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+                        anim.setInterpolator(new android.view.animation.LinearInterpolator());
+                        anim.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
+                            @Override
+                            public void onAnimationUpdate(android.animation.ValueAnimator animation) {
+                                float value = (float) animation.getAnimatedValue();
+                                snakeDrawable.setAnimatePhase(value);
+                            }
+                        });
+                        anim.start();
+                        activeSnakeAnimators.add(anim);
                     }
                     
                     cellContainer.addView(tvStatusCell);
@@ -576,14 +668,14 @@ public class MainActivity extends AppCompatActivity {
             TableRow tr = new TableRow(this);
             tr.setPadding(6, 8, 6, 8);
 
-            TextView tvDate = new TextView(this); tvDate.setText(logDate); tvDate.setPadding(20, 16, 20, 16); tr.addView(tvDate);
+            TextView tvDate = new TextView(this); tvDate.setText(logDate); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tvDate.setGravity(Gravity.CENTER); tr.addView(tvDate);
             
             TextView tvChit = new TextView(this); tvChit.setText(chitName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
             TextView tvMem = new TextView(this); tvMem.setText(clientName); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvMem);
-            TextView tvInst = new TextView(this); tvInst.setText("Inst. " + instNum); tvInst.setPadding(20, 16, 20, 16); tr.addView(tvInst);
+            TextView tvInst = new TextView(this); tvInst.setText("Inst. " + instNum); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tvInst.setGravity(Gravity.CENTER); tr.addView(tvInst);
             
-            TextView tvAdv = new TextView(this); tvAdv.setText("₹" + advAmt); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tr.addView(tvAdv);
-            TextView tvRate = new TextView(this); tvRate.setText("₹" + newRepayRate); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tr.addView(tvRate);
+            TextView tvAdv = new TextView(this); tvAdv.setText("₹" + advAmt); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tvAdv.setGravity(Gravity.CENTER); tr.addView(tvAdv);
+            TextView tvRate = new TextView(this); tvRate.setText("₹" + newRepayRate); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tvRate.setGravity(Gravity.CENTER); tr.addView(tvRate);
 
             tlAdvancesTable.addView(tr);
         }
@@ -900,6 +992,16 @@ public class MainActivity extends AppCompatActivity {
                 refreshTransactionHistory();
             }
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        // Clean up animators when the activity finishes
+        for (android.animation.ValueAnimator animator : activeSnakeAnimators) {
+            animator.cancel();
+        }
+        activeSnakeAnimators.clear();
+        super.onDestroy();
     }
 
     private void triggerDynamicAmountFields(String countStr, LinearLayout container, ArrayList<TextInputEditText> fieldTrackerList) {
