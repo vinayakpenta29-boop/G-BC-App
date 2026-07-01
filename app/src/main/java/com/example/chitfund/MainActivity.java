@@ -385,7 +385,6 @@ public class MainActivity extends AppCompatActivity {
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         SimpleDateFormat sdfOutput = new SimpleDateFormat("d - MMM", Locale.getDefault());
 
-        // UPDATE: Core Time-Engine calculations added to detect real-world current active indexes
         int currentActiveIndexId = -1;
         Calendar todayCal = Calendar.getInstance();
 
@@ -415,6 +414,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (!isMatrixVertical) {
+            // MODE A: HORIZONTAL GRID
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
@@ -422,25 +422,16 @@ public class MainActivity extends AppCompatActivity {
             TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(20, 16, 20, 16); hNo.setTextSize(14); hNo.setTypeface(null, android.graphics.Typeface.BOLD); hNo.setTextColor(Color.WHITE); hNo.setGravity(Gravity.CENTER); headerRow.addView(hNo);
             TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextSize(14); hName.setTypeface(null, android.graphics.Typeface.BOLD); hName.setTextColor(Color.WHITE); hName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); headerRow.addView(hName);
 
-            // UPDATE: Injects the progressive play store tracking stroke layout around the active columns header
-            int loopHeaderIdx = 0;
+            // UPDATE: Removed month header stroke outline to isolate strictly on paid text columns
             for (String dateStr : calculatedDatesHeaders) {
                 TextView hDate = new TextView(this);
                 hDate.setText(dateStr);
                 hDate.setPadding(24, 16, 24, 16);
                 hDate.setTextSize(14);
                 hDate.setTypeface(null, android.graphics.Typeface.BOLD);
-                
-                if (loopHeaderIdx == currentActiveIndexId) {
-                    hDate.setBackgroundResource(R.drawable.current_month_marker_bg);
-                    hDate.setTextColor(Color.parseColor("#047857")); // Distinct emerald text
-                } else {
-                    hDate.setTextColor(Color.WHITE);
-                }
-                
+                hDate.setTextColor(Color.WHITE);
                 hDate.setGravity(Gravity.CENTER);
                 headerRow.addView(hDate);
-                loopHeaderIdx++;
             }
             tlFundTable.addView(headerRow);
 
@@ -464,7 +455,7 @@ public class MainActivity extends AppCompatActivity {
                     cellContainer.setPadding(12, 8, 12, 8);
                     cellContainer.setGravity(Gravity.CENTER);
 
-                    // UPDATE: Highlights cell column container background frame if matched to active time metrics index
+                    // Highlights ONLY the text cell column status block container
                     if ((i - 1) == currentActiveIndexId) {
                         cellContainer.setBackgroundResource(R.drawable.current_month_marker_bg);
                     }
@@ -491,7 +482,7 @@ public class MainActivity extends AppCompatActivity {
                 tlFundTable.addView(memberRow);
             }
         } else {
-            // MODE B: VERTICAL ROTATED MODE (Rows = Installments, Columns = Members)
+            // MODE B: VERTICAL TRANSPOSITION GRID
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
@@ -515,11 +506,7 @@ public class MainActivity extends AppCompatActivity {
                 TableRow instRow = new TableRow(this);
                 instRow.setPadding(6, 8, 6, 8);
 
-                // UPDATE: Highlights the entire row capsule if matched in vertical mode
-                if ((i - 1) == currentActiveIndexId) {
-                    instRow.setBackgroundResource(R.drawable.current_month_marker_bg);
-                }
-
+                // UPDATE: Removed row-level stroke highlight block here
                 TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTextColor(Color.parseColor("#64748B")); tvInstNum.setTypeface(null, Typeface.BOLD); tvInstNum.setGravity(Gravity.CENTER); instRow.addView(tvInstNum);
                 TextView tvInstDate = new TextView(this); tvInstDate.setText(calculatedDatesHeaders.get(i - 1)); tvInstDate.setPadding(20, 16, 20, 16); tvInstDate.setTextColor(Color.parseColor("#475569")); tvInstDate.setGravity(Gravity.CENTER); instRow.addView(tvInstDate);
 
@@ -527,6 +514,11 @@ public class MainActivity extends AppCompatActivity {
                     LinearLayout cellContainer = new LinearLayout(this);
                     cellContainer.setPadding(12, 8, 12, 8);
                     cellContainer.setGravity(Gravity.CENTER);
+
+                    // UPDATE: Forces snake stroke highlight strictly on current month text cells in vertical tracking mode
+                    if ((i - 1) == currentActiveIndexId) {
+                        cellContainer.setBackgroundResource(R.drawable.current_month_marker_bg);
+                    }
 
                     TextView tvStatusCell = new TextView(this);
                     tvStatusCell.setTextSize(13);
@@ -584,14 +576,14 @@ public class MainActivity extends AppCompatActivity {
             TableRow tr = new TableRow(this);
             tr.setPadding(6, 8, 6, 8);
 
-            TextView tvDate = new TextView(this); tvDate.setText(logDate); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tvDate.setGravity(Gravity.CENTER); tr.addView(tvDate);
+            TextView tvDate = new TextView(this); tvDate.setText(logDate); tvDate.setPadding(20, 16, 20, 16); tr.addView(tvDate);
             
-            TextView tvChit = new TextView(this); tvChit.setText(chitName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tvChit.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); tr.addView(tvChit);
-            TextView tvMem = new TextView(this); tvMem.setText(clientName); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tvMem.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); tr.addView(tvMem);
-            TextView tvInst = new TextView(this); tvInst.setText("Inst. " + instNum); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tvInst.setGravity(Gravity.CENTER); tr.addView(tvInst);
+            TextView tvChit = new TextView(this); tvChit.setText(chitName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
+            TextView tvMem = new TextView(this); tvMem.setText(clientName); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvMem);
+            TextView tvInst = new TextView(this); tvInst.setText("Inst. " + instNum); tvInst.setPadding(20, 16, 20, 16); tr.addView(tvInst);
             
-            TextView tvAdv = new TextView(this); tvAdv.setText("₹" + advAmt); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tvAdv.setGravity(Gravity.CENTER); tr.addView(tvAdv);
-            TextView tvRate = new TextView(this); tvRate.setText("₹" + newRepayRate); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tvRate.setGravity(Gravity.CENTER); tr.addView(tvRate);
+            TextView tvAdv = new TextView(this); tvAdv.setText("₹" + advAmt); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tr.addView(tvAdv);
+            TextView tvRate = new TextView(this); tvRate.setText("₹" + newRepayRate); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tr.addView(tvRate);
 
             tlAdvancesTable.addView(tr);
         }
