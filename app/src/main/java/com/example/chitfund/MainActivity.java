@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<DatabaseHelper.ChitItem> globalChitsList = new ArrayList<>();
     private ArrayList<String> globalMembersList = new ArrayList<>();
 
-    // UPDATE: Redesigned Vector Engine to perfectly mirror the Play Store installation path chase behavior
+    // UPDATE: Implemented dynamic snake-morphing mechanics to replicate Play Store progress loops
     private static class SnakeBorderDrawable extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint borderPaint;
         private final android.graphics.Paint fillPaint;
@@ -90,9 +90,9 @@ public class MainActivity extends AppCompatActivity {
 
             borderPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
             borderPaint.setStyle(android.graphics.Paint.Style.STROKE);
-            borderPaint.setStrokeWidth(6f); // Crisp high-definition outline width
+            borderPaint.setStrokeWidth(6f); 
             borderPaint.setColor(strokeColor);
-            borderPaint.setStrokeCap(android.graphics.Paint.Cap.ROUND); // Forces smooth, rounded organic ends on the snake body
+            borderPaint.setStrokeCap(android.graphics.Paint.Cap.ROUND); // Smooth rounded caps for organic slithering
         }
 
         public void setAnimationProgress(float progress) {
@@ -108,22 +108,20 @@ public class MainActivity extends AppCompatActivity {
             android.graphics.RectF rectF = new android.graphics.RectF(bounds);
             rectF.inset(inset, inset);
             
-            // Render card background canvas color fills safely
             canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, fillPaint);
 
-            // Construct exact rounded box layout vectors paths profile geometry
             borderPath.reset();
             borderPath.addRoundRect(rectF, cornerRadius, cornerRadius, android.graphics.Path.Direction.CW);
 
-            // Measure precise shape path circumference dynamically
             android.graphics.PathMeasure pathMeasure = new android.graphics.PathMeasure(borderPath, false);
             float totalPerimeterLength = pathMeasure.getLength();
 
-            // Structure a singular crawling segment (25% of complete border bounds space width)
-            float visibleSnakeBodySize = totalPerimeterLength * 0.25f;
+            // UPDATE: Sine-wave generator fluctuates the snake size from 5% to 25% of the total perimeter length
+            float sinePulseFactor = (float) Math.sin(animationProgress * Math.PI * 2.0); 
+            float visibleSnakeBodySize = totalPerimeterLength * (0.15f + (0.10f * sinePulseFactor));
             float infiniteGapRemainder = totalPerimeterLength - visibleSnakeBodySize;
 
-            // Apply singular sliding window vector offset phase transformations logic engine calculations 
+            // Shifting dash arrays dynamically simulates realistic cursive crawling movements
             borderPaint.setPathEffect(new android.graphics.DashPathEffect(
                 new float[]{visibleSnakeBodySize, infiniteGapRemainder}, 
                 animationProgress * totalPerimeterLength
@@ -444,7 +442,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshFundMatrixTable() {
-        // Clear old loops state mappings cleanly to prevent leak overheads
         for (android.animation.ValueAnimator existingAnim : activeSnakeAnimators) {
             existingAnim.cancel();
         }
@@ -542,7 +539,6 @@ public class MainActivity extends AppCompatActivity {
                         tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
                     }
 
-                    // UPDATE: Launches the active single tracking snake progress engine inside matching cell matrix spaces
                     if ((i - 1) == currentActiveIndexId) {
                         int snakeStrokeColor = Color.parseColor("#10B981"); 
                         int innerFillColor = isPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9");
@@ -551,14 +547,14 @@ public class MainActivity extends AppCompatActivity {
                         cellContainer.setBackground(snakeDrawable);
 
                         android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofFloat(0f, 1f); 
-                        anim.setDuration(1400); // Premium rotation loop duration
+                        anim.setDuration(1600); // 1.6s duration provides the ultimate smooth, non-jerky slither velocity
                         anim.setRepeatCount(android.animation.ValueAnimator.INFINITE);
                         anim.setInterpolator(new android.view.animation.LinearInterpolator());
                         anim.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
                             @Override
                             public void onAnimationUpdate(android.animation.ValueAnimator animation) {
                                 float progressValue = (float) animation.getAnimatedValue();
-                                snakeDrawable.setAnimationProgress(-progressValue); // Negative progress drives clock rotation forwards
+                                snakeDrawable.setAnimationProgress(-progressValue); 
                             }
                         });
                         anim.start();
@@ -571,7 +567,6 @@ public class MainActivity extends AppCompatActivity {
                 tlFundTable.addView(memberRow);
             }
         } else {
-            // MODE B: VERTICAL ROTATED MODE
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
@@ -620,7 +615,6 @@ public class MainActivity extends AppCompatActivity {
                         tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
                     }
 
-                    // UPDATE: Attaches trailing snake path engine onto current month block elements (Vertical orientation view mapping)
                     if ((i - 1) == currentActiveIndexId) {
                         int snakeStrokeColor = Color.parseColor("#10B981");
                         int innerFillColor = isPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9");
@@ -629,7 +623,7 @@ public class MainActivity extends AppCompatActivity {
                         cellContainer.setBackground(snakeDrawable);
 
                         android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofFloat(0f, 1f);
-                        anim.setDuration(1400);
+                        anim.setDuration(1600);
                         anim.setRepeatCount(android.animation.ValueAnimator.INFINITE);
                         anim.setInterpolator(new android.view.animation.LinearInterpolator());
                         anim.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
