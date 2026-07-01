@@ -66,7 +66,6 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // Kept for tracking active selection loops globally
     private ArrayList<Integer> selectedInstallmentsList = new ArrayList<>();
     
     private ArrayList<DatabaseHelper.ChitItem> globalChitsList = new ArrayList<>();
@@ -117,6 +116,7 @@ public class MainActivity extends AppCompatActivity {
                     tabContainerMatrix.setVisibility(View.VISIBLE);
                     tabContainerLedger.setVisibility(View.GONE);
                     tabContainerAdvances.setVisibility(View.GONE);
+                    refreshFundMatrixTable();
                 } else if (position == 2) {
                     tabContainerCollect.setVisibility(View.GONE);
                     tabContainerMatrix.setVisibility(View.GONE);
@@ -301,7 +301,6 @@ public class MainActivity extends AppCompatActivity {
         c.close();
     }
 
-    // UPDATE: Rewritten to dynamically filter out paid installments
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == -1) return;
 
@@ -311,7 +310,6 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Dynamically track indexes of pending installments
         final ArrayList<Integer> openInstallmentNumbers = new ArrayList<>();
         ArrayList<String> filteredOptionsList = new ArrayList<>();
 
@@ -323,7 +321,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // Return early if no installments are pending
         if (openInstallmentNumbers.isEmpty()) {
             Toast.makeText(this, "All installments are already paid for this member!", Toast.LENGTH_SHORT).show();
             return;
@@ -388,6 +385,10 @@ public class MainActivity extends AppCompatActivity {
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         SimpleDateFormat sdfOutput = new SimpleDateFormat("d - MMM", Locale.getDefault());
 
+        // UPDATE: Core Time-Engine calculations added to detect real-world current active indexes
+        int currentActiveIndexId = -1;
+        Calendar todayCal = Calendar.getInstance();
+
         try {
             Date startDate = sdfInput.parse(firstInstallmentDateStr);
             Calendar cal = Calendar.getInstance();
@@ -396,8 +397,16 @@ public class MainActivity extends AppCompatActivity {
                 cal.setTime(startDate);
                 if (frequencyType.equals("Monthly")) {
                     cal.add(Calendar.MONTH, i);
+                    if (cal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) && 
+                        cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) {
+                        currentActiveIndexId = i;
+                    }
                 } else {
                     cal.add(Calendar.DATE, i * 7);
+                    if (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && 
+                        cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) {
+                        currentActiveIndexId = i;
+                    }
                 }
                 calculatedDatesHeaders.add(sdfOutput.format(cal.getTime()));
             }
@@ -413,15 +422,25 @@ public class MainActivity extends AppCompatActivity {
             TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(20, 16, 20, 16); hNo.setTextSize(14); hNo.setTypeface(null, android.graphics.Typeface.BOLD); hNo.setTextColor(Color.WHITE); hNo.setGravity(Gravity.CENTER); headerRow.addView(hNo);
             TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextSize(14); hName.setTypeface(null, android.graphics.Typeface.BOLD); hName.setTextColor(Color.WHITE); hName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); headerRow.addView(hName);
 
+            // UPDATE: Injects the progressive play store tracking stroke layout around the active columns header
+            int loopHeaderIdx = 0;
             for (String dateStr : calculatedDatesHeaders) {
                 TextView hDate = new TextView(this);
                 hDate.setText(dateStr);
-                hDate.setPadding(20, 16, 20, 16);
+                hDate.setPadding(24, 16, 24, 16);
                 hDate.setTextSize(14);
                 hDate.setTypeface(null, android.graphics.Typeface.BOLD);
-                hDate.setTextColor(Color.WHITE);
+                
+                if (loopHeaderIdx == currentActiveIndexId) {
+                    hDate.setBackgroundResource(R.drawable.current_month_marker_bg);
+                    hDate.setTextColor(Color.parseColor("#047857")); // Distinct emerald text
+                } else {
+                    hDate.setTextColor(Color.WHITE);
+                }
+                
                 hDate.setGravity(Gravity.CENTER);
                 headerRow.addView(hDate);
+                loopHeaderIdx++;
             }
             tlFundTable.addView(headerRow);
 
@@ -445,6 +464,11 @@ public class MainActivity extends AppCompatActivity {
                     cellContainer.setPadding(12, 8, 12, 8);
                     cellContainer.setGravity(Gravity.CENTER);
 
+                    // UPDATE: Highlights cell column container background frame if matched to active time metrics index
+                    if ((i - 1) == currentActiveIndexId) {
+                        cellContainer.setBackgroundResource(R.drawable.current_month_marker_bg);
+                    }
+
                     TextView tvStatusCell = new TextView(this);
                     tvStatusCell.setTextSize(13);
                     tvStatusCell.setGravity(Gravity.CENTER);
@@ -467,6 +491,7 @@ public class MainActivity extends AppCompatActivity {
                 tlFundTable.addView(memberRow);
             }
         } else {
+            // MODE B: VERTICAL ROTATED MODE (Rows = Installments, Columns = Members)
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
@@ -489,6 +514,11 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 1; i <= totalInstallmentsCount; i++) {
                 TableRow instRow = new TableRow(this);
                 instRow.setPadding(6, 8, 6, 8);
+
+                // UPDATE: Highlights the entire row capsule if matched in vertical mode
+                if ((i - 1) == currentActiveIndexId) {
+                    instRow.setBackgroundResource(R.drawable.current_month_marker_bg);
+                }
 
                 TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTextColor(Color.parseColor("#64748B")); tvInstNum.setTypeface(null, Typeface.BOLD); tvInstNum.setGravity(Gravity.CENTER); instRow.addView(tvInstNum);
                 TextView tvInstDate = new TextView(this); tvInstDate.setText(calculatedDatesHeaders.get(i - 1)); tvInstDate.setPadding(20, 16, 20, 16); tvInstDate.setTextColor(Color.parseColor("#475569")); tvInstDate.setGravity(Gravity.CENTER); instRow.addView(tvInstDate);
