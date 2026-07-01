@@ -17,9 +17,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -50,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnSelectInstallments;
     private Button btnToggleMatrixOrientation;
     private TableLayout tlFundTable;
-    private TableLayout tlAdvancesTable; // Added view element binding pointer
+    private TableLayout tlAdvancesTable;
     private TextView tvFundTitle;
     private View llFormContainer;
     
@@ -60,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private View tabContainerMatrix;
     private View tabContainerCollect;
     private View tabContainerLedger;
-    private View tabContainerAdvances; // Added sheet container tracker flag
+    private View tabContainerAdvances;
     
     private int totalInstallmentsCount;
     private String frequencyType;
@@ -68,8 +66,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    private String[] installmentOptionsArray;
-    private boolean[] checkedInstallments;
+    // Kept for tracking active selection loops globally
     private ArrayList<Integer> selectedInstallmentsList = new ArrayList<>();
     
     private ArrayList<DatabaseHelper.ChitItem> globalChitsList = new ArrayList<>();
@@ -100,7 +97,6 @@ public class MainActivity extends AppCompatActivity {
         tabContainerLedger = findViewById(R.id.tabContainerLedger);
         tabContainerAdvances = findViewById(R.id.tabContainerAdvances);
 
-        // UPDATE: Expanded TabLayout structure configurations mapping definitions
         TabLayout tabLayout = findViewById(R.id.premiumTabLayout);
         tabLayout.addTab(tabLayout.newTab().setText("Collect"));
         tabLayout.addTab(tabLayout.newTab().setText("Matrix Grid"));
@@ -131,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
                     tabContainerMatrix.setVisibility(View.GONE);
                     tabContainerLedger.setVisibility(View.GONE);
                     tabContainerAdvances.setVisibility(View.VISIBLE);
-                    refreshAdvancesTable(); // Updates the advances table data automatically when clicked
+                    refreshAdvancesTable();
                 }
             }
             @Override
@@ -305,32 +301,44 @@ public class MainActivity extends AppCompatActivity {
         c.close();
     }
 
+    // UPDATE: Rewritten to dynamically filter out paid installments
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == -1) return;
 
-        String Hellomember = spMembers.getText().toString().trim();
+        final String Hellomember = spMembers.getText().toString().trim();
         if(Hellomember.isEmpty()) {
             Toast.makeText(this, "Select a valid member first.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        installmentOptionsArray = new String[totalInstallmentsCount];
-        if (checkedInstallments == null || checkedInstallments.length != totalInstallmentsCount) {
-            checkedInstallments = new boolean[totalInstallmentsCount];
-        }
+        // Dynamically track indexes of pending installments
+        final ArrayList<Integer> openInstallmentNumbers = new ArrayList<>();
+        ArrayList<String> filteredOptionsList = new ArrayList<>();
 
         for (int i = 1; i <= totalInstallmentsCount; i++) {
-            double amt = dbHelper.getMemberInstallmentAmount(chitId, Hellomember, i);
-            installmentOptionsArray[i - 1] = "Inst. " + i + " - ₹" + amt;
+            if (!dbHelper.isPaymentMade(chitId, Hellomember, i)) {
+                double amt = dbHelper.getMemberInstallmentAmount(chitId, Hellomember, i);
+                openInstallmentNumbers.add(i);
+                filteredOptionsList.add("Inst. " + i + " - ₹" + amt);
+            }
         }
 
+        // Return early if no installments are pending
+        if (openInstallmentNumbers.isEmpty()) {
+            Toast.makeText(this, "All installments are already paid for this member!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final String[] optionsArray = filteredOptionsList.toArray(new String[0]);
+        final boolean[] localCheckedTracker = new boolean[optionsArray.length];
+
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
-        builder.setTitle("Select Installments");
+        builder.setTitle("Select Pending Installments");
         
-        builder.setMultiChoiceItems(installmentOptionsArray, checkedInstallments, new DialogInterface.OnMultiChoiceClickListener() {
+        builder.setMultiChoiceItems(optionsArray, localCheckedTracker, new DialogInterface.OnMultiChoiceClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which, boolean isChecked) {
-                checkedInstallments[which] = isChecked;
+                localCheckedTracker[which] = isChecked;
             }
         });
 
@@ -340,18 +348,19 @@ public class MainActivity extends AppCompatActivity {
                 selectedInstallmentsList.clear();
                 StringBuilder sb = new StringBuilder();
                 
-                for (int i = 0; i < checkedInstallments.length; i++) {
-                    if (checkedInstallments[i]) {
-                        selectedInstallmentsList.add(i + 1);
+                for (int i = 0; i < localCheckedTracker.length; i++) {
+                    if (localCheckedTracker[i]) {
+                        int realInstallmentNum = openInstallmentNumbers.get(i);
+                        selectedInstallmentsList.add(realInstallmentNum);
                         if (sb.length() > 0) sb.append(", ");
-                        sb.append(i + 1);
+                        sb.append(realInstallmentNum);
                     }
                 }
 
                 if (selectedInstallmentsList.isEmpty()) {
                     btnSelectInstallments.setText("Tap to Select Installments");
                 } else {
-                    btnSelectInstallments.setText("Selected Installments: " + sb.toString());
+                    btnSelectInstallments.setText("Selected Inst: " + sb.toString());
                 }
             }
         });
@@ -367,9 +376,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void resetInstallmentSelection() {
-        if (checkedInstallments != null) {
-            Arrays.fill(checkedInstallments, false);
-        }
         selectedInstallmentsList.clear();
         btnSelectInstallments.setText("Tap to Select Installments");
     }
@@ -516,7 +522,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ADDED: RENDERS INTUITIVE MATRIX VIEW SHEET FOR ALL REGISTERED LOAN/ADVANCE MILESTONES
     private void refreshAdvancesTable() {
         tlAdvancesTable.removeAllViews();
         
@@ -675,7 +680,7 @@ public class MainActivity extends AppCompatActivity {
 
         final AutoCompleteTextView acMem = view.findViewById(R.id.acMem);
         final TextInputEditText etInst = view.findViewById(R.id.etInstNum);
-        final TextInputEditText etAdvanceAmt = view.findViewById(R.id.etAdvanceAmt); // Linked the new amount field
+        final TextInputEditText etAdvanceAmt = view.findViewById(R.id.etAdvanceAmt);
         final TextInputEditText etAmt = view.findViewById(R.id.etNewAmt);
 
         acMem.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList));
@@ -713,7 +718,6 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                // Captures system time automatically during logs saving operations
                 String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
                 dbHelper.insertAdvance(chitId, instNum, memName, advAmt, newAmt, currentDate);
