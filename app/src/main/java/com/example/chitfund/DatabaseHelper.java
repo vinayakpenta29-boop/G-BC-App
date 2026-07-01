@@ -10,7 +10,7 @@ import java.util.ArrayList;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "ChitFundMatrix.db";
-    private static final int DATABASE_VERSION = 2; // Bumped version to register new structures cleanly
+    private static final int DATABASE_VERSION = 3; // Bumped to 3 to introduce full historical tracking columns
 
     public static class ChitItem {
         public long id;
@@ -30,28 +30,40 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE payments (id INTEGER PRIMARY KEY AUTOINCREMENT, chit_id INTEGER, installment_num INTEGER, date TEXT, member_name TEXT, amount REAL)");
         db.execSQL("CREATE TABLE installment_structures (id INTEGER PRIMARY KEY AUTOINCREMENT, chit_id INTEGER, installment_num INTEGER, amount REAL)");
         
-        // NEW ADVANCES LOG TABLE: Tracks specific milestone Pot takeouts per client
-        db.execSQL("CREATE TABLE advances (id INTEGER PRIMARY KEY AUTOINCREMENT, chit_id INTEGER, installment_num INTEGER, member_name TEXT, new_amount REAL)");
+        // UPDATE: Created complete architecture structure schema tracking variables natively
+        db.execSQL("CREATE TABLE advances (id INTEGER PRIMARY KEY AUTOINCREMENT, chit_id INTEGER, installment_num INTEGER, member_name TEXT, advance_amount REAL, new_amount REAL, date TEXT)");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion < 2) {
-            db.execSQL("CREATE TABLE IF NOT EXISTS advances (id INTEGER PRIMARY KEY AUTOINCREMENT, chit_id INTEGER, installment_num INTEGER, member_name TEXT, new_amount REAL)");
+        if (oldVersion < 3) {
+            db.execSQL("DROP TABLE IF EXISTS advances");
+            db.execSQL("CREATE TABLE advances (id INTEGER PRIMARY KEY AUTOINCREMENT, chit_id INTEGER, installment_num INTEGER, member_name TEXT, advance_amount REAL, new_amount REAL, date TEXT)");
         }
     }
 
-    public void insertAdvance(long chitId, int installmentNum, String memberName, double newAmount) {
+    public void insertAdvance(long chitId, int installmentNum, String memberName, double advanceAmount, double newAmount, String date) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("chit_id", chitId);
         v.put("installment_num", installmentNum);
         v.put("member_name", memberName);
+        v.put("advance_amount", advanceAmount);
         v.put("new_amount", newAmount);
+        v.put("date", date);
         db.insert("advances", null, v);
     }
 
-    // DYNAMIC PRICE RULES ENGINE: Returns modified rates if an advance has been registered in past installments
+    // ADDED: Returns full historical advances logs tracking records 
+    public Cursor getAllAdvancesRecordsCursor() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.rawQuery(
+                "SELECT a.date, c.name AS chit_name, a.member_name, a.installment_num, a.advance_amount, a.new_amount " +
+                "FROM advances a " +
+                "JOIN chits c ON a.chit_id = c.id " +
+                "ORDER BY a.id DESC", null);
+    }
+
     public double getMemberInstallmentAmount(long chitId, String memberName, int installmentNum) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor c = db.rawQuery(
@@ -67,7 +79,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         c.close();
         
         if (customizedAmount != -1) return customizedAmount;
-        return getInstallmentAmount(chitId, installmentNum); // Fall back to base chit rule defaults
+        return getInstallmentAmount(chitId, installmentNum);
     }
 
     public Cursor getTransactionHistoryCursor(long filterChitId) {
