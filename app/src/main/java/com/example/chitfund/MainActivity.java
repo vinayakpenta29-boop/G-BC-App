@@ -29,7 +29,7 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.textfield.TextInputEditText;
 
-// FIREBASE FIRESTORE CLOUD REPOSITORIES IMPORTS
+// FIREBASE FIRESTORE REAL-TIME IMPORTS
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -45,7 +45,7 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
-    // Cloud Database Engine Reference Instantiations
+    // Firebase cloud client context reference pointer
     private FirebaseFirestore firestore;
     private String chitId = null; 
     private String historyFilterChitId = "ALL"; 
@@ -74,26 +74,27 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // HIGH-SPEED ASYNCHRONOUS ENGINE MEMORY CACHE LOOKUP MAPS
-    private HashSet<String> cloudPaymentsCache = new HashSet<>(); // Key format: "memberName_installmentNum"
-    private HashMap<String, Integer> cloudAdvanceStartCache = new HashMap<>(); // Key format: memberName -> installmentNum
-    private HashMap<String, Double> cloudAdvanceRateCache = new HashMap<>(); // Key format: memberName -> customRepaymentAmount
+    // HIGH-SPEED MEMORY CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
+    private HashSet<String> cloudPaymentsCache = new HashSet<>(); 
+    private HashMap<String, Integer> cloudAdvanceStartCache = new HashMap<>(); 
+    private HashMap<String, Double> cloudAdvanceRateCache = new HashMap<>(); 
     private ArrayList<Double> baseChitInstallmentAmounts = new ArrayList<>();
 
     private ArrayList<android.animation.ValueAnimator> activeSnakeAnimators = new ArrayList<>();
     private ArrayList<Integer> selectedInstallmentsList = new ArrayList<>();
     
-    // Cloud Item Parser Model Contexts
+    // Cloud parsing item models
     public static class CloudChitItem {
         public String id;
         public String name;
         public CloudChitItem(String id, String name) { this.id = id; this.name = name; }
         @Override public String toString() { return name; }
     }
-
+    
     private ArrayList<CloudChitItem> globalChitsList = new ArrayList<>();
     private ArrayList<String> globalMembersList = new ArrayList<>();
 
+    // Play Store style morphing cursive progress animation snake engine
     private static class SnakeBorderDrawable extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint borderPaint;
         private final android.graphics.Paint fillPaint;
@@ -113,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
             borderPaint.setStyle(android.graphics.Paint.Style.STROKE);
             borderPaint.setStrokeWidth(6f); 
             borderPaint.setColor(strokeColor);
-            borderPaint.setStrokeCap(android.graphics.Paint.Cap.ROUND); 
+            borderPaint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
         }
 
         public void setAnimationProgress(float progress) {
@@ -125,18 +126,15 @@ public class MainActivity extends AppCompatActivity {
         public void draw(android.graphics.Canvas canvas) {
             android.graphics.Rect bounds = getBounds();
             float inset = borderPaint.getStrokeWidth() / 2f;
-            
             android.graphics.RectF rectF = new android.graphics.RectF(bounds);
             rectF.inset(inset, inset);
             
             canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, fillPaint);
-
             borderPath.reset();
             borderPath.addRoundRect(rectF, cornerRadius, cornerRadius, android.graphics.Path.Direction.CW);
 
             android.graphics.PathMeasure pathMeasure = new android.graphics.PathMeasure(borderPath, false);
             float totalPerimeterLength = pathMeasure.getLength();
-
             float sinePulseFactor = (float) Math.sin(animationProgress * Math.PI * 2.0); 
             float visibleSnakeBodySize = totalPerimeterLength * (0.15f + (0.10f * sinePulseFactor));
             float infiniteGapRemainder = totalPerimeterLength - visibleSnakeBodySize;
@@ -145,7 +143,6 @@ public class MainActivity extends AppCompatActivity {
                 new float[]{visibleSnakeBodySize, infiniteGapRemainder}, 
                 animationProgress * totalPerimeterLength
             ));
-
             canvas.drawPath(borderPath, borderPaint);
         }
 
@@ -159,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(Bundle);
         setContentView(R.layout.activity_main);
         
-        // Connect Live Cloud Client Instance Context
+        // Initialize Live Firestore Client reference
         firestore = FirebaseFirestore.getInstance();
 
         spChitSelector = findViewById(R.id.spChitSelector);
@@ -299,19 +296,38 @@ public class MainActivity extends AppCompatActivity {
                         paymentPayload.put("date", currentDate);
                         paymentPayload.put("timestamp", System.currentTimeMillis());
 
-                        // Immediate Async Write Pipe pushing out onto Cloud Firestore instances
                         firestore.collection("payments").add(paymentPayload);
                         cloudPaymentsCache.add(lookupKey);
                     }
                 }
 
                 Toast.makeText(MainActivity.this, "Installments Saved Online!", Toast.LENGTH_SHORT).show();
-                
                 resetInstallmentSelection();
                 refreshFundMatrixTable();
                 refreshTransactionHistory();
             }
         });
+    }
+
+    // RESTORED: Three-Dots Menu inflation lifecycle handler hook method context
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.home_menu, menu);
+        return true;
+    }
+
+    // RESTORED: Captures items selection bounds tracking flags from three-dots layout natively
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.menu_new_chit) {
+            showNewChitDialog();
+            return true;
+        }
+        if (item.getItemId() == R.id.menu_log_advance) {
+            showLogAdvanceDialog();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     private void fetchChitGroupsListFromCloud() {
@@ -917,6 +933,13 @@ public class MainActivity extends AppCompatActivity {
                 syncCurrentChitContextFromCloud();
             });
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        for (android.animation.ValueAnimator animator : activeSnakeAnimators) animator.cancel();
+        activeSnakeAnimators.clear();
+        super.onDestroy();
     }
 
     private void triggerDynamicAmountFields(String countStr, LinearLayout container, ArrayList<TextInputEditText> fieldTrackerList) {
