@@ -1,0 +1,69 @@
+{
+  "project_info": {
+    "project_number": "966935185024",
+    "firebase_url": "https://chit-fund-bc-mamanger-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "chit-fund-bc-mamanger",
+    "storage_bucket": "chit-fund-bc-mamanger.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:966935185024:android:01e11cea7bea8995bd8865",
+        "android_client_info": {
+          "package_name": "com.example.bcapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "966935185024-pmmafsu9immq5ru1kv2gua55o0nhgf2d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRg6kdH0kF4DlG-UdMXnztX0lIQHPw-oU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "966935185024-pmmafsu9immq5ru1kv2gua55o0nhgf2d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:966935185024:android:bb2e1008b67fcbeebd8865",
+        "android_client_info": {
+          "package_name": "com.example.chitfund"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "966935185024-pmmafsu9immq5ru1kv2gua55o0nhgf2d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRg6kdH0kF4DlG-UdMXnztX0lIQHPw-oU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "966935185024-pmmafsu9immq5ru1kv2gua55o0nhgf2d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
