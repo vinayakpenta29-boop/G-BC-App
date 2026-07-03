@@ -73,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
+    // HIGH-SPEED MEMORY CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
     private HashSet<String> cloudPaymentsCache = new HashSet<>(); 
     private HashMap<String, Integer> cloudAdvanceStartCache = new HashMap<>(); 
     private HashMap<String, Double> cloudAdvanceRateCache = new HashMap<>(); 
@@ -91,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<CloudChitItem> globalChitsList = new ArrayList<>();
     private ArrayList<String> globalMembersList = new ArrayList<>();
 
+    // Play Store style morphing cursive progress animation snake engine
     private static class SnakeBorderDrawable extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint borderPaint;
         private final android.graphics.Paint fillPaint;
@@ -110,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
             borderPaint.setStyle(android.graphics.Paint.Style.STROKE);
             borderPaint.setStrokeWidth(6f); 
             borderPaint.setColor(strokeColor);
-            borderPaint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+            borderPaint.setStrokeCap(android.graphics.Paint.Cap.ROUND); 
         }
 
         public void setAnimationProgress(float progress) {
@@ -497,12 +499,12 @@ public class MainActivity extends AppCompatActivity {
         tlFundTable.removeAllViews();
         if (chitId == null) return;
 
-        // CREATE: Universal Light slate grid divider lines configuration asset
+        // Create universal horizontal gray row line parameters
         android.graphics.drawable.GradientDrawable gridLine = new android.graphics.drawable.GradientDrawable();
         gridLine.setColor(Color.parseColor("#CBD5E1")); 
-        gridLine.setSize(2, 2); // 2px line thickness mapping width definition
+        gridLine.setSize(2, 2); 
 
-        // Bind dividers onto the Main table layout container
+        // LOCK ROW DIVIDERS: Set dividers ONLY on the vertical parent TableLayout stack container
         tlFundTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
         tlFundTable.setDividerDrawable(gridLine);
 
@@ -540,8 +542,7 @@ public class MainActivity extends AppCompatActivity {
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
-            headerRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
-            headerRow.setDividerDrawable(gridLine);
+            // REMOVED: Vertical TableRow column divider assignments here
 
             TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(20, 16, 20, 16); hNo.setTextSize(14); hNo.setTypeface(null, android.graphics.Typeface.BOLD); hNo.setTextColor(Color.WHITE); hNo.setGravity(Gravity.CENTER); headerRow.addView(hNo);
             TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextSize(14); hName.setTypeface(null, android.graphics.Typeface.BOLD); hName.setTextColor(Color.WHITE); hName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); headerRow.addView(hName);
@@ -555,8 +556,7 @@ public class MainActivity extends AppCompatActivity {
             for (String name : globalMembersList) {
                 TableRow memberRow = new TableRow(this);
                 memberRow.setPadding(6, 8, 6, 8);
-                memberRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
-                memberRow.setDividerDrawable(gridLine);
+                // REMOVED: Vertical TableRow column divider assignments here
 
                 TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(20, 16, 20, 16); tvSerial.setTextColor(Color.parseColor("#64748B")); tvSerial.setGravity(Gravity.CENTER); memberRow.addView(tvSerial);
                 TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(20, 16, 20, 16); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvName.setTextColor(Color.parseColor("#1E293B")); tvName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); memberRow.addView(tvName);
@@ -602,12 +602,10 @@ public class MainActivity extends AppCompatActivity {
                 tlFundTable.addView(memberRow);
             }
         } else {
-            // UPDATE: VERTICAL MATRIX VIEW - INSURES DIVIDERS SITS BETWEEN EACH INSTALLMENT ROW PERFECTLY
+            // MODE B: VERTICAL ROTATED TABULATION MATRIX - ONLY INTER-INSTALLMENT HORIZONTAL LINES RETAINED
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
-            headerRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
-            headerRow.setDividerDrawable(gridLine);
 
             TextView hInst = new TextView(this); hInst.setText("Inst."); hInst.setPadding(20, 16, 20, 16); hInst.setTextSize(14); hInst.setTypeface(null, Typeface.BOLD); hInst.setTextColor(Color.WHITE); hInst.setGravity(Gravity.CENTER); headerRow.addView(hInst);
             TextView hDate = new TextView(this); hDate.setText("Due Date"); hDate.setPadding(20, 16, 20, 16); hDate.setTextSize(14); hDate.setTypeface(null, Typeface.BOLD); hDate.setTextColor(Color.WHITE); hDate.setGravity(Gravity.CENTER); headerRow.addView(hDate);
@@ -620,8 +618,7 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 1; i <= totalInstallmentsCount; i++) {
                 TableRow instRow = new TableRow(this);
                 instRow.setPadding(6, 8, 6, 8);
-                instRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
-                instRow.setDividerDrawable(gridLine);
+                // REMOVED: Vertical TableRow column divider configuration codes here
 
                 TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTextColor(Color.parseColor("#64748B")); tvInstNum.setTypeface(null, Typeface.BOLD); tvInstNum.setGravity(Gravity.CENTER); instRow.addView(tvInstNum);
                 TextView tvInstDate = new TextView(this); tvInstDate.setText(calculatedDatesHeaders.get(i - 1)); tvInstDate.setPadding(20, 16, 20, 16); tvInstDate.setTextColor(Color.parseColor("#475569")); tvInstDate.setGravity(Gravity.CENTER); instRow.addView(tvInstDate);
@@ -679,11 +676,9 @@ public class MainActivity extends AppCompatActivity {
         advancesDivider.setColor(Color.parseColor("#CBD5E1"));
         advancesDivider.setSize(2, 2);
 
-        // UPDATE: Setup dividers context for Advances table sheets
+        // LOCK ROW DIVIDERS: Apply dividers ONLY to vertical parent TableLayout framework
         tlAdvancesTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
         tlAdvancesTable.setDividerDrawable(advancesDivider);
-        headRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
-        headRow.setDividerDrawable(advancesDivider);
 
         String[] headers = {"Date Locked", "Chit Group", "Member Name", "Inst. #", "Advance Paid Out", "New Rate"};
         for (String headerText : headers) {
@@ -699,8 +694,7 @@ public class MainActivity extends AppCompatActivity {
             for (QueryDocumentSnapshot doc : value) {
                 TableRow tr = new TableRow(this);
                 tr.setPadding(6, 8, 6, 8);
-                tr.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
-                tr.setDividerDrawable(advancesDivider);
+                // REMOVED: Vertical TableRow column divider configuration codes here
 
                 String cId = doc.getString("chitId");
                 String cName = "Unknown Group";
@@ -728,11 +722,9 @@ public class MainActivity extends AppCompatActivity {
         ledgerDivider.setColor(Color.parseColor("#CBD5E1"));
         ledgerDivider.setSize(2, 2);
 
-        // UPDATE: Setup dividers context for Ledger table logs sheets
+        // LOCK ROW DIVIDERS: Apply dividers ONLY to vertical parent TableLayout ledger history structure
         tlHistoryTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
         tlHistoryTable.setDividerDrawable(ledgerDivider);
-        headRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
-        headRow.setDividerDrawable(ledgerDivider);
 
         String[] headers = {"Date", "Chit Group", "Member Name", "Inst.", "Amount Paid"};
         for (String headerText : headers) {
@@ -758,8 +750,7 @@ public class MainActivity extends AppCompatActivity {
 
                 TableRow tr = new TableRow(this);
                 tr.setPadding(6, 8, 6, 8);
-                tr.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
-                tr.setDividerDrawable(ledgerDivider);
+                // REMOVED: Vertical TableRow column divider configuration codes here
 
                 TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tvDate.setGravity(Gravity.CENTER); tr.addView(tvDate);
                 
