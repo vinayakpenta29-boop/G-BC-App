@@ -57,6 +57,10 @@ public class MainActivity extends AppCompatActivity {
     private TableLayout tlFundTable;
     private TableLayout tlAdvancesTable;
     private TextView tvFundTitle;
+    private TextView tvCurrentMonthHeader;
+    private TextView tvCurrentMonthTarget;
+    private TextView tvCurrentMonthPending;
+    
     private View llFormContainer;
     
     private TextView tvHistorySummary;
@@ -163,6 +167,11 @@ public class MainActivity extends AppCompatActivity {
         btnToggleMatrixOrientation = findViewById(R.id.btnToggleMatrixOrientation);
         Button btnAddInstallment = findViewById(R.id.btnAddInstallment);
         tlFundTable = findViewById(R.id.tlFundTable);
+
+        tvCurrentMonthHeader = findViewById(R.id.tvCurrentMonthHeader);
+        tvCurrentMonthTarget = findViewById(R.id.tvCurrentMonthTarget);
+        tvCurrentMonthPending = findViewById(R.id.tvCurrentMonthPending);
+        
         tlAdvancesTable = findViewById(R.id.tlAdvancesTable);
         tvFundTitle = findViewById(R.id.tvFundTitle);
         llFormContainer = findViewById(R.id.llFormContainer);
@@ -540,6 +549,37 @@ public class MainActivity extends AppCompatActivity {
                 }
                 calculatedDatesHeaders.add(sdfOutput.format(cal.getTime()));
             }
+
+            // PASTE THIS CODE DIRECTLY BELOW THE TRY-CATCH BLOCK INSIDE refreshFundMatrixTable()
+            double currentMonthTotalTarget = 0.0;
+            double currentMonthTotalPending = 0.0;
+
+            if (currentActiveIndexId != -1) {
+                int realInstallmentNumber = currentActiveIndexId + 1;
+                String currentMonthName = calculatedDatesHeaders.get(currentActiveIndexId);
+    
+                tvCurrentMonthHeader.setText("Current Month Status (" + currentMonthName + " - Inst. #" + realInstallmentNumber + ")");
+    
+                // Calculate totals across all active group members dynamically
+                for (String name : globalMembersList) {
+                    double memberAmount = getCachedMemberInstallmentAmount(name, realInstallmentNumber);
+                    currentMonthTotalTarget += memberAmount;
+     
+                    // If no payment signature is logged in the local cloud cache, mark it as pending to pay
+                    if (!cloudPaymentsCache.contains(name + "_" + realInstallmentNumber)) {
+                       currentMonthTotalPending += memberAmount;
+                    }
+                }
+    
+                tvCurrentMonthTarget.setText("₹" + String.format(Locale.getDefault(), "%.2f", currentMonthTotalTarget));
+                tvCurrentMonthPending.setText("₹" + String.format(Locale.getDefault(), "%.2f", currentMonthTotalPending));
+            } else {
+                // Fallback display if there is no active installment calendar match this month
+                tvCurrentMonthHeader.setText("No Active Installment Due This Month");
+                tvCurrentMonthTarget.setText("₹0.00");
+                tvCurrentMonthPending.setText("₹0.00");
+            }
+
         } catch (Exception ignored) {}
 
         if (!isMatrixVertical) {
