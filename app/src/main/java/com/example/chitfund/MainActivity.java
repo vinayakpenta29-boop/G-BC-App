@@ -728,7 +728,9 @@ public class MainActivity extends AppCompatActivity {
             headerRow.setPadding(6, 12, 6, 12);
 
             TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(20, 16, 20, 16); hNo.setTextColor(Color.WHITE); hNo.setTypeface(null, Typeface.BOLD); headerRow.addView(hNo);
-            TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextColor(Color.WHITE); hName.setTypeface(null, Typeface.BOLD); headerRow.addView(hName);
+            
+            // FIXED: Changed alignment format configurations to CENTER for Horizontal Header [checks image 1000767856.jpg]
+            TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextColor(Color.WHITE); hName.setTypeface(null, Typeface.BOLD); hName.setGravity(Gravity.CENTER); headerRow.addView(hName);
 
             for (String dateStr : calculatedDatesHeaders) {
                 TextView hDate = new TextView(this); hDate.setText(dateStr); hDate.setPadding(24, 16, 24, 16); hDate.setTextColor(Color.WHITE); hDate.setTypeface(null, Typeface.BOLD); headerRow.addView(hDate);
@@ -742,7 +744,7 @@ public class MainActivity extends AppCompatActivity {
 
                 TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(20, 16, 20, 16); tvSerial.setTextColor(Color.parseColor("#64748B")); memberRow.addView(tvSerial);
                 
-                // UPDATE: Changed member cell allocation layout alignment configurations to CENTER
+                // FIXED: Set Gravity to CENTER for Horizontal view cells item records column [checks image 1000767856.jpg]
                 TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(20, 16, 20, 16); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvName.setTextColor(Color.parseColor("#1E293B")); tvName.setGravity(Gravity.CENTER); memberRow.addView(tvName);
 
                 for (int i = 1; i <= totalInstallmentsCount; i++) {
@@ -768,12 +770,11 @@ public class MainActivity extends AppCompatActivity {
                 tlFundTable.addView(memberRow);
             }
         } else {
-            // MODE B: VERTICAL ROTATED TABULATION MATRIX View
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
 
-            // UPDATE: Restored color, font, size, and layout settings to White for vertical structural headers
+            // FIXED: Repaired text color values to WHITE for Vertical configuration layout titles [checks image 1000767854.jpg]
             TextView hInst = new TextView(this); hInst.setText("Inst."); hInst.setPadding(20, 16, 20, 16); hInst.setTextSize(14); hInst.setTypeface(null, Typeface.BOLD); hInst.setTextColor(Color.WHITE); hInst.setGravity(Gravity.CENTER); headerRow.addView(hInst);
             TextView hDate = new TextView(this); hDate.setText("Due Date"); hDate.setPadding(20, 16, 20, 16); hDate.setTextSize(14); hDate.setTypeface(null, Typeface.BOLD); hDate.setTextColor(Color.WHITE); hDate.setGravity(Gravity.CENTER); headerRow.addView(hDate);
 
@@ -827,7 +828,12 @@ public class MainActivity extends AppCompatActivity {
 
         String[] headers = {"Date Locked", "Chit Group", "Member Name", "Inst. #", "Advance Paid Out", "New Rate"};
         for (String h : headers) {
-            TextView tv = new TextView(this); tv.setText(h); tv.setPadding(20, 16, 20, 16); tv.setTextColor(Color.WHITE); tv.setTypeface(null, Typeface.BOLD); headRow.addView(tv);
+            TextView tv = new TextView(this); tv.setText(h); tv.setPadding(20, 16, 20, 16); tv.setTextColor(Color.WHITE); tv.setTypeface(null, Typeface.BOLD); 
+            
+            // FIXED: Set Gravity to CENTER for Advances Header column string [checks image 1000767851.jpg]
+            if (h.equals("Member Name")) tv.setGravity(Gravity.CENTER);
+            
+            headRow.addView(tv);
         }
         tlAdvancesTable.addView(headRow);
 
@@ -847,7 +853,7 @@ public class MainActivity extends AppCompatActivity {
                 TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tr.addView(tvDate);
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
                 
-                // UPDATE: Configured member field columns layout alignment markers to CENTER inside Advances logs
+                // FIXED: Configured gravity property values to CENTER for field items inside Advances log sheet entries [checks image 1000767851.jpg]
                 TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tvMem.setGravity(Gravity.CENTER); tr.addView(tvMem);
                 
                 TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
@@ -872,7 +878,12 @@ public class MainActivity extends AppCompatActivity {
 
         String[] headers = {"Date", "Chit Group", "Member Name", "Inst.", "Amount Paid"};
         for (String h : headers) {
-            TextView tv = new TextView(this); tv.setText(h); tv.setPadding(20, 16, 20, 16); tv.setTextColor(Color.WHITE); tv.setTypeface(null, Typeface.BOLD); headRow.addView(tv);
+            TextView tv = new TextView(this); tv.setText(h); tv.setPadding(20, 16, 20, 16); tv.setTextColor(Color.WHITE); tv.setTypeface(null, Typeface.BOLD); 
+            
+            // FIXED: Set Gravity to CENTER for History Ledger Header column string [checks image 1000767849.jpg]
+            if (h.equals("Member Name")) tv.setGravity(Gravity.CENTER);
+            
+            headRow.addView(tv);
         }
         tlHistoryTable.addView(headRow);
 
@@ -901,7 +912,7 @@ public class MainActivity extends AppCompatActivity {
 
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
                 
-                // UPDATE: Configured member field columns layout alignment markers to CENTER inside Ledger Logs
+                // FIXED: Set alignment marker settings to CENTER inside history logs columns layout cells [checks image 1000767849.jpg]
                 TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tvMem.setGravity(Gravity.CENTER); tr.addView(tvMem);
                 
                 LinearLayout badgeWrapper = new LinearLayout(this); badgeWrapper.setPadding(10, 6, 10, 6); badgeWrapper.setGravity(Gravity.CENTER);
@@ -1071,21 +1082,5 @@ public class MainActivity extends AppCompatActivity {
                 syncCurrentChitContextFromCloud();
             });
         });
-    }
-
-    private void triggerDynamicAmountFields(String countStr, LinearLayout container, ArrayList<TextInputEditText> fieldTrackerList) {
-        container.removeAllViews(); fieldTrackerList.clear();
-        if (!countStr.trim().isEmpty()) {
-            int total = Integer.parseInt(countStr.trim());
-            for (int i = 1; i <= total; i++) {
-                TextInputLayout wrap = new TextInputLayout(this); wrap.setHint("Installment " + i + " Amount (₹)");
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                lp.setMargins(0, 0, 0, 12); wrap.setLayoutParams(lp);
-
-                TextInputEditText etAmtInput = new TextInputEditText(this);
-                etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-                wrap.addView(etAmtInput); container.addView(wrap); fieldTrackerList.add(etAmtInput);
-            }
-        }
     }
 }
