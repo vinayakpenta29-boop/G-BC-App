@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // HIGH-SPEED MEMORY CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
+    // HIGH-SPEED CLOUD CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
     private HashSet<String> globalPaymentsCache = new HashSet<>(); 
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
@@ -413,7 +413,7 @@ public class MainActivity extends AppCompatActivity {
         String[] headers = {"Chit Group Name", "Current Month Inst.", "Current Month Pending", "Previous Pending", "Total Outstanding"};
         for (String col : headers) {
             TextView tv = new TextView(this); tv.setText(col); tv.setPadding(20, 12, 20, 12);
-            tv.setTextColor(Color.WHITE); tv.setTextSize(13); tv.setTypeface(null, Typeface.BOLD); // FIX: Removed 'sp' literal flag error
+            tv.setTextColor(Color.WHITE); tv.setTextSize(13); tv.setTypeface(null, Typeface.BOLD); 
             tv.setGravity(col.equals("Chit Group Name") ? Gravity.START : Gravity.CENTER);
             header.addView(tv);
         }
@@ -437,7 +437,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
                 Calendar cal = Calendar.getInstance();
-                for (int idx = 0; idx < maxInst; idx++) { // FIX: Replaced broken 'k' with 'idx' safely
+                for (int idx = 0; idx < maxInst; idx++) { 
                     cal.setTime(d);
                     if ("Monthly".equals(freq)) {
                         cal.add(Calendar.MONTH, idx);
@@ -487,7 +487,7 @@ public class MainActivity extends AppCompatActivity {
             TextView tvInst = new TextView(this); tvInst.setText("#" + displayInstNumber); tvInst.setPadding(20, 12, 20, 12); tvInst.setGravity(Gravity.CENTER); tvInst.setTextColor(Color.parseColor("#475569")); row.addView(tvInst);
             TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
             TextView tvPrev = new TextView(this); tvPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", previousArrearsChitPending)); tvPrev.setPadding(20, 12, 20, 12); tvPrev.setGravity(Gravity.CENTER); tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD); row.addView(tvPrev);
-            TextView tvTot = new TextView(this); tvTot.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding)); tvTot.setPadding(20, 12, 20, 12); tvTot.setGravity(Gravity.CENTER); tvTot.setTextColor(Color.parseColor("#0F172A")); tvTot.setTypeface(null, Typeface.BOLD); row.addView(tvTot); // FIX: Restored tvTot mapping variable definition mismatch
+            TextView tvTot = new TextView(this); tvTot.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding)); tvTot.setPadding(20, 12, 20, 12); tvTot.setGravity(Gravity.CENTER); tvTot.setTextColor(Color.parseColor("#0F172A")); tvTot.setTypeface(null, Typeface.BOLD); row.addView(tvTot); 
 
             tlGlobalSummaryTable.addView(row);
         }
@@ -730,8 +730,8 @@ public class MainActivity extends AppCompatActivity {
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
 
-            TextView hInst = new TextView(this); hInst.setText("Inst."); hInst.setPadding(20, 16, 20, 16); hInst.setTextColor(Color.WHITE); hInst.setTypeface(null, Typeface.BOLD); headerRow.addView(hInst);
-            TextView hDate = new TextView(this); hDate.setText("Due Date"); hDate.setPadding(20, 16, 20, 16); hDate.setTextColor(Color.WHITE); hDate.setTypeface(null, Typeface.BOLD); headerRow.addView(hDate);
+            TextView hInst = new TextView(this); hInst.setText("Inst."); hInst.setPadding(20, 16, 20, 16); headerRow.addView(hInst);
+            TextView hDate = new TextView(this); hDate.setText("Due Date"); hDate.setPadding(20, 16, 20, 16); headerRow.addView(hDate);
 
             for (String name : globalMembersList) {
                 TextView hMemCol = new TextView(this); hMemCol.setText(name); hMemCol.setPadding(20, 16, 20, 16); hMemCol.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); hMemCol.setTextColor(Color.WHITE); headerRow.addView(hMemCol);
@@ -803,7 +803,7 @@ public class MainActivity extends AppCompatActivity {
                 TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tr.addView(tvDate);
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
                 TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvMem);
-                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
+                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tr.addView(tvInst);
                 TextView tvAdv = new TextView(this); tvAdv.setText("₹" + doc.getDouble("advance_amount")); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tr.addView(tvAdv);
                 TextView tvRate = new TextView(this); tvRate.setText("₹" + doc.getDouble("new_amount")); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tr.addView(tvRate);
 
@@ -868,7 +868,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showLogAdvanceDialog() {
-        if (chitId == null) return;
+        if (chitId == null) {
+            Toast.makeText(this, "Please create/select a Chit Group first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_log_advance, null);
 
@@ -896,6 +899,11 @@ public class MainActivity extends AppCompatActivity {
             int instNum = Integer.parseInt(instStr);
             double advAmt = Double.parseDouble(advAmtStr);
             double newAmt = Double.parseDouble(amtStr);
+
+            if (instNum < 1 || instNum > totalInstallmentsCount) {
+                Toast.makeText(MainActivity.this, "Invalid installment milestone number.", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
             String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
             Map<String, Object> advancePayload = new HashMap<>();
@@ -978,6 +986,10 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<Double> amountsArray = new ArrayList<>();
 
             if (amtType.equals("Fixed Amount")) {
+                if (etAmount.getText().toString().trim().isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Please specify an installment amount.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 double fixedVal = Double.parseDouble(etAmount.getText().toString().trim());
                 for(int k=0; k<totalInst; k++) amountsArray.add(fixedVal);
             } else {
@@ -1001,6 +1013,13 @@ public class MainActivity extends AppCompatActivity {
                 dialog.dismiss(); chitId = newId;
             });
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        for (android.animation.ValueAnimator animator : activeSnakeAnimators) animator.cancel();
+        activeSnakeAnimators.clear();
+        super.onDestroy();
     }
 
     private void triggerDynamicAmountFields(String countStr, LinearLayout container, ArrayList<TextInputEditText> fieldTrackerList) {
