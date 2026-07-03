@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // HIGH-SPEED CLOUD CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
+    // HIGH-SPEED CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
     private HashSet<String> globalPaymentsCache = new HashSet<>(); 
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
@@ -619,9 +619,8 @@ public class MainActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
-    }
+}
 
-    // FEATURE UPGRADE: Dynamically calculates calendar date limits to tag options (e.g., "( Dec - 10) Inst. 1 - ₹2500.0")
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == null) return;
         final String member = spMembers.getText().toString().trim();
@@ -742,7 +741,9 @@ public class MainActivity extends AppCompatActivity {
                 memberRow.setPadding(6, 8, 6, 8);
 
                 TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(20, 16, 20, 16); tvSerial.setTextColor(Color.parseColor("#64748B")); memberRow.addView(tvSerial);
-                TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(20, 16, 20, 16); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvName.setTextColor(Color.parseColor("#1E293B")); memberRow.addView(tvName);
+                
+                // UPDATE: Changed member cell allocation layout alignment configurations to CENTER
+                TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(20, 16, 20, 16); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvName.setTextColor(Color.parseColor("#1E293B")); tvName.setGravity(Gravity.CENTER); memberRow.addView(tvName);
 
                 for (int i = 1; i <= totalInstallmentsCount; i++) {
                     LinearLayout cellContainer = new LinearLayout(this); cellContainer.setPadding(12, 8, 12, 8); cellContainer.setGravity(Gravity.CENTER);
@@ -767,15 +768,17 @@ public class MainActivity extends AppCompatActivity {
                 tlFundTable.addView(memberRow);
             }
         } else {
+            // MODE B: VERTICAL ROTATED TABULATION MATRIX View
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
 
-            TextView hInst = new TextView(this); hInst.setText("Inst."); hInst.setPadding(20, 16, 20, 16); headerRow.addView(hInst);
-            TextView hDate = new TextView(this); hDate.setText("Due Date"); hDate.setPadding(20, 16, 20, 16); headerRow.addView(hDate);
+            // UPDATE: Restored color, font, size, and layout settings to White for vertical structural headers
+            TextView hInst = new TextView(this); hInst.setText("Inst."); hInst.setPadding(20, 16, 20, 16); hInst.setTextSize(14); hInst.setTypeface(null, Typeface.BOLD); hInst.setTextColor(Color.WHITE); hInst.setGravity(Gravity.CENTER); headerRow.addView(hInst);
+            TextView hDate = new TextView(this); hDate.setText("Due Date"); hDate.setPadding(20, 16, 20, 16); hDate.setTextSize(14); hDate.setTypeface(null, Typeface.BOLD); hDate.setTextColor(Color.WHITE); hDate.setGravity(Gravity.CENTER); headerRow.addView(hDate);
 
             for (String name : globalMembersList) {
-                TextView hMemCol = new TextView(this); hMemCol.setText(name); hMemCol.setPadding(20, 16, 20, 16); hMemCol.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); hMemCol.setTextColor(Color.WHITE); headerRow.addView(hMemCol);
+                TextView hMemCol = new TextView(this); hMemCol.setText(name); hMemCol.setPadding(20, 16, 20, 16); hMemCol.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); hMemCol.setTextColor(Color.WHITE); hMemCol.setGravity(Gravity.CENTER); headerRow.addView(hMemCol);
             }
             tlFundTable.addView(headerRow);
 
@@ -783,8 +786,8 @@ public class MainActivity extends AppCompatActivity {
                 TableRow instRow = new TableRow(this);
                 instRow.setPadding(6, 8, 6, 8);
 
-                TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTextColor(Color.parseColor("#64748B")); instRow.addView(tvInstNum);
-                TextView tvInstDate = new TextView(this); tvInstDate.setText(calculatedDatesHeaders.get(i - 1)); tvInstDate.setPadding(20, 16, 20, 16); tvInstDate.setTextColor(Color.parseColor("#475569")); instRow.addView(tvInstDate);
+                TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTextColor(Color.parseColor("#64748B")); tvInstNum.setTypeface(null, Typeface.BOLD); tvInstNum.setGravity(Gravity.CENTER); instRow.addView(tvInstNum);
+                TextView tvInstDate = new TextView(this); tvInstDate.setText(calculatedDatesHeaders.get(i - 1)); tvInstDate.setPadding(20, 16, 20, 16); tvInstDate.setTextColor(Color.parseColor("#475569")); tvInstDate.setGravity(Gravity.CENTER); instRow.addView(tvInstDate);
 
                 for (String name : globalMembersList) {
                     LinearLayout cellContainer = new LinearLayout(this); cellContainer.setPadding(12, 8, 12, 8); cellContainer.setGravity(Gravity.CENTER);
@@ -843,7 +846,10 @@ public class MainActivity extends AppCompatActivity {
 
                 TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tr.addView(tvDate);
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
-                TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvMem);
+                
+                // UPDATE: Configured member field columns layout alignment markers to CENTER inside Advances logs
+                TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tvMem.setGravity(Gravity.CENTER); tr.addView(tvMem);
+                
                 TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
                 TextView tvAdv = new TextView(this); tvAdv.setText("₹" + doc.getDouble("advance_amount")); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tr.addView(tvAdv);
                 TextView tvRate = new TextView(this); tvRate.setText("₹" + doc.getDouble("new_amount")); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tr.addView(tvRate);
@@ -894,7 +900,9 @@ public class MainActivity extends AppCompatActivity {
                 for (CloudChitItem item : globalChitsList) { if (item.id.equals(cId)) cName = item.name; }
 
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
-                TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvMem);
+                
+                // UPDATE: Configured member field columns layout alignment markers to CENTER inside Ledger Logs
+                TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tvMem.setGravity(Gravity.CENTER); tr.addView(tvMem);
                 
                 LinearLayout badgeWrapper = new LinearLayout(this); badgeWrapper.setPadding(10, 6, 10, 6); badgeWrapper.setGravity(Gravity.CENTER);
                 TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(14, 4, 14, 4); tvInst.setTextColor(Color.parseColor("#475569")); tvInst.setBackgroundResource(R.drawable.badge_unpaid_bg);
@@ -1063,5 +1071,21 @@ public class MainActivity extends AppCompatActivity {
                 syncCurrentChitContextFromCloud();
             });
         });
+    }
+
+    private void triggerDynamicAmountFields(String countStr, LinearLayout container, ArrayList<TextInputEditText> fieldTrackerList) {
+        container.removeAllViews(); fieldTrackerList.clear();
+        if (!countStr.trim().isEmpty()) {
+            int total = Integer.parseInt(countStr.trim());
+            for (int i = 1; i <= total; i++) {
+                TextInputLayout wrap = new TextInputLayout(this); wrap.setHint("Installment " + i + " Amount (₹)");
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                lp.setMargins(0, 0, 0, 12); wrap.setLayoutParams(lp);
+
+                TextInputEditText etAmtInput = new TextInputEditText(this);
+                etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                wrap.addView(etAmtInput); container.addView(wrap); fieldTrackerList.add(etAmtInput);
+            }
+        }
     }
 }
