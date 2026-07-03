@@ -9,4 +9,10 @@
         android:id="@+id/menu_log_advance"
         android:title="Log Member Advance"
         app:showAsAction="never" />
+    <item
+    android:id="@+id/menu_delete_chit"
+    android:title="Delete Current Chit"
+    android:icon="@android:drawable/ic_menu_delete"
+    app:showAsAction="never" />
+
 </menu>
