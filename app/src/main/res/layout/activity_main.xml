@@ -6,7 +6,6 @@
     android:background="#F8FAFC"
     android:orientation="vertical">
 
-    <!-- 1. PILL TAB NAVIGATION FIXED AT THE ABSOLUTE TOP -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/premiumTabLayout"
         android:layout_width="match_parent"
@@ -28,7 +27,6 @@
         app:tabTextAppearance="@style/PremiumTabTextStyle"
         app:tabRippleColor="@android:color/transparent"/>
 
-    <!-- 2. GLOBAL ACTIVE GROUP SELECTOR CARD -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -80,13 +78,11 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- MAIN VIEW FRAME CONTENT AREA VIEWPORT CONTROLLERS -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <!-- TAB POSITION 0 CONTENT: COLLECT PAYMENT PANEL -->
         <ScrollView
             android:id="@+id/tabContainerCollect"
             android:layout_width="match_parent"
@@ -182,7 +178,6 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- TAB POSITION 1 CONTENT: MATRIX DATA GRID -->
         <ScrollView
             android:id="@+id/tabContainerMatrix"
             android:layout_width="match_parent"
@@ -197,7 +192,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- FEATURE RESTAL: CROSS-CHIT INTERACTIVE MONTHLY EXECUTIVE OVERVIEW DASHBOARD -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -237,7 +231,6 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- ORIGINAL WORKSPACE RENDERING CONTAINER FOR SELECTED ACTIVE GROUP GRID -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -295,7 +288,6 @@
             </LinearLayout>
         </ScrollView>
 
-        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG -->
         <ScrollView
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
@@ -376,7 +368,6 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- TAB POSITION 3 CONTENT: RECORDED MEMBER ADVANCES -->
         <ScrollView
             android:id="@+id/tabContainerAdvances"
             android:layout_width="match_parent"
