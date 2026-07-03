@@ -45,7 +45,6 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
-    // Firebase cloud client context reference pointer
     private FirebaseFirestore firestore;
     private String chitId = null; 
     private String historyFilterChitId = "ALL"; 
@@ -74,7 +73,6 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // HIGH-SPEED MEMORY CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
     private HashSet<String> cloudPaymentsCache = new HashSet<>(); 
     private HashMap<String, Integer> cloudAdvanceStartCache = new HashMap<>(); 
     private HashMap<String, Double> cloudAdvanceRateCache = new HashMap<>(); 
@@ -83,7 +81,6 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<android.animation.ValueAnimator> activeSnakeAnimators = new ArrayList<>();
     private ArrayList<Integer> selectedInstallmentsList = new ArrayList<>();
     
-    // Cloud parsing item models
     public static class CloudChitItem {
         public String id;
         public String name;
@@ -94,7 +91,6 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<CloudChitItem> globalChitsList = new ArrayList<>();
     private ArrayList<String> globalMembersList = new ArrayList<>();
 
-    // Play Store style morphing cursive progress animation snake engine
     private static class SnakeBorderDrawable extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint borderPaint;
         private final android.graphics.Paint fillPaint;
@@ -156,7 +152,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(Bundle);
         setContentView(R.layout.activity_main);
         
-        // Initialize Live Firestore Client reference
         firestore = FirebaseFirestore.getInstance();
 
         spChitSelector = findViewById(R.id.spChitSelector);
@@ -309,14 +304,12 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // RESTORED: Three-Dots Menu inflation lifecycle handler hook method context
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.home_menu, menu);
         return true;
     }
 
-    // RESTORED: Captures items selection bounds tracking flags from three-dots layout natively
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.menu_new_chit) {
@@ -504,6 +497,15 @@ public class MainActivity extends AppCompatActivity {
         tlFundTable.removeAllViews();
         if (chitId == null) return;
 
+        // CREATE: Universal Light slate grid divider lines configuration asset
+        android.graphics.drawable.GradientDrawable gridLine = new android.graphics.drawable.GradientDrawable();
+        gridLine.setColor(Color.parseColor("#CBD5E1")); 
+        gridLine.setSize(2, 2); // 2px line thickness mapping width definition
+
+        // Bind dividers onto the Main table layout container
+        tlFundTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
+        tlFundTable.setDividerDrawable(gridLine);
+
         ArrayList<String> calculatedDatesHeaders = new ArrayList<>();
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         SimpleDateFormat sdfOutput = new SimpleDateFormat("d - MMM", Locale.getDefault());
@@ -538,6 +540,8 @@ public class MainActivity extends AppCompatActivity {
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
+            headerRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
+            headerRow.setDividerDrawable(gridLine);
 
             TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(20, 16, 20, 16); hNo.setTextSize(14); hNo.setTypeface(null, android.graphics.Typeface.BOLD); hNo.setTextColor(Color.WHITE); hNo.setGravity(Gravity.CENTER); headerRow.addView(hNo);
             TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextSize(14); hName.setTypeface(null, android.graphics.Typeface.BOLD); hName.setTextColor(Color.WHITE); hName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); headerRow.addView(hName);
@@ -551,6 +555,8 @@ public class MainActivity extends AppCompatActivity {
             for (String name : globalMembersList) {
                 TableRow memberRow = new TableRow(this);
                 memberRow.setPadding(6, 8, 6, 8);
+                memberRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
+                memberRow.setDividerDrawable(gridLine);
 
                 TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(20, 16, 20, 16); tvSerial.setTextColor(Color.parseColor("#64748B")); tvSerial.setGravity(Gravity.CENTER); memberRow.addView(tvSerial);
                 TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(20, 16, 20, 16); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvName.setTextColor(Color.parseColor("#1E293B")); tvName.setGravity(Gravity.START | Gravity.CENTER_VERTICAL); memberRow.addView(tvName);
@@ -596,9 +602,12 @@ public class MainActivity extends AppCompatActivity {
                 tlFundTable.addView(memberRow);
             }
         } else {
+            // UPDATE: VERTICAL MATRIX VIEW - INSURES DIVIDERS SITS BETWEEN EACH INSTALLMENT ROW PERFECTLY
             TableRow headerRow = new TableRow(this);
             headerRow.setBackgroundResource(R.drawable.table_header_bg);
             headerRow.setPadding(6, 12, 6, 12);
+            headerRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
+            headerRow.setDividerDrawable(gridLine);
 
             TextView hInst = new TextView(this); hInst.setText("Inst."); hInst.setPadding(20, 16, 20, 16); hInst.setTextSize(14); hInst.setTypeface(null, Typeface.BOLD); hInst.setTextColor(Color.WHITE); hInst.setGravity(Gravity.CENTER); headerRow.addView(hInst);
             TextView hDate = new TextView(this); hDate.setText("Due Date"); hDate.setPadding(20, 16, 20, 16); hDate.setTextSize(14); hDate.setTypeface(null, Typeface.BOLD); hDate.setTextColor(Color.WHITE); hDate.setGravity(Gravity.CENTER); headerRow.addView(hDate);
@@ -611,6 +620,8 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 1; i <= totalInstallmentsCount; i++) {
                 TableRow instRow = new TableRow(this);
                 instRow.setPadding(6, 8, 6, 8);
+                instRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
+                instRow.setDividerDrawable(gridLine);
 
                 TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTextColor(Color.parseColor("#64748B")); tvInstNum.setTypeface(null, Typeface.BOLD); tvInstNum.setGravity(Gravity.CENTER); instRow.addView(tvInstNum);
                 TextView tvInstDate = new TextView(this); tvInstDate.setText(calculatedDatesHeaders.get(i - 1)); tvInstDate.setPadding(20, 16, 20, 16); tvInstDate.setTextColor(Color.parseColor("#475569")); tvInstDate.setGravity(Gravity.CENTER); instRow.addView(tvInstDate);
@@ -664,6 +675,16 @@ public class MainActivity extends AppCompatActivity {
         headRow.setBackgroundResource(R.drawable.table_header_bg);
         headRow.setPadding(6, 12, 6, 12);
 
+        android.graphics.drawable.GradientDrawable advancesDivider = new android.graphics.drawable.GradientDrawable();
+        advancesDivider.setColor(Color.parseColor("#CBD5E1"));
+        advancesDivider.setSize(2, 2);
+
+        // UPDATE: Setup dividers context for Advances table sheets
+        tlAdvancesTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
+        tlAdvancesTable.setDividerDrawable(advancesDivider);
+        headRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
+        headRow.setDividerDrawable(advancesDivider);
+
         String[] headers = {"Date Locked", "Chit Group", "Member Name", "Inst. #", "Advance Paid Out", "New Rate"};
         for (String headerText : headers) {
             TextView tvHead = new TextView(this); tvHead.setText(headerText); tvHead.setPadding(20, 16, 20, 16); tvHead.setTextSize(14); tvHead.setTypeface(null, Typeface.BOLD); tvHead.setTextColor(Color.WHITE); tvHead.setGravity(Gravity.CENTER); headRow.addView(tvHead);
@@ -678,6 +699,8 @@ public class MainActivity extends AppCompatActivity {
             for (QueryDocumentSnapshot doc : value) {
                 TableRow tr = new TableRow(this);
                 tr.setPadding(6, 8, 6, 8);
+                tr.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
+                tr.setDividerDrawable(advancesDivider);
 
                 String cId = doc.getString("chitId");
                 String cName = "Unknown Group";
@@ -700,6 +723,16 @@ public class MainActivity extends AppCompatActivity {
         TableRow headRow = new TableRow(this);
         headRow.setBackgroundResource(R.drawable.table_header_bg);
         headRow.setPadding(6, 12, 6, 12);
+
+        android.graphics.drawable.GradientDrawable ledgerDivider = new android.graphics.drawable.GradientDrawable();
+        ledgerDivider.setColor(Color.parseColor("#CBD5E1"));
+        ledgerDivider.setSize(2, 2);
+
+        // UPDATE: Setup dividers context for Ledger table logs sheets
+        tlHistoryTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
+        tlHistoryTable.setDividerDrawable(ledgerDivider);
+        headRow.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
+        headRow.setDividerDrawable(ledgerDivider);
 
         String[] headers = {"Date", "Chit Group", "Member Name", "Inst.", "Amount Paid"};
         for (String headerText : headers) {
@@ -725,6 +758,8 @@ public class MainActivity extends AppCompatActivity {
 
                 TableRow tr = new TableRow(this);
                 tr.setPadding(6, 8, 6, 8);
+                tr.setShowDividers(TableRow.SHOW_DIVIDER_MIDDLE);
+                tr.setDividerDrawable(ledgerDivider);
 
                 TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tvDate.setGravity(Gravity.CENTER); tr.addView(tvDate);
                 
@@ -899,7 +934,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 for (TextInputEditText field : dynamicAmountFields) {
                     if (field.getText().toString().trim().isEmpty()) {
-                        Toast.makeText(MainActivity.this, "Fill all dynamic amount fields.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Please fill all dynamic amount fields.", Toast.LENGTH_SHORT).show();
                         return;
                     }
                     amountsArray.add(Double.parseDouble(field.getText().toString().trim()));
