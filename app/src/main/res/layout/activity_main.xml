@@ -6,6 +6,7 @@
     android:background="#F8FAFC"
     android:orientation="vertical">
 
+    <!-- 1. PILL TAB NAVIGATION FIXED AT THE ABSOLUTE TOP -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/premiumTabLayout"
         android:layout_width="match_parent"
@@ -27,6 +28,7 @@
         app:tabTextAppearance="@style/PremiumTabTextStyle"
         app:tabRippleColor="@android:color/transparent"/>
 
+    <!-- 2. GLOBAL ACTIVE GROUP SELECTOR CARD -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -78,11 +80,13 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- MAIN VIEW FRAME CONTENT AREA VIEWPORT CONTROLLERS -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
+        <!-- TAB POSITION 0 CONTENT: COLLECT PAYMENT PANEL -->
         <ScrollView
             android:id="@+id/tabContainerCollect"
             android:layout_width="match_parent"
@@ -178,6 +182,7 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
+        <!-- TAB POSITION 1 CONTENT: MATRIX DATA GRID -->
         <ScrollView
             android:id="@+id/tabContainerMatrix"
             android:layout_width="match_parent"
@@ -187,138 +192,110 @@
             android:paddingBottom="32dp"
             android:visibility="gone">
 
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_margin="16dp"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="4dp"
-                app:cardPreventCornerOverlap="true"
-                app:strokeWidth="0dp">
+                android:orientation="vertical">
 
-                <LinearLayout
+                <!-- FEATURE RESTAL: CROSS-CHIT INTERACTIVE MONTHLY EXECUTIVE OVERVIEW DASHBOARD -->
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="4dp"
+                    app:cardPreventCornerOverlap="true"
+                    app:strokeWidth="0dp">
 
-                    <TextView
-                        android:id="@+id/tvFundTitle"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textSize="18sp"
-                        android:fontFamily="monospace"
-                        android:textStyle="bold"
-                        android:textColor="#0F172A"
-                        android:layout_marginBottom="12dp" />
+                        android:orientation="vertical"
+                        android:padding="20dp">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnToggleMatrixOrientation"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="18dp"
-                        android:text="View Vertically (Scroll Down)"
-                        android:textAllCaps="false"
-                        android:textColor="#0F172A"
-                        android:textSize="13sp"
-                        app:strokeColor="#CBD5E1"
-                        app:strokeWidth="1.5dp"
-                        app:cornerRadius="20dp"
-                        app:icon="@android:drawable/ic_menu_sort_by_size"
-                        app:iconTint="#0F172A" />
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        app:cardCornerRadius="16dp"
-                        app:cardBackgroundColor="#F0FDF4"
-                        app:strokeColor="#DCFCE7"
-                        app:strokeWidth="1dp"
-                        app:cardElevation="0dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="16dp">
-
-                            <TextView
-                                android:id="@+id/tvCurrentMonthHeader"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Current Month Status"
-                                android:textColor="#15803D"
-                                android:textSize="14sp"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="12dp" />
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:weightSum="2">
-
-                                <LinearLayout
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:orientation="vertical">
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="Total Target"
-                                        android:textColor="#166534"
-                                        android:textSize="12sp" />
-                                    <TextView
-                                        android:id="@+id/tvCurrentMonthTarget"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="₹0.00"
-                                        android:textColor="#14532D"
-                                        android:textSize="18sp"
-                                        android:textStyle="bold" />
-                                </LinearLayout>
-
-                                <LinearLayout
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:orientation="vertical">
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="Remaining to Pay"
-                                        android:textColor="#991B1B"
-                                        android:textSize="12sp" />
-                                    <TextView
-                                        android:id="@+id/tvCurrentMonthPending"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="₹0.00"
-                                        android:textColor="#7F1D1D"
-                                        android:textSize="18sp"
-                                        android:textStyle="bold" />
-                                </LinearLayout>
-                            </LinearLayout>
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-
-                    <HorizontalScrollView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
-                        <TableLayout
-                            android:id="@+id/tlFundTable"
+                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:stretchColumns="*" />
-                    </HorizontalScrollView>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                            android:text="All Chit Funds Monthly Collection Ledger"
+                            android:textColor="#0F172A"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="16dp" />
+
+                        <HorizontalScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+                            <TableLayout
+                                android:id="@+id/tlGlobalSummaryTable"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:stretchColumns="*" />
+                        </HorizontalScrollView>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ORIGINAL WORKSPACE RENDERING CONTAINER FOR SELECTED ACTIVE GROUP GRID -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="16dp"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="4dp"
+                    app:cardPreventCornerOverlap="true"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <TextView
+                            android:id="@+id/tvFundTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textSize="18sp"
+                            android:fontFamily="monospace"
+                            android:textStyle="bold"
+                            android:textColor="#0F172A"
+                            android:layout_marginBottom="12dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnToggleMatrixOrientation"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="18dp"
+                            android:text="View Vertically (Scroll Down)"
+                            android:textAllCaps="false"
+                            android:textColor="#0F172A"
+                            android:textSize="13sp"
+                            app:strokeColor="#CBD5E1"
+                            app:strokeWidth="1.5dp"
+                            app:cornerRadius="20dp"
+                            app:icon="@android:drawable/ic_menu_sort_by_size"
+                            app:iconTint="#0F172A" />
+
+                        <HorizontalScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+                            <TableLayout
+                                android:id="@+id/tlFundTable"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:stretchColumns="*" />
+                        </HorizontalScrollView>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
         </ScrollView>
 
+        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG -->
         <ScrollView
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
@@ -399,6 +376,7 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
+        <!-- TAB POSITION 3 CONTENT: RECORDED MEMBER ADVANCES -->
         <ScrollView
             android:id="@+id/tabContainerAdvances"
             android:layout_width="match_parent"
