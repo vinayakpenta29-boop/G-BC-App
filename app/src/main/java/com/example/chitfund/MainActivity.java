@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // HIGH-SPEED CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
+    // HIGH-SPEED CLOUD CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
     private HashSet<String> globalPaymentsCache = new HashSet<>(); 
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
@@ -99,6 +99,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<CloudChitItem> globalChitsList = new ArrayList<>();
     private ArrayList<String> globalMembersList = new ArrayList<>();
 
+    // Play Store style morphing cursive progress animation snake engine
     private static class SnakeBorderDrawable extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint borderPaint;
         private final android.graphics.Paint fillPaint;
@@ -620,6 +621,7 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
+    // FEATURE UPGRADE: Dynamically calculates calendar date limits to tag options (e.g., "( Dec - 10) Inst. 1 - ₹2500.0")
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == null) return;
         final String member = spMembers.getText().toString().trim();
@@ -628,11 +630,28 @@ public class MainActivity extends AppCompatActivity {
         final ArrayList<Integer> openInstallmentNumbers = new ArrayList<>();
         ArrayList<String> filteredOptionsList = new ArrayList<>();
 
+        SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        SimpleDateFormat sdfDialogOutput = new SimpleDateFormat("MMM - d", Locale.getDefault());
+
         for (int i = 1; i <= totalInstallmentsCount; i++) {
             if (!globalPaymentsCache.contains(chitId + "_" + member + "_" + i)) {
                 double amt = getSpecificCachedMemberInstallmentAmount(chitId, member, i);
                 openInstallmentNumbers.add(i);
-                filteredOptionsList.add("Inst. " + i + " - ₹" + amt);
+
+                String dateLabel = "";
+                try {
+                    Date startDate = sdfInput.parse(firstInstallmentDateStr);
+                    Calendar cal = Calendar.getInstance();
+                    cal.setTime(startDate);
+                    if ("Monthly".equals(frequencyType)) {
+                        cal.add(Calendar.MONTH, i - 1);
+                    } else {
+                        cal.add(Calendar.DATE, (i - 1) * 7);
+                    }
+                    dateLabel = "( " + sdfDialogOutput.format(cal.getTime()) + ") ";
+                } catch (Exception ignored) {}
+
+                filteredOptionsList.add(dateLabel + "Inst. " + i + " - ₹" + amt);
             }
         }
 
@@ -1044,28 +1063,5 @@ public class MainActivity extends AppCompatActivity {
                 syncCurrentChitContextFromCloud();
             });
         });
-    }
-
-    @Override
-    protected void onDestroy() {
-        for (android.animation.ValueAnimator animator : activeSnakeAnimators) animator.cancel();
-        activeSnakeAnimators.clear();
-        super.onDestroy();
-    }
-
-    private void triggerDynamicAmountFields(String countStr, LinearLayout container, ArrayList<TextInputEditText> fieldTrackerList) {
-        container.removeAllViews(); fieldTrackerList.clear();
-        if (!countStr.trim().isEmpty()) {
-            int total = Integer.parseInt(countStr.trim());
-            for (int i = 1; i <= total; i++) {
-                TextInputLayout wrap = new TextInputLayout(this); wrap.setHint("Installment " + i + " Amount (₹)");
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                lp.setMargins(0, 0, 0, 12); wrap.setLayoutParams(lp);
-
-                TextInputEditText etAmtInput = new TextInputEditText(this);
-                etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-                wrap.addView(etAmtInput); container.addView(wrap); fieldTrackerList.add(etAmtInput);
-            }
-        }
     }
 }
