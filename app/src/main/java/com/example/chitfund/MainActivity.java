@@ -507,6 +507,7 @@ public class MainActivity extends AppCompatActivity {
         tlGlobalSummaryTable.addView(footerRow);
     }
 
+    // FIXED: Changed amounts.get(targetChitId).get(...) to directly map the local List parameter array object bounds
     private double getSpecificCachedMemberInstallmentAmount(String targetChitId, String memberName, int installmentNum) {
         String compositeKey = targetChitId + "_" + memberName;
         if (globalAdvanceStartCache.containsKey(compositeKey)) {
@@ -517,7 +518,7 @@ public class MainActivity extends AppCompatActivity {
         }
         ArrayList<Double> amounts = globalChitAmountsCache.get(targetChitId);
         if (amounts != null && (installmentNum - 1) < amounts.size()) {
-            return amounts.get(targetChitId).get(installmentNum - 1);
+            return amounts.get(installmentNum - 1);
         }
         return 0.0;
     }
@@ -619,7 +620,7 @@ public class MainActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
-    }
+}
 
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == null) return;
@@ -782,7 +783,7 @@ public class MainActivity extends AppCompatActivity {
                 TableRow instRow = new TableRow(this);
                 instRow.setPadding(6, 8, 6, 8);
 
-                TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTextColor(Color.parseColor("#64748B")); tvInstNum.setTypeface(null, Typeface.BOLD); tvInstNum.setGravity(Gravity.CENTER); instRow.addView(tvInstNum);
+                TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTypeface(null, Typeface.BOLD); tvInstNum.setGravity(Gravity.CENTER); instRow.addView(tvInstNum);
                 TextView tvInstDate = new TextView(this); tvInstDate.setText(calculatedDatesHeaders.get(i - 1)); tvInstDate.setPadding(20, 16, 20, 16); tvInstDate.setTextColor(Color.parseColor("#475569")); tvInstDate.setGravity(Gravity.CENTER); instRow.addView(tvInstDate);
 
                 for (String name : globalMembersList) {
@@ -1068,7 +1069,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // RESTORED CORE METHOD: Resolves missing structural creation layout fields tracking loops compiler barriers
     private void triggerDynamicAmountFields(String countStr, LinearLayout container, ArrayList<TextInputEditText> fieldTrackerList) {
         container.removeAllViews(); fieldTrackerList.clear();
         if (!countStr.trim().isEmpty()) {
