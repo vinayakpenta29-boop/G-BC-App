@@ -33,7 +33,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="12dp"
-        app:cardCornerRadius="20dp"
+        app:cardCornerRadius="24dp"
         app:cardElevation="4dp"
         app:cardPreventCornerOverlap="true"
         app:strokeWidth="0dp">
@@ -80,13 +80,16 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
         <ScrollView
             android:id="@+id/tabContainerCollect"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:fillViewport="true"
+            android:clipToPadding="false"
+            android:paddingBottom="32dp"
             android:visibility="visible">
 
             <com.google.android.material.card.MaterialCardView
@@ -94,7 +97,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
-                app:cardCornerRadius="20dp"
+                app:cardCornerRadius="24dp"
                 app:cardElevation="4dp"
                 app:cardPreventCornerOverlap="true"
                 app:strokeWidth="0dp">
@@ -180,13 +183,15 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:fillViewport="true"
+            android:clipToPadding="false"
+            android:paddingBottom="32dp"
             android:visibility="gone">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
-                app:cardCornerRadius="20dp"
+                app:cardCornerRadius="24dp"
                 app:cardElevation="4dp"
                 app:cardPreventCornerOverlap="true"
                 app:strokeWidth="0dp">
@@ -241,13 +246,15 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:fillViewport="true"
+            android:clipToPadding="false"
+            android:paddingBottom="32dp"
             android:visibility="gone">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
-                app:cardCornerRadius="20dp"
+                app:cardCornerRadius="24dp"
                 app:cardElevation="4dp"
                 app:cardPreventCornerOverlap="true"
                 app:strokeWidth="0dp">
@@ -319,13 +326,15 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:fillViewport="true"
+            android:clipToPadding="false"
+            android:paddingBottom="32dp"
             android:visibility="gone">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
-                app:cardCornerRadius="20dp"
+                app:cardCornerRadius="24dp"
                 app:cardElevation="4dp"
                 app:cardPreventCornerOverlap="true"
                 app:strokeWidth="0dp">
