@@ -58,6 +58,10 @@ public class MainActivity extends AppCompatActivity {
     private TableLayout tlAdvancesTable;
     private TableLayout tlGlobalSummaryTable; 
     private TextView tvFundTitle;
+    private TextView tvCurrentMonthHeader;
+    private TextView tvCurrentMonthTarget;
+    private TextView tvCurrentMonthPending;
+    
     private View llFormContainer;
     
     private TextView tvHistorySummary;
@@ -74,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // HIGH-SPEED CLOUD CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
+    // HIGH-SPEED CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
     private HashSet<String> globalPaymentsCache = new HashSet<>(); 
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
@@ -84,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
     private HashMap<String, String> globalChitStartDatesCache = new HashMap<>();
     private HashMap<String, String> globalChitFrequenciesCache = new HashMap<>();
     private HashMap<String, Integer> globalChitInstallmentsCountCache = new HashMap<>();
+    private ArrayList<Double> baseChitInstallmentAmounts = new ArrayList<>(); // RESTORED: Fixed missing class field variable symbol
 
     private ArrayList<android.animation.ValueAnimator> activeSnakeAnimators = new ArrayList<>();
     private ArrayList<Integer> selectedInstallmentsList = new ArrayList<>();
@@ -98,6 +103,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<CloudChitItem> globalChitsList = new ArrayList<>();
     private ArrayList<String> globalMembersList = new ArrayList<>();
 
+    // Play Store style morphing cursive progress animation snake engine
     private static class SnakeBorderDrawable extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint borderPaint;
         private final android.graphics.Paint fillPaint;
@@ -168,6 +174,11 @@ public class MainActivity extends AppCompatActivity {
         btnToggleMatrixOrientation = findViewById(R.id.btnToggleMatrixOrientation);
         Button btnAddInstallment = findViewById(R.id.btnAddInstallment);
         tlFundTable = findViewById(R.id.tlFundTable);
+
+        tvCurrentMonthHeader = findViewById(R.id.tvCurrentMonthHeader);
+        tvCurrentMonthTarget = findViewById(R.id.tvCurrentMonthTarget);
+        tvCurrentMonthPending = findViewById(R.id.tvCurrentMonthPending);
+        
         tlAdvancesTable = findViewById(R.id.tlAdvancesTable);
         tlGlobalSummaryTable = findViewById(R.id.tlGlobalSummaryTable);
         tvFundTitle = findViewById(R.id.tvFundTitle);
@@ -649,6 +660,12 @@ public class MainActivity extends AppCompatActivity {
         if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
     }
 
+    // RESTORED: Fixed missing system helper method validation block pointer
+    private void resetInstallmentSelection() {
+        selectedInstallmentsList.clear();
+        btnSelectInstallments.setText("Tap to Select Installments");
+    }
+
     private void refreshFundMatrixTable() {
         for (android.animation.ValueAnimator existingAnim : activeSnakeAnimators) existingAnim.cancel();
         activeSnakeAnimators.clear();
@@ -680,6 +697,33 @@ public class MainActivity extends AppCompatActivity {
                 }
                 calculatedDatesHeaders.add(sdfOutput.format(cal.getTime()));
             }
+
+            double currentMonthTotalTarget = 0.0;
+            double currentMonthTotalPending = 0.0;
+
+            if (currentActiveIndexId != -1) {
+                int realInstallmentNumber = currentActiveIndexId + 1;
+                String currentMonthName = calculatedDatesHeaders.get(currentActiveIndexId);
+    
+                tvCurrentMonthHeader.setText("Current Month Status (" + currentMonthName + " - Inst. #" + realInstallmentNumber + ")");
+    
+                for (String name : globalMembersList) {
+                    double memberAmount = getSpecificCachedMemberInstallmentAmount(chitId, name, realInstallmentNumber);
+                    currentMonthTotalTarget += memberAmount;
+     
+                    if (!globalPaymentsCache.contains(chitId + "_" + name + "_" + realInstallmentNumber)) {
+                       currentMonthTotalPending += memberAmount;
+                    }
+                }
+    
+                tvCurrentMonthTarget.setText("₹" + String.format(Locale.getDefault(), "%.2f", currentMonthTotalTarget));
+                tvCurrentMonthPending.setText("₹" + String.format(Locale.getDefault(), "%.2f", currentMonthTotalPending));
+            } else {
+                tvCurrentMonthHeader.setText("No Active Installment Due This Month");
+                tvCurrentMonthTarget.setText("₹0.00");
+                tvCurrentMonthPending.setText("₹0.00");
+            }
+
         } catch (Exception ignored) {}
 
         if (!isMatrixVertical) {
@@ -803,7 +847,7 @@ public class MainActivity extends AppCompatActivity {
                 TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tr.addView(tvDate);
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
                 TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvMem);
-                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tr.addView(tvInst);
+                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
                 TextView tvAdv = new TextView(this); tvAdv.setText("₹" + doc.getDouble("advance_amount")); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tr.addView(tvAdv);
                 TextView tvRate = new TextView(this); tvRate.setText("₹" + doc.getDouble("new_amount")); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tr.addView(tvRate);
 
@@ -894,7 +938,10 @@ public class MainActivity extends AppCompatActivity {
             String advAmtStr = etAdvanceAmt.getText().toString().trim();
             String amtStr = etAmt.getText().toString().trim();
 
-            if (memName.isEmpty() || instStr.isEmpty() || advAmtStr.isEmpty() || amtStr.isEmpty()) return;
+            if (memName.isEmpty() || instStr.isEmpty() || advAmtStr.isEmpty() || amtStr.isEmpty()) {
+                Toast.makeText(MainActivity.this, "Please fill out all fields completely.", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
             int instNum = Integer.parseInt(instStr);
             double advAmt = Double.parseDouble(advAmtStr);
@@ -912,6 +959,7 @@ public class MainActivity extends AppCompatActivity {
             advancePayload.put("new_amount", newAmt); advancePayload.put("date", currentDate);
 
             firestore.collection("advances").add(advancePayload).addOnSuccessListener(ref -> {
+                Toast.makeText(MainActivity.this, "Advance configuration saved to Cloud!", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
             });
         });
@@ -980,7 +1028,10 @@ public class MainActivity extends AppCompatActivity {
             String amtType = spAmountType.getText().toString();
             String date = etDate.getText().toString().trim();
 
-            if (name.isEmpty() || instStr.isEmpty() || date.isEmpty() || freq.isEmpty() || amtType.isEmpty()) return;
+            if (name.isEmpty() || instStr.isEmpty() || date.isEmpty() || freq.isEmpty() || amtType.isEmpty()) {
+                Toast.makeText(MainActivity.this, "Fill in all basic fields.", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
             int totalInst = Integer.parseInt(instStr);
             ArrayList<Double> amountsArray = new ArrayList<>();
@@ -1010,17 +1061,83 @@ public class MainActivity extends AppCompatActivity {
                         firestore.collection("members").add(mPayload);
                     }
                 }
+                Toast.makeText(MainActivity.this, "Chit Synchronized to Cloud!", Toast.LENGTH_SHORT).show();
                 dialog.dismiss(); chitId = newId;
+                syncCurrentChitContextFromCloud();
             });
         });
     }
 
-    @Override
-    protected void onDestroy() {
-        for (android.animation.ValueAnimator animator : activeSnakeAnimators) animator.cancel();
-        activeSnakeAnimators.clear();
-        super.onDestroy();
+    private void showDeleteChitSelectionDialog() {
+        if (globalChitsList == null || globalChitsList.isEmpty()) {
+            Toast.makeText(this, "No Chit Fund groups available to delete.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] chitNames = new String[globalChitsList.size()];
+        for (int i = 0; i < globalChitsList.size(); i++) {
+            chitNames[i] = globalChitsList.get(i).name;
+        }
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Select Chit Group to Delete")
+                .setItems(chitNames, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        CloudChitItem chosenChit = globalChitsList.get(which);
+                        showFinalDeleteConfirmationDialog(chosenChit.id, chosenChit.name);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
+
+    private void showFinalDeleteConfirmationDialog(final String targetedDeleteId, String chitName) {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Delete \"" + chitName + "\"?")
+                .setMessage("Are you sure you want to permanently delete this group? All ledger logs, member lists, payments, and advances will be completely wiped from the cloud.")
+                .setPositiveButton("Delete Permanently", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        executeCloudChitDeletion(targetedDeleteId);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+}
+
+private void executeCloudChitDeletion(final String targetedDeleteId) {
+    firestore.collection("chits").document(targetedDeleteId).delete()
+            .addOnSuccessListener(aVoid -> {
+                Toast.makeText(MainActivity.this, "Chit Group deleted successfully!", Toast.LENGTH_SHORT).show();
+                
+                if (targetedDeleteId.equals(chitId)) {
+                    chitId = null;
+                    globalMembersList.clear();
+                    tlFundTable.removeAllViews();
+                    tvFundTitle.setText("No active Chit Fund found. Create one using the menu!");
+                    llFormContainer.setVisibility(View.GONE);
+                }
+
+                firestore.collection("members").whereEqualTo("chitId", targetedDeleteId).get()
+                        .addOnSuccessListener(snapshots -> {
+                            for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
+                        });
+
+                firestore.collection("payments").whereEqualTo("chitId", targetedDeleteId).get()
+                        .addOnSuccessListener(snapshots -> {
+                            for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
+                        });
+
+                firestore.collection("advances").whereEqualTo("chitId", targetedDeleteId).get()
+                        .addOnSuccessListener(snapshots -> {
+                            for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
+                        });
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+}
 
     private void triggerDynamicAmountFields(String countStr, LinearLayout container, ArrayList<TextInputEditText> fieldTrackerList) {
         container.removeAllViews(); fieldTrackerList.clear();
