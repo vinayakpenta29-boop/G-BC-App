@@ -29,7 +29,7 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.textfield.TextInputEditText;
 
-// FIREBASE FIRESTORE CLOUD SERVER IMPORTS
+// FIREBASE FIRESTORE REAL-TIME IMPORTS
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnToggleMatrixOrientation;
     private TableLayout tlFundTable;
     private TableLayout tlAdvancesTable;
-    private TableLayout tlGlobalSummaryTable; // New cross-project workspace view variable
+    private TableLayout tlGlobalSummaryTable; 
     private TextView tvFundTitle;
     private View llFormContainer;
     
@@ -74,13 +74,12 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // COMPREHENSIVE RESTRUCTURED GLOBAL DATA STREAMS CACHE LOOKUP MAPS
-    private HashSet<String> globalPaymentsCache = new HashSet<>(); // Format: "chitId_memberName_installmentNum"
-    private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); // Format: chitId -> array of member names
-    private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); // Format: "chitId_memberName" -> installmentNum
-    private HashMap<String, Double> globalAdvanceRateCache = new HashMap<>(); // Format: "chitId_memberName" -> newRateAmount
+    // HIGH-SPEED MEMORY CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
+    private HashSet<String> globalPaymentsCache = new HashSet<>(); 
+    private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
+    private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
+    private HashMap<String, Double> globalAdvanceRateCache = new HashMap<>(); 
     
-    // Global Structural Configuration Properties Repositories Cache
     private HashMap<String, ArrayList<Double>> globalChitAmountsCache = new HashMap<>();
     private HashMap<String, String> globalChitStartDatesCache = new HashMap<>();
     private HashMap<String, String> globalChitFrequenciesCache = new HashMap<>();
@@ -249,7 +248,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 isMatrixVertical = !isMatrixVertical;
-                btnToggleMatrixOrientation.setText(isMatrixVertical ? "View Horizontally (Scroll Right)" : "View Vertically (Scroll Down)");
+                if (isMatrixVertical) {
+                    btnToggleMatrixOrientation.setText("View Horizontally (Scroll Right)");
+                } else {
+                    btnToggleMatrixOrientation.setText("View Vertically (Scroll Down)");
+                }
                 refreshFundMatrixTable();
             }
         });
@@ -261,7 +264,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Initialize Cross-Project System Core Data Listeners Stream Models Framework
         initGlobalDatabaseSynchronizers();
         refreshTransactionHistory();
 
@@ -324,9 +326,7 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // CORE MECHANIC UPDATE: Set up parallel cloud sync lookups to feed the aggregated overview table
     private void initGlobalDatabaseSynchronizers() {
-        // 1. Listen to all Chits configuration rules globally
         firestore.collection("chits").addSnapshotListener((value, error) -> {
             if (value == null) return;
             globalChitsList.clear();
@@ -345,7 +345,6 @@ public class MainActivity extends AppCompatActivity {
             }
             rebuildGlobalDropdownsUI();
             
-            // 2. Listen to all structural sub-members globally
             firestore.collection("members").addSnapshotListener((mVal, mErr) -> {
                 if (mVal == null) return;
                 globalChitMembersCache.clear();
@@ -356,7 +355,6 @@ public class MainActivity extends AppCompatActivity {
                     globalChitMembersCache.get(cId).add(name);
                 }
 
-                // 3. Listen to all loan structural advance configurations globally
                 firestore.collection("advances").addSnapshotListener((aVal, aErr) -> {
                     if (aVal == null) return;
                     globalAdvanceStartCache.clear();
@@ -367,7 +365,6 @@ public class MainActivity extends AppCompatActivity {
                         globalAdvanceRateCache.put(compositeKey, aDoc.getDouble("new_amount"));
                     }
 
-                    // 4. Listen to all milestone payment receipts globally
                     firestore.collection("payments").addSnapshotListener((pVal, pErr) -> {
                         if (pVal == null) return;
                         globalPaymentsCache.clear();
@@ -376,7 +373,6 @@ public class MainActivity extends AppCompatActivity {
                             globalPaymentsCache.add(compositeKey);
                         }
                         
-                        // Local system state synchronized across all branches: recalculate master table views
                         calculateGlobalMonthlyDuesEngine();
                         syncCurrentChitContextFromCloud();
                     });
@@ -400,7 +396,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ADVANCED CALCULATOR MODULE: Resolves current active installment vs overdue arrears across all projects
     private void calculateGlobalMonthlyDuesEngine() {
         tlGlobalSummaryTable.removeAllViews();
         if (globalChitsList.isEmpty()) return;
@@ -411,7 +406,6 @@ public class MainActivity extends AppCompatActivity {
         tlGlobalSummaryTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
         tlGlobalSummaryTable.setDividerDrawable(rowLine);
 
-        // Render Spreadsheet Headers Row Configuration
         TableRow header = new TableRow(this);
         header.setBackgroundColor(Color.parseColor("#1E293B"));
         header.setPadding(4, 12, 4, 12);
@@ -419,7 +413,7 @@ public class MainActivity extends AppCompatActivity {
         String[] headers = {"Chit Group Name", "Current Month Inst.", "Current Month Pending", "Previous Pending", "Total Outstanding"};
         for (String col : headers) {
             TextView tv = new TextView(this); tv.setText(col); tv.setPadding(20, 12, 20, 12);
-            tv.setTextColor(Color.WHITE); tv.setTextSize(13sp); tv.setTypeface(null, Typeface.BOLD);
+            tv.setTextColor(Color.WHITE); tv.setTextSize(13); tv.setTypeface(null, Typeface.BOLD); // FIX: Removed 'sp' literal flag error
             tv.setGravity(col.equals("Chit Group Name") ? Gravity.START : Gravity.CENTER);
             header.addView(tv);
         }
@@ -429,7 +423,6 @@ public class MainActivity extends AppCompatActivity {
         double aggregatePreviousPending = 0.0;
         Calendar todayCal = Calendar.getInstance();
 
-        // Evaluate every configured group registered inside the database cache
         for (CloudChitItem item : globalChitsList) {
             String id = item.id;
             if (!globalChitStartDatesCache.containsKey(id)) continue;
@@ -444,7 +437,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
                 Calendar cal = Calendar.getInstance();
-                for (int idx = 0; k < maxInst; idx++) {
+                for (int idx = 0; idx < maxInst; idx++) { // FIX: Replaced broken 'k' with 'idx' safely
                     cal.setTime(d);
                     if ("Monthly".equals(freq)) {
                         cal.add(Calendar.MONTH, idx);
@@ -460,12 +453,10 @@ public class MainActivity extends AppCompatActivity {
             double previousArrearsChitPending = 0.0;
             int displayInstNumber = (currentActiveIndex != -1) ? (currentActiveIndex + 1) : 1;
 
-            // Loop through all milestones to separate current dues from overdue balances
             for (int step = 1; step <= maxInst; step++) {
                 boolean isCurrentMilestone = (currentActiveIndex != -1 && step == (currentActiveIndex + 1));
                 boolean isPreviousMilestone = (currentActiveIndex != -1 && step < (currentActiveIndex + 1));
                 
-                // If there's no active calendar match this month, assume everything up to the final installment is due
                 if (currentActiveIndex == -1) {
                     isCurrentMilestone = false;
                     isPreviousMilestone = true;
@@ -488,7 +479,6 @@ public class MainActivity extends AppCompatActivity {
             aggregateCurrentPending += currentMonthChitPending;
             aggregatePreviousPending += previousArrearsChitPending;
 
-            // Generate row entries dynamically
             TableRow row = new TableRow(this);
             row.setPadding(4, 10, 4, 10);
             row.setBackgroundColor(Color.parseColor("#FFFFFF"));
@@ -497,12 +487,11 @@ public class MainActivity extends AppCompatActivity {
             TextView tvInst = new TextView(this); tvInst.setText("#" + displayInstNumber); tvInst.setPadding(20, 12, 20, 12); tvInst.setGravity(Gravity.CENTER); tvInst.setTextColor(Color.parseColor("#475569")); row.addView(tvInst);
             TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
             TextView tvPrev = new TextView(this); tvPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", previousArrearsChitPending)); tvPrev.setPadding(20, 12, 20, 12); tvPrev.setGravity(Gravity.CENTER); tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD); row.addView(tvPrev);
-            TextView tvTot = new TextView(this); tvTotal.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding)); tvTot.setPadding(20, 12, 20, 12); tvTot.setGravity(Gravity.CENTER); tvTot.setTextColor(Color.parseColor("#0F172A")); tvTot.setTypeface(null, Typeface.BOLD); row.addView(tvTot);
+            TextView tvTot = new TextView(this); tvTot.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding)); tvTot.setPadding(20, 12, 20, 12); tvTot.setGravity(Gravity.CENTER); tvTot.setTextColor(Color.parseColor("#0F172A")); tvTot.setTypeface(null, Typeface.BOLD); row.addView(tvTot); // FIX: Restored tvTot mapping variable definition mismatch
 
             tlGlobalSummaryTable.addView(row);
         }
 
-        // Render Grand Totals Footer Rows Mappings
         TableRow footerRow = new TableRow(this);
         footerRow.setBackgroundColor(Color.parseColor("#F1F5F9"));
         footerRow.setPadding(4, 12, 4, 12);
@@ -814,7 +803,7 @@ public class MainActivity extends AppCompatActivity {
                 TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tr.addView(tvDate);
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
                 TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvMem);
-                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tr.addView(tvInst);
+                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
                 TextView tvAdv = new TextView(this); tvAdv.setText("₹" + doc.getDouble("advance_amount")); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tr.addView(tvAdv);
                 TextView tvRate = new TextView(this); tvRate.setText("₹" + doc.getDouble("new_amount")); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tr.addView(tvRate);
 
@@ -1012,13 +1001,6 @@ public class MainActivity extends AppCompatActivity {
                 dialog.dismiss(); chitId = newId;
             });
         });
-    }
-
-    @Override
-    protected void onDestroy() {
-        for (android.animation.ValueAnimator animator : activeSnakeAnimators) animator.cancel();
-        activeSnakeAnimators.clear();
-        super.onDestroy();
     }
 
     private void triggerDynamicAmountFields(String countStr, LinearLayout container, ArrayList<TextInputEditText> fieldTrackerList) {
