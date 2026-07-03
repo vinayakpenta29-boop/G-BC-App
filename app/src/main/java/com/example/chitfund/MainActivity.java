@@ -323,7 +323,7 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         if (item.getItemId() == R.id.menu_delete_chit) {
-        showDeleteChitConfirmationDialog();
+        showDeleteChitSelectionDialog();
         return true;
         }
         return super.onOptionsItemSelected(item);
