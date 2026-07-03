@@ -6,6 +6,7 @@
     android:background="#F8FAFC"
     android:orientation="vertical">
 
+    <!-- 1. PILL TAB NAVIGATION FIXED AT THE ABSOLUTE TOP -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/premiumTabLayout"
         android:layout_width="match_parent"
@@ -27,6 +28,7 @@
         app:tabTextAppearance="@style/PremiumTabTextStyle"
         app:tabRippleColor="@android:color/transparent"/>
 
+    <!-- 2. GLOBAL ACTIVE GROUP SELECTOR CARD -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -78,11 +80,13 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- CONTENT DISPLAY VIEWPORT WINDOW PANEL CONTAINERS -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
+        <!-- TAB POSITION 0 CONTENT: COLLECT PAYMENT PANEL -->
         <ScrollView
             android:id="@+id/tabContainerCollect"
             android:layout_width="match_parent"
@@ -92,106 +96,12 @@
             android:paddingBottom="32dp"
             android:visibility="visible">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/llFormContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="16dp"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="4dp"
-                app:cardPreventCornerOverlap="true"
-                app:strokeWidth="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Log Installment Payments"
-                        android:textColor="#334155"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="16dp" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="20dp"
-                        android:hint="Select Member Name"
-                        app:boxCornerRadiusTopStart="12dp"
-                        app:boxCornerRadiusTopEnd="12dp"
-                        app:boxCornerRadiusBottomStart="12dp"
-                        app:boxCornerRadiusBottomEnd="12dp">
-
-                        <AutoCompleteTextView
-                            android:id="@+id/spMembers"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="none"
-                            android:padding="16dp"
-                            android:fontFamily="monospace"
-                            android:textStyle="bold"
-                            android:textColor="#0F172A"
-                            android:popupBackground="@drawable/dropdown_popup_bg" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Target Milestone Installments"
-                        android:textColor="#64748B"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="8dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSelectInstallments"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="20dp"
-                        android:text="Tap to Select Installments"
-                        android:textColor="#0F172A"
-                        android:gravity="start|center_vertical"
-                        android:padding="16dp"
-                        android:textAllCaps="false"
-                        app:strokeColor="#CBD5E1"
-                        app:strokeWidth="1.5dp"
-                        app:cornerRadius="12dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnAddInstallment"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Save Selected Payments"
-                        android:textAllCaps="false"
-                        android:textSize="16sp"
-                        android:padding="16dp"
-                        app:backgroundTint="#0F172A"
-                        app:cornerRadius="12dp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </ScrollView>
-
-        <ScrollView
-            android:id="@+id/tabContainerMatrix"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fillViewport="true"
-            android:clipToPadding="false"
-            android:paddingBottom="32dp"
-            android:visibility="gone">
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <!-- MOVED HERE: CROSS-CHIT MASTER MONTHLY LEDGER OVERVIEW TABLE -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -231,7 +141,9 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- LOG INSTALLMENT PAYMENTS MAIN FORM CARD -->
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/llFormContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
@@ -249,45 +161,142 @@
                         android:padding="20dp">
 
                         <TextView
-                            android:id="@+id/tvFundTitle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:textSize="18sp"
-                            android:fontFamily="monospace"
-                            android:textStyle="bold"
-                            android:textColor="#0F172A"
-                            android:layout_marginBottom="12dp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnToggleMatrixOrientation"
-                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="18dp"
-                            android:text="View Vertically (Scroll Down)"
-                            android:textAllCaps="false"
+                            android:text="Log Installment Payments"
+                            android:textColor="#334155"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="16dp" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="20dp"
+                            android:hint="Select Member Name"
+                            app:boxCornerRadiusTopStart="12dp"
+                            app:boxCornerRadiusTopEnd="12dp"
+                            app:boxCornerRadiusBottomStart="12dp"
+                            app:boxCornerRadiusBottomEnd="12dp">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/spMembers"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="none"
+                                android:padding="16dp"
+                                android:fontFamily="monospace"
+                                android:textStyle="bold"
+                                android:textColor="#0F172A"
+                                android:popupBackground="@drawable/dropdown_popup_bg" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Target Milestone Installments"
+                            android:textColor="#64748B"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="8dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSelectInstallments"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="20dp"
+                            android:text="Tap to Select Installments"
                             android:textColor="#0F172A"
-                            android:textSize="13sp"
+                            android:gravity="start|center_vertical"
+                            android:padding="16dp"
+                            android:textAllCaps="false"
                             app:strokeColor="#CBD5E1"
                             app:strokeWidth="1.5dp"
-                            app:cornerRadius="20dp"
-                            app:icon="@android:drawable/ic_menu_sort_by_size"
-                            app:iconTint="#0F172A" />
+                            app:cornerRadius="12dp" />
 
-                        <HorizontalScrollView
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAddInstallment"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content">
-                            <TableLayout
-                                android:id="@+id/tlFundTable"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:stretchColumns="*" />
-                        </HorizontalScrollView>
+                            android:layout_height="wrap_content"
+                            android:text="Save Selected Payments"
+                            android:textAllCaps="false"
+                            android:textSize="16sp"
+                            android:padding="16dp"
+                            app:backgroundTint="#0F172A"
+                            app:cornerRadius="12dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
         </ScrollView>
 
+        <!-- TAB POSITION 1 CONTENT: MATRIX DATA GRID -->
+        <ScrollView
+            android:id="@+id/tabContainerMatrix"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:clipToPadding="false"
+            android:paddingBottom="32dp"
+            android:visibility="gone">
+
+            <!-- SELECTED INDIVIDUAL ACTIVE GROUP GRID CONTAINER -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="4dp"
+                app:cardPreventCornerOverlap="true"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:id="@+id/tvFundTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="18sp"
+                        android:fontFamily="monospace"
+                        android:textStyle="bold"
+                        android:textColor="#0F172A"
+                        android:layout_marginBottom="12dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnToggleMatrixOrientation"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="18dp"
+                        android:text="View Vertically (Scroll Down)"
+                        android:textAllCaps="false"
+                        android:textColor="#0F172A"
+                        android:textSize="13sp"
+                        app:strokeColor="#CBD5E1"
+                        app:strokeWidth="1.5dp"
+                        app:cornerRadius="20dp"
+                        app:icon="@android:drawable/ic_menu_sort_by_size"
+                        app:iconTint="#0F172A" />
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+                        <TableLayout
+                            android:id="@+id/tlFundTable"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:stretchColumns="*" />
+                    </HorizontalScrollView>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </ScrollView>
+
+        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG -->
         <ScrollView
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
@@ -368,6 +377,7 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
+        <!-- TAB POSITION 3 CONTENT: RECORDED MEMBER ADVANCES -->
         <ScrollView
             android:id="@+id/tabContainerAdvances"
             android:layout_width="match_parent"
