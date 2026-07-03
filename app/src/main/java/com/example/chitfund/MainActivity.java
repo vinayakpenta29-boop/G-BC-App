@@ -322,6 +322,10 @@ public class MainActivity extends AppCompatActivity {
             showLogAdvanceDialog();
             return true;
         }
+        if (item.getItemId() == R.id.menu_delete_chit) {
+        showDeleteChitConfirmationDialog();
+        return true;
+        }
         return super.onOptionsItemSelected(item);
     }
 
@@ -967,6 +971,69 @@ public class MainActivity extends AppCompatActivity {
         activeSnakeAnimators.clear();
         super.onDestroy();
     }
+
+private void showDeleteChitConfirmationDialog() {
+    if (chitId == null) {
+        Toast.makeText(this, "No active Chit Fund group to delete.", Toast.LENGTH_SHORT).show();
+        return;
+    }
+
+    new MaterialAlertDialogBuilder(this)
+            .setTitle("Delete Chit Group?")
+            .setMessage("Are you sure you want to permanently delete this group? All records, payments, and advances will be completely wiped from the cloud.")
+            .setPositiveButton("Delete Permanently", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    executeCloudChitDeletion();
+                }
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+}
+
+private void executeCloudChitDeletion() {
+    if (chitId == null) return;
+    
+    String targetedDeleteId = chitId;
+
+    // 1. Delete the base Chit configuration document
+    firestore.collection("chits").document(targetedDeleteId).delete()
+            .addOnSuccessListener(aVoid -> {
+                Toast.makeText(MainActivity.this, "Chit Group deleted successfully!", Toast.LENGTH_SHORT).show();
+                
+                // Reset active workspace variables cleanly
+                chitId = null;
+                cloudPaymentsCache.clear();
+                cloudAdvanceStartCache.clear();
+                cloudAdvanceRateCache.clear();
+                globalMembersList.clear();
+
+                // 2. Cascade cleanup associated cloud members
+                firestore.collection("members").whereEqualTo("chitId", targetedDeleteId).get()
+                        .addOnSuccessListener(snapshots -> {
+                            for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
+                        });
+
+                // 3. Cascade cleanup associated cloud payments
+                firestore.collection("payments").whereEqualTo("chitId", targetedDeleteId).get()
+                        .addOnSuccessListener(snapshots -> {
+                            for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
+                        });
+
+                // 4. Cascade cleanup associated cloud advances
+                firestore.collection("advances").whereEqualTo("chitId", targetedDeleteId).get()
+                        .addOnSuccessListener(snapshots -> {
+                            for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
+                        });
+
+                // 5. Force background data stream reload to clear matrix screens
+                fetchChitGroupsListFromCloud();
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(MainActivity.this, "Error deleting group: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+}
+    
 
     private void triggerDynamicAmountFields(String countStr, LinearLayout container, ArrayList<TextInputEditText> fieldTrackerList) {
         container.removeAllViews();
