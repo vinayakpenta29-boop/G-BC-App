@@ -409,7 +409,7 @@ public class MainActivity extends AppCompatActivity {
         tlGlobalSummaryTable.setDividerDrawable(rowLine);
 
         TableRow header = new TableRow(this);
-        header.setBackgroundColor(Color.parseColor("#1E293B"));
+        header.setBackgroundResource(R.drawable.table_header_bg);
         header.setPadding(4, 12, 4, 12);
         
         String[] headers = {"Chit Group Name", "Current Month Inst.", "Current Month Pending", "Previous Pending", "Total Outstanding"};
