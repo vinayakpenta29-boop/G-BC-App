@@ -57,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private TableLayout tlFundTable;
     private TableLayout tlAdvancesTable;
     private TableLayout tlGlobalSummaryTable; 
+    private LinearLayout llGlobalSummaryContainer; // Instantiated dashboard wrapper layout variable
     private TextView tvFundTitle;
     private View llFormContainer;
     
@@ -74,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // HIGH-SPEED CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
+    // HIGH-SPEED CLOUD CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
     private HashSet<String> globalPaymentsCache = new HashSet<>(); 
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
@@ -87,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<Double> baseChitInstallmentAmounts = new ArrayList<>(); 
 
     private ArrayList<android.animation.ValueAnimator> activeSnakeAnimators = new ArrayList<>();
+    private android.animation.ValueAnimator globalSummaryAnimator = null; // Isolated single tracking reference pointer
     private ArrayList<Integer> selectedInstallmentsList = new ArrayList<>();
     
     public static class CloudChitItem {
@@ -172,6 +174,7 @@ public class MainActivity extends AppCompatActivity {
         tlFundTable = findViewById(R.id.tlFundTable);
         tlAdvancesTable = findViewById(R.id.tlAdvancesTable);
         tlGlobalSummaryTable = findViewById(R.id.tlGlobalSummaryTable);
+        llGlobalSummaryContainer = findViewById(R.id.llGlobalSummaryContainer);
         tvFundTitle = findViewById(R.id.tvFundTitle);
         llFormContainer = findViewById(R.id.llFormContainer);
         
@@ -399,6 +402,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void calculateGlobalMonthlyDuesEngine() {
+        // UPDATE FEATURE: Terminate and unbind running loops on data reload changes to prevent stacking leaks
+        if (globalSummaryAnimator != null) {
+            globalSummaryAnimator.cancel();
+            activeSnakeAnimators.remove(globalSummaryAnimator);
+        }
+
         tlGlobalSummaryTable.removeAllViews();
         if (globalChitsList.isEmpty()) return;
 
@@ -409,7 +418,7 @@ public class MainActivity extends AppCompatActivity {
         tlGlobalSummaryTable.setDividerDrawable(rowLine);
 
         TableRow header = new TableRow(this);
-        header.setBackgroundResource(R.drawable.table_header_bg);
+        header.setBackgroundResource(R.drawable.table_header_bg); // RESTORED: Applies rounded corner premium asset
         header.setPadding(4, 12, 4, 12);
         
         String[] headers = {"Chit Group Name", "Current Month Inst.", "Current Month Pending", "Previous Pending", "Total Outstanding"};
@@ -495,7 +504,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         TableRow footerRow = new TableRow(this);
-        footerRow.setBackgroundResource(R.drawable.table_footer_bg);
+        footerRow.setBackgroundColor(Color.parseColor("#F1F5F9"));
         footerRow.setPadding(4, 12, 4, 12);
 
         TextView tvTotalLbl = new TextView(this); tvTotalLbl.setText("GRAND TOTALS"); tvTotalLbl.setPadding(20, 12, 20, 12); tvTotalLbl.setTextColor(Color.parseColor("#0F172A")); tvTotalLbl.setTypeface(null, Typeface.BOLD); footerRow.addView(tvTotalLbl);
@@ -505,9 +514,20 @@ public class MainActivity extends AppCompatActivity {
         TextView tvSumGrand = new TextView(this); tvSumGrand.setText("₹" + String.format(Locale.getDefault(), "%.1f", (aggregateCurrentPending + aggregatePreviousPending))); tvSumGrand.setPadding(20, 12, 20, 12); tvSumGrand.setGravity(Gravity.CENTER); tvSumGrand.setTextColor(Color.parseColor("#0F172A")); tvSumGrand.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumGrand);
 
         tlGlobalSummaryTable.addView(footerRow);
+
+        // UPDATE FEATURE: Bind a persistent 48f cursive slither stroke animator ring onto the global overview table dashboard
+        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#0F172A"), Color.WHITE, 48f);
+        llGlobalSummaryContainer.setBackground(globalSnakeDrawable);
+
+        globalSummaryAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
+        globalSummaryAnimator.setDuration(2400); 
+        globalSummaryAnimator.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        globalSummaryAnimator.setInterpolator(new android.view.animation.LinearInterpolator());
+        globalSummaryAnimator.addUpdateListener(animation -> globalSnakeDrawable.setAnimationProgress(-(float) animation.getAnimatedValue()));
+        globalSummaryAnimator.start();
+        activeSnakeAnimators.add(globalSummaryAnimator);
     }
 
-    // FIXED: Changed amounts.get(targetChitId).get(...) to directly map the local List parameter array object bounds
     private double getSpecificCachedMemberInstallmentAmount(String targetChitId, String memberName, int installmentNum) {
         String compositeKey = targetChitId + "_" + memberName;
         if (globalAdvanceStartCache.containsKey(compositeKey)) {
@@ -848,7 +868,7 @@ public class MainActivity extends AppCompatActivity {
                 TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tvMem.setGravity(Gravity.CENTER); tr.addView(tvMem);
                 TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
                 TextView tvAdv = new TextView(this); tvAdv.setText("₹" + doc.getDouble("advance_amount")); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tr.addView(tvAdv);
-                TextView tvRate = new TextView(this); tvRate.setText("₹" + doc.getDouble("new_amount")); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tr.addView(tvRate);
+                TextView tvRate = new TextView(this); tvRate.setText("₹" + doc.getDouble("new_amount")); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tvRate.setGravity(Gravity.CENTER); tr.addView(tvRate);
 
                 tlAdvancesTable.addView(tr);
             }
