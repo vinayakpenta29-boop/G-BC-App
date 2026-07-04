@@ -403,7 +403,7 @@ public class MainActivity extends AppCompatActivity {
         if (globalChitsList.isEmpty()) return;
 
         android.graphics.drawable.GradientDrawable rowLine = new android.graphics.drawable.GradientDrawable();
-        rowLine.setColor(Color.parseColor("#E2E8F0"));
+        rowLine.setBackgroundResource(R.drawable.table_footer_bg);
         rowLine.setSize(2, 2);
         tlGlobalSummaryTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
         tlGlobalSummaryTable.setDividerDrawable(rowLine);
