@@ -509,13 +509,13 @@ public class MainActivity extends AppCompatActivity {
         globalSummaryAnimator.setDuration(1600); 
         globalSummaryAnimator.setRepeatCount(android.animation.ValueAnimator.INFINITE);
         globalSummaryAnimator.setInterpolator(new android.view.animation.LinearInterpolator());
-        
-        // FIX: Explicitly calling invalidate guarantees that the container re-renders the crawling animation stroke on every frame tick smoothly
+
+        // OPTIMIZED: Remove llGlobalSummaryContainer.invalidate() to stop heavy layout re-renders
         globalSummaryAnimator.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(android.animation.ValueAnimator animation) {
+                // Let the drawable's internal invalidateSelf() update the stroke layer natively
                 globalSnakeDrawable.setAnimationProgress(-(float) animation.getAnimatedValue());
-                llGlobalSummaryContainer.invalidate();
             }
         });
         globalSummaryAnimator.start();
