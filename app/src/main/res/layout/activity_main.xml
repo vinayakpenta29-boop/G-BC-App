@@ -101,7 +101,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- MOVED HERE: CROSS-CHIT MASTER MONTHLY LEDGER OVERVIEW TABLE -->
+                <!-- CROSS-CHIT MASTER MONTHLY LEDGER OVERVIEW TABLE WITH INSTANTIATED CONTAINER ID -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -115,6 +115,7 @@
                     app:strokeWidth="0dp">
 
                     <LinearLayout
+                        android:id="@+id/llGlobalSummaryContainer"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
@@ -241,7 +242,6 @@
             android:paddingBottom="32dp"
             android:visibility="gone">
 
-            <!-- SELECTED INDIVIDUAL ACTIVE GROUP GRID CONTAINER -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
