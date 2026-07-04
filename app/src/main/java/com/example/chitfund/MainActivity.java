@@ -186,6 +186,21 @@ public class MainActivity extends AppCompatActivity {
         tabContainerLedger = findViewById(R.id.tabContainerLedger);
         tabContainerAdvances = findViewById(R.id.tabContainerAdvances);
 
+        // FIX FIX FIX: Initialize the dashboard animation exactly ONCE here on initialization startup
+        float radiusPx = 24 * getResources().getDisplayMetrics().density;
+        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), Color.WHITE, radiusPx);
+        llGlobalSummaryContainer.setBackground(globalSnakeDrawable);
+
+        globalSummaryAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
+        globalSummaryAnimator.setDuration(1600); 
+        globalSummaryAnimator.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        globalSummaryAnimator.setInterpolator(new android.view.animation.LinearInterpolator());
+        globalSummaryAnimator.addUpdateListener(animation -> {
+            globalSnakeDrawable.setAnimationProgress(-(float) animation.getAnimatedValue());
+            llGlobalSummaryContainer.postInvalidateOnAnimation(); // Smooth drawing pass invocation
+        });
+        globalSummaryAnimator.start();
+
         TabLayout tabLayout = findViewById(R.id.premiumTabLayout);
         tabLayout.addTab(tabLayout.newTab().setText("Collect"));
         tabLayout.addTab(tabLayout.newTab().setText("Matrix Grid"));
@@ -317,6 +332,20 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.home_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.menu_new_chit) { showNewChitDialog(); return true; }
+        if (item.getItemId() == R.id.menu_log_advance) { showLogAdvanceDialog(); return true; }
+        if (item.getItemId() == R.id.menu_delete_chit) { showDeleteChitSelectionDialog(); return true; }
+        return super.onOptionsItemSelected(item);
+    }
+
     private void initGlobalDatabaseSynchronizers() {
         firestore.collection("chits").addSnapshotListener((value, error) -> {
             if (value == null) return;
@@ -388,11 +417,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void calculateGlobalMonthlyDuesEngine() {
-        if (globalSummaryAnimator != null) {
-            globalSummaryAnimator.cancel();
-            activeSnakeAnimators.remove(globalSummaryAnimator);
-        }
-
         tlGlobalSummaryTable.removeAllViews();
         if (globalChitsList.isEmpty()) return;
 
@@ -499,27 +523,6 @@ public class MainActivity extends AppCompatActivity {
         TextView tvSumGrand = new TextView(this); tvSumGrand.setText("₹" + String.format(Locale.getDefault(), "%.1f", (aggregateCurrentPending + aggregatePreviousPending))); tvSumGrand.setPadding(20, 12, 20, 12); tvSumGrand.setGravity(Gravity.CENTER); tvSumGrand.setTextColor(Color.parseColor("#0F172A")); tvSumGrand.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumGrand);
 
         tlGlobalSummaryTable.addView(footerRow);
-
-        // FIX: Transformed corner radius bounds to explicit display metrics values to match the 24dp design perfectly
-        float radiusPx = 24 * getResources().getDisplayMetrics().density;
-        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), Color.WHITE, radiusPx);
-        llGlobalSummaryContainer.setBackground(globalSnakeDrawable);
-
-        globalSummaryAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
-        globalSummaryAnimator.setDuration(1600); 
-        globalSummaryAnimator.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-        globalSummaryAnimator.setInterpolator(new android.view.animation.LinearInterpolator());
-
-        // OPTIMIZED: Remove llGlobalSummaryContainer.invalidate() to stop heavy layout re-renders
-        globalSummaryAnimator.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(android.animation.ValueAnimator animation) {
-                // Let the drawable's internal invalidateSelf() update the stroke layer natively
-                globalSnakeDrawable.setAnimationProgress(-(float) animation.getAnimatedValue());
-            }
-        });
-        globalSummaryAnimator.start();
-        activeSnakeAnimators.add(globalSummaryAnimator);
     }
 
     private double getSpecificCachedMemberInstallmentAmount(String targetChitId, String memberName, int installmentNum) {
