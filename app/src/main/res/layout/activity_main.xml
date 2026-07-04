@@ -101,46 +101,37 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- CROSS-CHIT MASTER MONTHLY LEDGER OVERVIEW TABLE WITH INSTANTIATED CONTAINER ID -->
-                <com.google.android.material.card.MaterialCardView
+                <!-- FIX: Removed parent MaterialCardView to prevent frame boundary corner canvas clipping anomalies -->
+                <LinearLayout
+                    android:id="@+id/llGlobalSummaryContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
                     android:layout_marginEnd="16dp"
                     android:layout_marginTop="16dp"
                     android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="24dp"
-                    app:cardElevation="4dp"
-                    app:cardPreventCornerOverlap="true"
-                    app:strokeWidth="0dp">
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                    <LinearLayout
-                        android:id="@+id/llGlobalSummaryContainer"
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="20dp">
+                        android:text="All Chit Funds Monthly Collection Ledger"
+                        android:textColor="#0F172A"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="16dp" />
 
-                        <TextView
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+                        <TableLayout
+                            android:id="@+id/tlGlobalSummaryTable"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="All Chit Funds Monthly Collection Ledger"
-                            android:textColor="#0F172A"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:layout_marginBottom="16dp" />
-
-                        <HorizontalScrollView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content">
-                            <TableLayout
-                                android:id="@+id/tlGlobalSummaryTable"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:stretchColumns="*" />
-                        </HorizontalScrollView>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
+                            android:stretchColumns="*" />
+                    </HorizontalScrollView>
+                </LinearLayout>
 
                 <!-- LOG INSTALLMENT PAYMENTS MAIN FORM CARD -->
                 <com.google.android.material.card.MaterialCardView
