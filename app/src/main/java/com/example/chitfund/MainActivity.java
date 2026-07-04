@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private TableLayout tlFundTable;
     private TableLayout tlAdvancesTable;
     private TableLayout tlGlobalSummaryTable; 
-    private LinearLayout llGlobalSummaryContainer; // Instantiated dashboard wrapper layout variable
+    private LinearLayout llGlobalSummaryContainer; 
     private TextView tvFundTitle;
     private View llFormContainer;
     
@@ -75,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // HIGH-SPEED CLOUD CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
+    // HIGH-SPEED CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
     private HashSet<String> globalPaymentsCache = new HashSet<>(); 
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
@@ -88,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<Double> baseChitInstallmentAmounts = new ArrayList<>(); 
 
     private ArrayList<android.animation.ValueAnimator> activeSnakeAnimators = new ArrayList<>();
-    private android.animation.ValueAnimator globalSummaryAnimator = null; // Isolated single tracking reference pointer
+    private android.animation.ValueAnimator globalSummaryAnimator = null; 
     private ArrayList<Integer> selectedInstallmentsList = new ArrayList<>();
     
     public static class CloudChitItem {
@@ -317,20 +317,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.home_menu, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == R.id.menu_new_chit) { showNewChitDialog(); return true; }
-        if (item.getItemId() == R.id.menu_log_advance) { showLogAdvanceDialog(); return true; }
-        if (item.getItemId() == R.id.menu_delete_chit) { showDeleteChitSelectionDialog(); return true; }
-        return super.onOptionsItemSelected(item);
-    }
-
     private void initGlobalDatabaseSynchronizers() {
         firestore.collection("chits").addSnapshotListener((value, error) -> {
             if (value == null) return;
@@ -402,7 +388,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void calculateGlobalMonthlyDuesEngine() {
-        // UPDATE FEATURE: Terminate and unbind running loops on data reload changes to prevent stacking leaks
         if (globalSummaryAnimator != null) {
             globalSummaryAnimator.cancel();
             activeSnakeAnimators.remove(globalSummaryAnimator);
@@ -418,7 +403,7 @@ public class MainActivity extends AppCompatActivity {
         tlGlobalSummaryTable.setDividerDrawable(rowLine);
 
         TableRow header = new TableRow(this);
-        header.setBackgroundResource(R.drawable.table_header_bg); // RESTORED: Applies rounded corner premium asset
+        header.setBackgroundResource(R.drawable.table_header_bg); 
         header.setPadding(4, 12, 4, 12);
         
         String[] headers = {"Chit Group Name", "Current Month Inst.", "Current Month Pending", "Previous Pending", "Total Outstanding"};
@@ -515,15 +500,24 @@ public class MainActivity extends AppCompatActivity {
 
         tlGlobalSummaryTable.addView(footerRow);
 
-        // UPDATE FEATURE: Bind a persistent 48f cursive slither stroke animator ring onto the global overview table dashboard
-        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#0F172A"), Color.WHITE, 48f);
+        // FIX: Transformed corner radius bounds to explicit display metrics values to match the 24dp design perfectly
+        float radiusPx = 24 * getResources().getDisplayMetrics().density;
+        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), Color.WHITE, radiusPx);
         llGlobalSummaryContainer.setBackground(globalSnakeDrawable);
 
         globalSummaryAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
-        globalSummaryAnimator.setDuration(2400); 
+        globalSummaryAnimator.setDuration(1600); 
         globalSummaryAnimator.setRepeatCount(android.animation.ValueAnimator.INFINITE);
         globalSummaryAnimator.setInterpolator(new android.view.animation.LinearInterpolator());
-        globalSummaryAnimator.addUpdateListener(animation -> globalSnakeDrawable.setAnimationProgress(-(float) animation.getAnimatedValue()));
+        
+        // FIX: Explicitly calling invalidate guarantees that the container re-renders the crawling animation stroke on every frame tick smoothly
+        globalSummaryAnimator.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(android.animation.ValueAnimator animation) {
+                globalSnakeDrawable.setAnimationProgress(-(float) animation.getAnimatedValue());
+                llGlobalSummaryContainer.invalidate();
+            }
+        });
         globalSummaryAnimator.start();
         activeSnakeAnimators.add(globalSummaryAnimator);
     }
