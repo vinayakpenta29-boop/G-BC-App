@@ -501,7 +501,7 @@ public class MainActivity extends AppCompatActivity {
 
             TableRow row = new TableRow(this);
             row.setPadding(4, 10, 4, 10);
-            row.setBackgroundColor(Color.parseColor("#FFFFFF"));
+            row.setBackgroundColor(Color.parseColor("#F0FDF4"));
 
             TextView tvName = new TextView(this); tvName.setText(item.name); tvName.setPadding(20, 12, 20, 12); tvName.setTextColor(Color.parseColor("#0F172A")); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); row.addView(tvName);
             TextView tvInst = new TextView(this); tvInst.setText("#" + displayInstNumber); tvInst.setPadding(20, 12, 20, 12); tvInst.setGravity(Gravity.CENTER); tvInst.setTextColor(Color.parseColor("#475569")); row.addView(tvInst);
