@@ -513,7 +513,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         TableRow footerRow = new TableRow(this);
-        footerRow.setBackgroundColor(Color.parseColor("#F1F5F9"));
+        footerRow.setBackgroundColor(Color.parseColor("#C6BFB5"));
         footerRow.setPadding(4, 12, 4, 12);
 
         TextView tvTotalLbl = new TextView(this); tvTotalLbl.setText("GRAND TOTALS"); tvTotalLbl.setPadding(20, 12, 20, 12); tvTotalLbl.setTextColor(Color.parseColor("#0F172A")); tvTotalLbl.setTypeface(null, Typeface.BOLD); footerRow.addView(tvTotalLbl);
