@@ -188,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
 
         // FIX FIX FIX: Initialize the dashboard animation exactly ONCE here on initialization startup
         float radiusPx = 24 * getResources().getDisplayMetrics().density;
-        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), Color.WHITE, radiusPx);
+        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), Color.parseColor("#F0FDF4"), radiusPx);
         llGlobalSummaryContainer.setBackground(globalSnakeDrawable);
 
         globalSummaryAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
