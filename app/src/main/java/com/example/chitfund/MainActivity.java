@@ -512,7 +512,57 @@ public class MainActivity extends AppCompatActivity {
             tvName.setTextColor(Color.parseColor("#0F172A")); // Normal Black if ONLY current month is pending
         } else {
             tvName.setTextColor(Color.parseColor("#15803D")); // Emerald Green if completely paid up for current month!
-        } 
+        }
+        
+        final String targetName = item.name;
+        final String targetStartDate = startStr;
+        final String targetFreq = freq;
+        final int targetMaxInst = maxInst;
+        final int activeInstNum = displayInstNumber;
+        final ArrayList<String> targetMembers = members;
+        final double curMonthDues = currentMonthChitPending;
+        final double pastMonthDues = previousArrearsChitPending;
+        final double grossDues = totalChitOutstanding;
+        final ArrayList<Double> targetPlanBreakdown = globalChitAmountsCache.get(id);
+
+        tvName.setOnClickListener(v -> {
+            StringBuilder details = new StringBuilder();
+            details.append("📅 Start Date Plan: ").append(targetStartDate).append("\n");
+            details.append("🔄 Cycle Frequency: ").append(targetFreq).append("\n");
+            details.append("🔢 Maximum Milestones: ").append(targetMaxInst).append(" Steps\n");
+            details.append("🎯 Calendar Active Target: Step #").append(activeInstNum).append("\n\n");
+            
+            details.append("👥 Registered Group Members:\n");
+            if (targetMembers != null && !targetMembers.isEmpty()) {
+                for (int m = 0; m < targetMembers.size(); m++) {
+                    details.append("  ").append(m + 1).append(". ").append(targetMembers.get(m)).append("\n");
+                }
+            } else {
+                details.append("  No workspace members found.\n");
+            }
+            details.append("\n");
+
+            details.append("📊 Outstanding Liability Logs:\n");
+            details.append("  • Active Cycle Dues: ₹").append(String.format(Locale.getDefault(), "%.1f", curMonthDues)).append("\n");
+            details.append("  • Previous Month Arrears: ₹").append(String.format(Locale.getDefault(), "%.1f", pastMonthDues)).append("\n");
+            details.append("  • Combined Net Outstanding: ₹").append(String.format(Locale.getDefault(), "%.1f", grossDues)).append("\n\n");
+
+            details.append("💰 Fixed/Dynamic Installment Plan Chart:\n");
+            if (targetPlanBreakdown != null) {
+                for (int i = 0; i < targetPlanBreakdown.size(); i++) {
+                    details.append("  • Step #").append(i + 1).append(": ₹").append(targetPlanBreakdown.get(i)).append("\n");
+                }
+            } else {
+                details.append("  No installment plan cached.\n");
+            }
+
+            new MaterialAlertDialogBuilder(MainActivity.this)
+                .setTitle(targetName + " Overview Summary Profile")
+                .setMessage(details.toString())
+                .setPositiveButton("Dismiss Dashboard View", null)
+                .show();
+        });
+        
         row.addView(tvName);
         
         TextView tvInst = new TextView(this); tvInst.setText("#" + displayInstNumber); tvInst.setPadding(20, 12, 20, 12); tvInst.setGravity(Gravity.CENTER); tvInst.setTextColor(Color.parseColor("#475569")); row.addView(tvInst);
