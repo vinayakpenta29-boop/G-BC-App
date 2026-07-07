@@ -191,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
         tabContainerAdvances = findViewById(R.id.tabContainerAdvances);
 
         float radiusPx = 24 * getResources().getDisplayMetrics().density;
-        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), Color.parseColor("#F0FDF4"), radiusPx);
+        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#F59E0B"), Color.parseColor("#FFF7ED"), radiusPx);
         llGlobalSummaryContainer.setBackground(globalSnakeDrawable);
 
         globalSummaryAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
