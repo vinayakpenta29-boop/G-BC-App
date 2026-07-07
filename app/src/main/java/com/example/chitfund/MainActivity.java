@@ -415,124 +415,129 @@ public class MainActivity extends AppCompatActivity {
             chitId = globalChitsList.get(0).id;
         }
     }
-
+    
     private void calculateGlobalMonthlyDuesEngine() {
-        tlGlobalSummaryTable.removeAllViews();
-        if (globalChitsList.isEmpty()) return;
+    tlGlobalSummaryTable.removeAllViews();
+    if (globalChitsList.isEmpty()) return;
 
-        android.graphics.drawable.GradientDrawable rowLine = new android.graphics.drawable.GradientDrawable();
-        rowLine.setColor(Color.parseColor("#E2E8F0"));
-        rowLine.setSize(2, 2);
-        tlGlobalSummaryTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
-        tlGlobalSummaryTable.setDividerDrawable(rowLine);
+    android.graphics.drawable.GradientDrawable rowLine = new android.graphics.drawable.GradientDrawable();
+    rowLine.setColor(Color.parseColor("#E2E8F0"));
+    rowLine.setSize(2, 2);
+    tlGlobalSummaryTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
+    tlGlobalSummaryTable.setDividerDrawable(rowLine);
 
-        TableRow header = new TableRow(this);
-        header.setBackgroundResource(R.drawable.table_header_bg); 
-        header.setPadding(4, 12, 4, 12);
+    TableRow header = new TableRow(this);
+    header.setBackgroundResource(R.drawable.table_header_bg); 
+    header.setPadding(4, 12, 4, 12);
+    
+    String[] headers = {"Chit Group Name", "Current Month Inst.", "Current Month Pending", "Previous Pending", "Total Outstanding"};
+    for (String col : headers) {
+        TextView tv = new TextView(this); tv.setText(col); tv.setPadding(20, 12, 20, 12);
+        tv.setTextColor(Color.WHITE); tv.setTextSize(13); tv.setTypeface(null, Typeface.BOLD); 
+        tv.setGravity(col.equals("Chit Group Name") ? Gravity.START : Gravity.CENTER);
+        header.addView(tv);
+    }
+    tlGlobalSummaryTable.addView(header);
+
+    double aggregateCurrentPending = 0.0;
+    double aggregatePreviousPending = 0.0;
+    Calendar todayCal = Calendar.getInstance();
+
+    for (CloudChitItem item : globalChitsList) {
+        String id = item.id;
+        if (!globalChitStartDatesCache.containsKey(id)) continue;
+
+        String startStr = globalChitStartDatesCache.get(id);
+        String freq = globalChitFrequenciesCache.get(id);
+        int maxInst = globalChitInstallmentsCountCache.get(id);
+        ArrayList<String> members = globalChitMembersCache.get(id);
+        if (members == null) members = new ArrayList<>();
+
+        int currentActiveIndex = -1;
+        try {
+            Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
+            Calendar cal = Calendar.getInstance();
+            for (int idx = 0; idx < maxInst; idx++) { 
+                cal.setTime(d);
+                if ("Monthly".equals(freq)) {
+                    cal.add(Calendar.MONTH, idx);
+                    if (cal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) { currentActiveIndex = idx; break; }
+                } else {
+                    cal.add(Calendar.DATE, idx * 7);
+                    if (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) { currentActiveIndex = idx; break; }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        double currentMonthChitPending = 0.0;
+        double previousArrearsChitPending = 0.0;
+        int displayInstNumber = (currentActiveIndex != -1) ? (currentActiveIndex + 1) : 1;
+
+        for (int step = 1; step <= maxInst; step++) {
+            boolean isCurrentMilestone = (currentActiveIndex != -1 && step == (currentActiveIndex + 1));
+            boolean isPreviousMilestone = (currentActiveIndex != -1 && step < (currentActiveIndex + 1));
+            
+            if (currentActiveIndex == -1) {
+                isCurrentMilestone = false;
+                isPreviousMilestone = true;
+            }
+
+            for (String mName : members) {
+                String payKey = id + "_" + mName + "_" + step;
+                if (!globalPaymentsCache.contains(payKey)) {
+                    double stepAmt = getSpecificCachedMemberInstallmentAmount(id, mName, step);
+                    if (isCurrentMilestone) {
+                        currentMonthChitPending += stepAmt;
+                    } else if (isPreviousMilestone) {
+                        previousArrearsChitPending += stepAmt;
+                    }
+                }
+            }
+        }
+
+        if (currentMonthChitPending == 0 && previousArrearsChitPending == 0) {
+            continue; // Skips creating the table row entirely for this chit fund
+        }
         
-        String[] headers = {"Chit Group Name", "Current Month Inst.", "Current Month Pending", "Previous Pending", "Total Outstanding"};
-        for (String col : headers) {
-            TextView tv = new TextView(this); tv.setText(col); tv.setPadding(20, 12, 20, 12);
-            tv.setTextColor(Color.WHITE); tv.setTextSize(13); tv.setTypeface(null, Typeface.BOLD); 
-            tv.setGravity(col.equals("Chit Group Name") ? Gravity.START : Gravity.CENTER);
-            header.addView(tv);
-        }
-        tlGlobalSummaryTable.addView(header);
+        // FIX: Re-inserted missing sum initialization loop allocation here
+        double totalChitOutstanding = currentMonthChitPending + previousArrearsChitPending;
+        
+        aggregateCurrentPending += currentMonthChitPending;
+        aggregatePreviousPending += previousArrearsChitPending;
+        
+        TableRow row = new TableRow(this);
+        row.setPadding(4, 10, 4, 10);
+        row.setBackgroundColor(Color.parseColor("#FFF7ED"));
 
-        double aggregateCurrentPending = 0.0;
-        double aggregatePreviousPending = 0.0;
-        Calendar todayCal = Calendar.getInstance();
+        TextView tvName = new TextView(this); tvName.setText(item.name); tvName.setPadding(20, 12, 20, 12); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        if (previousArrearsChitPending > 0) {
+            tvName.setTextColor(Color.parseColor("#DC2626")); // Highlight Red for Previous Months Arrears
+        } else {
+            tvName.setTextColor(Color.parseColor("#0F172A")); // Normal Black if ONLY current month is pending
+        } row.addView(tvName);
+        
+        TextView tvInst = new TextView(this); tvInst.setText("#" + displayInstNumber); tvInst.setPadding(20, 12, 20, 12); tvInst.setGravity(Gravity.CENTER); tvInst.setTextColor(Color.parseColor("#475569")); row.addView(tvInst);
+        TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
+        TextView tvPrev = new TextView(this); tvPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", previousArrearsChitPending)); tvPrev.setPadding(20, 12, 20, 12); tvPrev.setGravity(Gravity.CENTER); tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD); row.addView(tvPrev);
+        TextView tvTot = new TextView(this); tvTot.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding)); tvTot.setPadding(20, 12, 20, 12); tvTot.setGravity(Gravity.CENTER); tvTot.setTextColor(Color.parseColor("#0F172A")); tvTot.setTypeface(null, Typeface.BOLD); row.addView(tvTot); 
 
-        for (CloudChitItem item : globalChitsList) {
-            String id = item.id;
-            if (!globalChitStartDatesCache.containsKey(id)) continue;
-
-            String startStr = globalChitStartDatesCache.get(id);
-            String freq = globalChitFrequenciesCache.get(id);
-            int maxInst = globalChitInstallmentsCountCache.get(id);
-            ArrayList<String> members = globalChitMembersCache.get(id);
-            if (members == null) members = new ArrayList<>();
-
-            int currentActiveIndex = -1;
-            try {
-                Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
-                Calendar cal = Calendar.getInstance();
-                for (int idx = 0; idx < maxInst; idx++) { 
-                    cal.setTime(d);
-                    if ("Monthly".equals(freq)) {
-                        cal.add(Calendar.MONTH, idx);
-                        if (cal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) { currentActiveIndex = idx; break; }
-                    } else {
-                        cal.add(Calendar.DATE, idx * 7);
-                        if (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) { currentActiveIndex = idx; break; }
-                    }
-                }
-            } catch (Exception ignored) {}
-
-            double currentMonthChitPending = 0.0;
-            double previousArrearsChitPending = 0.0;
-            int displayInstNumber = (currentActiveIndex != -1) ? (currentActiveIndex + 1) : 1;
-
-            for (int step = 1; step <= maxInst; step++) {
-                boolean isCurrentMilestone = (currentActiveIndex != -1 && step == (currentActiveIndex + 1));
-                boolean isPreviousMilestone = (currentActiveIndex != -1 && step < (currentActiveIndex + 1));
-                
-                if (currentActiveIndex == -1) {
-                    isCurrentMilestone = false;
-                    isPreviousMilestone = true;
-                }
-
-                for (String mName : members) {
-                    String payKey = id + "_" + mName + "_" + step;
-                    if (!globalPaymentsCache.contains(payKey)) {
-                        double stepAmt = getSpecificCachedMemberInstallmentAmount(id, mName, step);
-                        if (isCurrentMilestone) {
-                            currentMonthChitPending += stepAmt;
-                        } else if (isPreviousMilestone) {
-                            previousArrearsChitPending += stepAmt;
-                        }
-                    }
-                }
-            }
-
-            if (currentMonthChitPending == 0 && previousArrearsChitPending == 0) {
-                continue; // Skips creating the table row entirely for this chit fund
-            }
-            aggregateCurrentPending += currentMonthChitPending;
-            aggregatePreviousPending += previousArrearsChitPending;
-            
-            TableRow row = new TableRow(this);
-            row.setPadding(4, 10, 4, 10);
-            row.setBackgroundColor(Color.parseColor("#FFF7ED"));
-
-            TextView tvName = new TextView(this); tvName.setText(item.name); tvName.setPadding(20, 12, 20, 12); tvName.setTextColor(Color.parseColor("#0F172A")); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-            if (previousArrearsChitPending > 0) {
-                tvName.setTextColor(Color.parseColor("#DC2626")); // Highlight Red for Previous Months Arrears
-            } else {
-                tvName.setTextColor(Color.parseColor("#0F172A")); // Normal Black if ONLY current month is pending
-            } row.addView(tvName);
-            
-            TextView tvInst = new TextView(this); tvInst.setText("#" + displayInstNumber); tvInst.setPadding(20, 12, 20, 12); tvInst.setGravity(Gravity.CENTER); tvInst.setTextColor(Color.parseColor("#475569")); row.addView(tvInst);
-            TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
-            TextView tvPrev = new TextView(this); tvPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", previousArrearsChitPending)); tvPrev.setPadding(20, 12, 20, 12); tvPrev.setGravity(Gravity.CENTER); tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD); row.addView(tvPrev);
-            TextView tvTot = new TextView(this); tvTot.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding)); tvTot.setPadding(20, 12, 20, 12); tvTot.setGravity(Gravity.CENTER); tvTot.setTextColor(Color.parseColor("#0F172A")); tvTot.setTypeface(null, Typeface.BOLD); row.addView(tvTot); 
-
-            tlGlobalSummaryTable.addView(row);
-        }
-
-        TableRow footerRow = new TableRow(this);
-        footerRow.setBackgroundResource(R.drawable.table_footer_bg); 
-        footerRow.setPadding(4, 12, 4, 12);
-
-        TextView tvTotalLbl = new TextView(this); tvTotalLbl.setText("GRAND TOTALS"); tvTotalLbl.setPadding(20, 12, 20, 12); tvTotalLbl.setTextColor(Color.parseColor("#0F172A")); tvTotalLbl.setTypeface(null, Typeface.BOLD); footerRow.addView(tvTotalLbl);
-        TextView tvEmpty = new TextView(this); tvEmpty.setText("-"); tvEmpty.setPadding(20, 12, 20, 12); tvEmpty.setGravity(Gravity.CENTER); tvEmpty.setTextColor(Color.TRANSPARENT); footerRow.addView(tvEmpty);
-        TextView tvSumCur = new TextView(this); tvSumCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", aggregateCurrentPending)); tvSumCur.setPadding(20, 12, 20, 12); tvSumCur.setGravity(Gravity.CENTER); tvSumCur.setTextColor(Color.parseColor("#15803D")); tvSumCur.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumCur);
-        TextView tvSumPrev = new TextView(this); tvSumPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", aggregatePreviousPending)); tvSumPrev.setPadding(20, 12, 20, 12); tvSumPrev.setGravity(Gravity.CENTER); tvSumPrev.setTextColor(Color.parseColor("#B91C1C")); tvSumPrev.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumPrev);
-        TextView tvSumGrand = new TextView(this); tvSumGrand.setText("₹" + String.format(Locale.getDefault(), "%.1f", (aggregateCurrentPending + aggregatePreviousPending))); tvSumGrand.setPadding(20, 12, 20, 12); tvSumGrand.setGravity(Gravity.CENTER); tvSumGrand.setTextColor(Color.parseColor("#0F172A")); tvSumGrand.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumGrand);
-
-        tlGlobalSummaryTable.addView(footerRow);
+        tlGlobalSummaryTable.addView(row);
     }
 
+    TableRow footerRow = new TableRow(this);
+    footerRow.setBackgroundResource(R.drawable.table_footer_bg); 
+    footerRow.setPadding(4, 12, 4, 12);
+
+    TextView tvTotalLbl = new TextView(this); tvTotalLbl.setText("GRAND TOTALS"); tvTotalLbl.setPadding(20, 12, 20, 12); tvTotalLbl.setTextColor(Color.parseColor("#0F172A")); tvTotalLbl.setTypeface(null, Typeface.BOLD); footerRow.addView(tvTotalLbl);
+    TextView tvEmpty = new TextView(this); tvEmpty.setText("-"); tvEmpty.setPadding(20, 12, 20, 12); tvEmpty.setGravity(Gravity.CENTER); tvEmpty.setTextColor(Color.TRANSPARENT); footerRow.addView(tvEmpty);
+    TextView tvSumCur = new TextView(this); tvSumCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", aggregateCurrentPending)); tvSumCur.setPadding(20, 12, 20, 12); tvSumCur.setGravity(Gravity.CENTER); tvSumCur.setTextColor(Color.parseColor("#15803D")); tvSumCur.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumCur);
+    TextView tvSumPrev = new TextView(this); tvSumPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", aggregatePreviousPending)); tvSumPrev.setPadding(20, 12, 20, 12); tvSumPrev.setGravity(Gravity.CENTER); tvSumPrev.setTextColor(Color.parseColor("#B91C1C")); tvSumPrev.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumPrev);
+    TextView tvSumGrand = new TextView(this); tvSumGrand.setText("₹" + String.format(Locale.getDefault(), "%.1f", (aggregateCurrentPending + aggregatePreviousPending))); tvSumGrand.setPadding(20, 12, 20, 12); tvSumGrand.setGravity(Gravity.CENTER); tvSumGrand.setTextColor(Color.parseColor("#0F172A")); tvSumGrand.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumGrand);
+
+    tlGlobalSummaryTable.addView(footerRow);
+}
+
+    
     private double getSpecificCachedMemberInstallmentAmount(String targetChitId, String memberName, int installmentNum) {
         String compositeKey = targetChitId + "_" + memberName;
         if (globalAdvanceStartCache.containsKey(compositeKey)) {
