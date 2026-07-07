@@ -495,15 +495,23 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            double totalChitOutstanding = currentMonthChitPending + previousArrearsChitPending;
+            if (currentMonthChitPending == 0 && previousArrearsChitPending == 0) {
+                continue; // Skips creating the table row entirely for this chit fund
+            }
             aggregateCurrentPending += currentMonthChitPending;
             aggregatePreviousPending += previousArrearsChitPending;
-
+            
             TableRow row = new TableRow(this);
             row.setPadding(4, 10, 4, 10);
             row.setBackgroundColor(Color.parseColor("#FFF7ED"));
 
-            TextView tvName = new TextView(this); tvName.setText(item.name); tvName.setPadding(20, 12, 20, 12); tvName.setTextColor(Color.parseColor("#0F172A")); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); row.addView(tvName);
+            TextView tvName = new TextView(this); tvName.setText(item.name); tvName.setPadding(20, 12, 20, 12); tvName.setTextColor(Color.parseColor("#0F172A")); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            if (previousArrearsChitPending > 0) {
+                tvName.setTextColor(Color.parseColor("#DC2626")); // Highlight Red for Previous Months Arrears
+            } else {
+                tvName.setTextColor(Color.parseColor("#0F172A")); // Normal Black if ONLY current month is pending
+            } row.addView(tvName);
+            
             TextView tvInst = new TextView(this); tvInst.setText("#" + displayInstNumber); tvInst.setPadding(20, 12, 20, 12); tvInst.setGravity(Gravity.CENTER); tvInst.setTextColor(Color.parseColor("#475569")); row.addView(tvInst);
             TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
             TextView tvPrev = new TextView(this); tvPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", previousArrearsChitPending)); tvPrev.setPadding(20, 12, 20, 12); tvPrev.setGravity(Gravity.CENTER); tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD); row.addView(tvPrev);
