@@ -494,10 +494,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-
-        if (currentMonthChitPending == 0 && previousArrearsChitPending == 0) {
-            continue; // Skips creating the table row entirely for this chit fund
-        }
         
         // FIX: Re-inserted missing sum initialization loop allocation here
         double totalChitOutstanding = currentMonthChitPending + previousArrearsChitPending;
