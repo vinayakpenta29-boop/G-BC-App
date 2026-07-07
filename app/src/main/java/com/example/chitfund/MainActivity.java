@@ -511,12 +511,13 @@ public class MainActivity extends AppCompatActivity {
 
         TextView tvName = new TextView(this); tvName.setText(item.name); tvName.setPadding(20, 12, 20, 12); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         if (previousArrearsChitPending > 0) {
-            tvName.setTextColor(Color.parseColor("#DC2626")); // Highlight Red for Previous Months Arrears
-        } else {
+            tvName.setTextColor(Color.parseColor("#DC2626")); // Red for past overdue arrears
+        } else if (currentMonthChitPending > 0) {
             tvName.setTextColor(Color.parseColor("#0F172A")); // Normal Black if ONLY current month is pending
         } else {
             tvName.setTextColor(Color.parseColor("#15803D")); // Emerald Green if completely paid up for current month!
-        } row.addView(tvName);
+        } 
+        row.addView(tvName);
         
         TextView tvInst = new TextView(this); tvInst.setText("#" + displayInstNumber); tvInst.setPadding(20, 12, 20, 12); tvInst.setGravity(Gravity.CENTER); tvInst.setTextColor(Color.parseColor("#475569")); row.addView(tvInst);
         TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
