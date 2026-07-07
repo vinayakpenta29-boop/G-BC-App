@@ -471,13 +471,16 @@ public class MainActivity extends AppCompatActivity {
                 Calendar cal = Calendar.getInstance();
                 for (int idx = 0; idx < maxInst; idx++) { 
                     cal.setTime(d);
-                    if ("Monthly".equals(freq)) {
+                                        if ("Monthly".equals(freq)) {
                         cal.add(Calendar.MONTH, idx);
                         if (cal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) { currentActiveIndex = idx; break; }
-                    } else {
-                        cal.add(Calendar.DATE, idx * 7);
-                        if (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) { currentActiveIndex = idx; break; }
-                    }
+                        } else if ("Half Yearly".equals(freq)) {
+                            cal.add(Calendar.MONTH, idx * 6);
+                            if (cal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) { currentActiveIndex = idx; break; }
+                        } else {
+                            cal.add(Calendar.DATE, idx * 7);
+                            if (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) { currentActiveIndex = idx; break; }
+                        }
                 }
             } catch (Exception ignored) {}
 
@@ -948,9 +951,12 @@ public class MainActivity extends AppCompatActivity {
                     cal.setTime(startDate);
                     if ("Monthly".equals(frequencyType)) {
                         cal.add(Calendar.MONTH, i - 1);
+                    } else if ("Half Yearly".equals(frequencyType)) {
+                        cal.add(Calendar.MONTH, (i - 1) * 6);
                     } else {
                         cal.add(Calendar.DATE, (i - 1) * 7);
                     }
+
                     dateLabel = "( " + sdfDialogOutput.format(cal.getTime()) + ") ";
                 } catch (Exception ignored) {}
 
@@ -1015,13 +1021,16 @@ public class MainActivity extends AppCompatActivity {
             Calendar cal = Calendar.getInstance();
             for (int i = 0; i < totalInstallmentsCount; i++) {
                 cal.setTime(startDate);
-                if ("Monthly".equals(frequencyType)) {
+                                if ("Monthly".equals(frequencyType)) {
                     cal.add(Calendar.MONTH, i);
                     if (cal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) currentActiveIndexId = i;
-                } else {
-                    cal.add(Calendar.DATE, i * 7);
-                    if (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) currentActiveIndexId = i;
-                }
+                    } else if ("Half Yearly".equals(frequencyType)) {
+                        cal.add(Calendar.MONTH, i * 6);
+                        if (cal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) currentActiveIndexId = i;
+                    } else {
+                        cal.add(Calendar.DATE, i * 7);
+                        if (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) currentActiveIndexId = i;
+                    }
                 calculatedDatesHeaders.add(sdfOutput.format(cal.getTime()));
             }
         } catch (Exception ignored) {}
@@ -1286,7 +1295,7 @@ public class MainActivity extends AppCompatActivity {
         final ArrayList<TextInputEditText> dynamicAmountFields = new ArrayList<>();
         final ArrayList<TextInputEditText> dynamicMemberFields = new ArrayList<>();
 
-        spFrequency.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Monthly", "Weekly"}));
+        spFrequency.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Monthly", "Weekly", "Half Yearly"}));
         spAmountType.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Fixed Amount", "Random Amount"}));
 
         TextInputLayout tlMemberWrap = new TextInputLayout(this); tlMemberWrap.setHint("Primary Member Name");
