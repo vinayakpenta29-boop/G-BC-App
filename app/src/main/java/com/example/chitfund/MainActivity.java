@@ -454,6 +454,7 @@ public class MainActivity extends AppCompatActivity {
 
             double calcTotalPlanAmount = 0.0;
             double calcTotalPaidAmount = 0.0;
+            int calcPaidInstCount = 0; // NEW: Track exact amount of paid installments 
             ArrayList<Double> dynamicPlanBreakdown = new ArrayList<>();
             ArrayList<Integer> pendingStepsList = new ArrayList<>();
 
@@ -517,6 +518,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                         } else {
                             calcTotalPaidAmount += stepAmt;
+                            calcPaidInstCount++; // Increment paid tracker
                         }
                     }
                     
@@ -575,10 +577,14 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            // FIX: Encapsulate actively mutated logic variables into explicit final snapshots for safe Lambda capture
+            // FINAL LAMBDA SNAPSHOTS
             final double targetPlanAmount = calcTotalPlanAmount;
             final double targetPaidAmount = calcTotalPaidAmount;
             final double targetBalance = calcBalanceToPay;
+            final int targetPaidInstCount = calcPaidInstCount;
+            // Calculate remaining steps across all users matching exactly what's left
+            final int targetRemainingInstCount = (targetMaxInst * targetMembers.size()) - calcPaidInstCount; 
+            
             final ArrayList<Double> targetPlanBreakdownList = dynamicPlanBreakdown;
             final ArrayList<Integer> targetPendingSteps = pendingStepsList;
             final ArrayList<String> targetAdvanceLogs = advanceLogsList;
@@ -587,7 +593,8 @@ public class MainActivity extends AppCompatActivity {
                 showPremiumChitSummaryDialog(
                     targetName, targetStartDate, targetFreq, targetMaxInst, activeInstNum, 
                     targetMembers, curMonthDues, pastMonthDues, grossDues, totalAdvancesTaken, 
-                    targetPlanBreakdownList, targetPendingSteps, targetPlanAmount, targetPaidAmount, targetBalance, targetAdvanceLogs
+                    targetPlanBreakdownList, targetPendingSteps, targetPlanAmount, targetPaidAmount, 
+                    targetBalance, targetAdvanceLogs, targetPaidInstCount, targetRemainingInstCount
                 );
             });
 
@@ -617,7 +624,7 @@ public class MainActivity extends AppCompatActivity {
     // =========================================================================================
     // ADVANCED UI BUILDER: Dynamically creates Premium Dialog incorporating comprehensive stats
     // =========================================================================================
-    private void showPremiumChitSummaryDialog(String name, String startDate, String freq, int maxInst, int activeInst, ArrayList<String> members, double curDues, double pastDues, double grossDues, double totalAdvances, ArrayList<Double> planBreakdown, ArrayList<Integer> pendingSteps, double totalPlanAmount, double totalPaid, double balanceAmount, ArrayList<String> advanceLogs) {
+    private void showPremiumChitSummaryDialog(String name, String startDate, String freq, int maxInst, int activeInst, ArrayList<String> members, double curDues, double pastDues, double grossDues, double totalAdvances, ArrayList<Double> planBreakdown, ArrayList<Integer> pendingSteps, double totalPlanAmount, double totalPaid, double balanceAmount, ArrayList<String> advanceLogs, int paidInstCount, int remainingInstCount) {
         ScrollView scrollView = new ScrollView(this);
         scrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         
@@ -737,7 +744,7 @@ public class MainActivity extends AppCompatActivity {
 
         mainLayout.addView(finGrid);
 
-        // 3. FINANCIAL FUND OVERVIEW SUMMARY (Plan vs Paid vs Balance)
+        // 3. FINANCIAL FUND OVERVIEW SUMMARY (Plan vs Paid vs Balance + Installment Counts)
         LinearLayout finSumCard = new LinearLayout(this);
         finSumCard.setOrientation(LinearLayout.VERTICAL);
         finSumCard.setPadding(50, 40, 50, 40);
@@ -747,15 +754,18 @@ public class MainActivity extends AppCompatActivity {
         finSumCard.setBackground(finSumBg);
         finSumCard.setLayoutParams(cardParams);
         
-        String[] finLabels = {"Total Plan Amount", "Total Amount Paid", "Balance to be Paid"};
+        // NEW FEATURE: Render Paid vs Remaining counts seamlessly in the summary layout
+        String[] finLabels = {"Total Plan Amount", "Total Amount Paid", "Balance to be Paid", "Paid Installments", "Remaining Installments"};
         String[] finValues = {
             "₹" + String.format(Locale.getDefault(), "%.1f", totalPlanAmount),
             "₹" + String.format(Locale.getDefault(), "%.1f", totalPaid),
-            "₹" + String.format(Locale.getDefault(), "%.1f", balanceAmount)
+            "₹" + String.format(Locale.getDefault(), "%.1f", balanceAmount),
+            String.valueOf(paidInstCount),
+            String.valueOf(remainingInstCount)
         };
-        String[] finColors = {"#0F172A", "#15803D", "#B91C1C"};
+        String[] finColors = {"#0F172A", "#15803D", "#B91C1C", "#15803D", "#B91C1C"};
 
-        for(int i=0; i<3; i++){
+        for(int i=0; i<5; i++){
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setPadding(0, 10, 0, 10);
@@ -1055,7 +1065,7 @@ public class MainActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
-}
+    }
 
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == null) return;
