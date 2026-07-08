@@ -971,7 +971,7 @@ public class MainActivity extends AppCompatActivity {
         ArrayList<String> filteredOptionsList = new ArrayList<>();
 
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        SimpleDateFormat sdfDialogOutput = new SimpleDateFormat("MMM d, yy", Locale.getDefault());
+        SimpleDateFormat sdfDialogOutput = new SimpleDateFormat("d MMM yy", Locale.getDefault());
 
         for (int i = 1; i <= totalInstallmentsCount; i++) {
             if (!globalPaymentsCache.contains(chitId + "_" + member + "_" + i)) {
