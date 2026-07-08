@@ -81,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
     private HashMap<String, Double> globalAdvanceRateCache = new HashMap<>(); 
-    private HashMap<String, String> globalAdvanceDateCache = new HashMap<>(); // TRACKS ADVANCE DATES
+    private HashMap<String, String> globalAdvanceDateCache = new HashMap<>(); 
     
     private HashMap<String, Double> globalChitTotalAdvancesCache = new HashMap<>();
     
@@ -191,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
         tabContainerAdvances = findViewById(R.id.tabContainerAdvances);
 
         float radiusPx = 24 * getResources().getDisplayMetrics().density;
-        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#F59E0B"), Color.parseColor("#FFF7ED"), radiusPx);
+        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), Color.parseColor("#F0FDF4"), radiusPx);
         llGlobalSummaryContainer.setBackground(globalSnakeDrawable);
 
         globalSummaryAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
@@ -575,11 +575,19 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
+            // FIX: Encapsulate actively mutated logic variables into explicit final snapshots for safe Lambda capture
+            final double targetPlanAmount = calcTotalPlanAmount;
+            final double targetPaidAmount = calcTotalPaidAmount;
+            final double targetBalance = calcBalanceToPay;
+            final ArrayList<Double> targetPlanBreakdownList = dynamicPlanBreakdown;
+            final ArrayList<Integer> targetPendingSteps = pendingStepsList;
+            final ArrayList<String> targetAdvanceLogs = advanceLogsList;
+
             tvName.setOnClickListener(v -> {
                 showPremiumChitSummaryDialog(
                     targetName, targetStartDate, targetFreq, targetMaxInst, activeInstNum, 
                     targetMembers, curMonthDues, pastMonthDues, grossDues, totalAdvancesTaken, 
-                    dynamicPlanBreakdown, pendingStepsList, calcTotalPlanAmount, calcTotalPaidAmount, calcBalanceToPay, advanceLogsList
+                    targetPlanBreakdownList, targetPendingSteps, targetPlanAmount, targetPaidAmount, targetBalance, targetAdvanceLogs
                 );
             });
 
@@ -1047,7 +1055,7 @@ public class MainActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
-    }
+}
 
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == null) return;
@@ -1058,7 +1066,7 @@ public class MainActivity extends AppCompatActivity {
         ArrayList<String> filteredOptionsList = new ArrayList<>();
 
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        SimpleDateFormat sdfDialogOutput = new SimpleDateFormat("d MMM yy", Locale.getDefault());
+        SimpleDateFormat sdfDialogOutput = new SimpleDateFormat("MMM d, yyyy", Locale.getDefault());
 
         for (int i = 1; i <= totalInstallmentsCount; i++) {
             if (!globalPaymentsCache.contains(chitId + "_" + member + "_" + i)) {
