@@ -465,23 +465,46 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<String> members = globalChitMembersCache.get(id);
             if (members == null) members = new ArrayList<>();
 
-            int currentActiveIndex = -1;
+            // 1. FIND THIS INSIDE calculateGlobalMonthlyDuesEngine()
+            int currentActiveIndex = 0;
             try {
                 Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
                 Calendar cal = Calendar.getInstance();
+                
+                int elapsedIndex = -1;
                 for (int idx = 0; idx < maxInst; idx++) { 
                     cal.setTime(d);
-                                        if ("Monthly".equals(freq)) {
+                    if ("Monthly".equals(freq)) {
                         cal.add(Calendar.MONTH, idx);
-                        if (cal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) { currentActiveIndex = idx; break; }
-                        } else if ("Half Yearly".equals(freq)) {
-                            cal.add(Calendar.MONTH, idx * 6);
-                            if (cal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) { currentActiveIndex = idx; break; }
+                    } else if ("Half Yearly".equals(freq)) {
+                        cal.add(Calendar.MONTH, idx * 6);
+                    } else {
+                        cal.add(Calendar.DATE, idx * 7);
+                    }
+                    
+                    // NEW ENGINE: Progressive cumulative date evaluation
+                    if ("Weekly".equals(freq)) {
+                        if (cal.getTimeInMillis() <= todayCal.getTimeInMillis() || 
+                           (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR))) {
+                            elapsedIndex = idx;
                         } else {
-                            cal.add(Calendar.DATE, idx * 7);
-                            if (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) { currentActiveIndex = idx; break; }
+                            break;
                         }
+                    } else {
+                        int cY = cal.get(Calendar.YEAR);
+                        int tY = todayCal.get(Calendar.YEAR);
+                        int cM = cal.get(Calendar.MONTH);
+                        int tM = todayCal.get(Calendar.MONTH);
+                        
+                        // Matches any milestone that has already passed or belongs to the current month/year
+                        if (cY < tY || (cY == tY && cM <= tM)) {
+                            elapsedIndex = idx;
+                        } else {
+                            break;
+                        }
+                    }
                 }
+                currentActiveIndex = (elapsedIndex != -1) ? elapsedIndex : 0;
             } catch (Exception ignored) {}
 
             double currentMonthChitPending = 0.0;
@@ -1013,26 +1036,43 @@ public class MainActivity extends AppCompatActivity {
         ArrayList<String> calculatedDatesHeaders = new ArrayList<>();
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         SimpleDateFormat sdfOutput = new SimpleDateFormat("d - MMM", Locale.getDefault());
-        int currentActiveIndexId = -1;
+        int currentActiveIndexId = 0;
         Calendar todayCal = Calendar.getInstance();
 
         try {
             Date startDate = sdfInput.parse(firstInstallmentDateStr);
             Calendar cal = Calendar.getInstance();
+            
+            int elapsedIndex = -1;
             for (int i = 0; i < totalInstallmentsCount; i++) {
                 cal.setTime(startDate);
-                                if ("Monthly".equals(frequencyType)) {
+                if ("Monthly".equals(frequencyType)) {
                     cal.add(Calendar.MONTH, i);
-                    if (cal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) currentActiveIndexId = i;
-                    } else if ("Half Yearly".equals(frequencyType)) {
-                        cal.add(Calendar.MONTH, i * 6);
-                        if (cal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) currentActiveIndexId = i;
-                    } else {
-                        cal.add(Calendar.DATE, i * 7);
-                        if (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) currentActiveIndexId = i;
-                    }
+                } else if ("Half Yearly".equals(frequencyType)) {
+                    cal.add(Calendar.MONTH, i * 6);
+                } else {
+                    cal.add(Calendar.DATE, i * 7);
+                }
                 calculatedDatesHeaders.add(sdfOutput.format(cal.getTime()));
+                
+                // NEW ENGINE: Progressive cumulative date evaluation
+                if ("Weekly".equals(frequencyType)) {
+                    if (cal.getTimeInMillis() <= todayCal.getTimeInMillis() || 
+                       (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR))) {
+                        elapsedIndex = i;
+                    }
+                } else {
+                    int cY = cal.get(Calendar.YEAR);
+                    int tY = todayCal.get(Calendar.YEAR);
+                    int cM = cal.get(Calendar.MONTH);
+                    int tM = todayCal.get(Calendar.MONTH);
+                    
+                    if (cY < tY || (cY == tY && cM <= tM)) {
+                        elapsedIndex = i;
+                    }
+                }
             }
+            currentActiveIndexId = (elapsedIndex != -1) ? elapsedIndex : 0;
         } catch (Exception ignored) {}
 
         if (!isMatrixVertical) {
