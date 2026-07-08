@@ -971,7 +971,7 @@ public class MainActivity extends AppCompatActivity {
         ArrayList<String> filteredOptionsList = new ArrayList<>();
 
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        SimpleDateFormat sdfDialogOutput = new SimpleDateFormat("MMM - d", Locale.getDefault());
+        SimpleDateFormat sdfDialogOutput = new SimpleDateFormat("MMM d, yy", Locale.getDefault());
 
         for (int i = 1; i <= totalInstallmentsCount; i++) {
             if (!globalPaymentsCache.contains(chitId + "_" + member + "_" + i)) {
@@ -1046,7 +1046,7 @@ public class MainActivity extends AppCompatActivity {
 
         ArrayList<String> calculatedDatesHeaders = new ArrayList<>();
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        SimpleDateFormat sdfOutput = new SimpleDateFormat("d - MMM", Locale.getDefault());
+        SimpleDateFormat sdfOutput = new SimpleDateFormat("d MMM yy", Locale.getDefault());
         int currentActiveIndexId = 0;
         Calendar todayCal = Calendar.getInstance();
 
