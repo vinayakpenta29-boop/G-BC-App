@@ -465,14 +465,20 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<String> members = globalChitMembersCache.get(id);
             if (members == null) members = new ArrayList<>();
 
-            // 1. FIND THIS INSIDE calculateGlobalMonthlyDuesEngine()
-            int currentActiveIndex = 0;
+            // =========================================================================
+            // NEW ENGINE: Progressive Step Evaluator (Replaces the old index guessing logic)
+            // =========================================================================
+            double currentMonthChitPending = 0.0;
+            double previousArrearsChitPending = 0.0;
+            boolean hasMilestoneThisMonth = false;
+            int highestPassedOrCurrentStep = 0;
+
             try {
                 Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
                 Calendar cal = Calendar.getInstance();
                 
-                int elapsedIndex = -1;
-                for (int idx = 0; idx < maxInst; idx++) { 
+                for (int step = 1; step <= maxInst; step++) {
+                    int idx = step - 1;
                     cal.setTime(d);
                     if ("Monthly".equals(freq)) {
                         cal.add(Calendar.MONTH, idx);
@@ -481,57 +487,62 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         cal.add(Calendar.DATE, idx * 7);
                     }
-                    
-                    // NEW ENGINE: Progressive cumulative date evaluation
+
+                    boolean isPast = false;
+                    boolean isCurrent = false;
+
                     if ("Weekly".equals(freq)) {
-                        if (cal.getTimeInMillis() <= todayCal.getTimeInMillis() || 
-                           (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR))) {
-                            elapsedIndex = idx;
-                        } else {
-                            break;
+                        if (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR)) {
+                            isCurrent = true;
+                            hasMilestoneThisMonth = true;
+                        } else if (cal.getTimeInMillis() < todayCal.getTimeInMillis()) {
+                            isPast = true;
                         }
                     } else {
                         int cY = cal.get(Calendar.YEAR);
                         int tY = todayCal.get(Calendar.YEAR);
                         int cM = cal.get(Calendar.MONTH);
                         int tM = todayCal.get(Calendar.MONTH);
-                        
-                        // Matches any milestone that has already passed or belongs to the current month/year
-                        if (cY < tY || (cY == tY && cM <= tM)) {
-                            elapsedIndex = idx;
-                        } else {
-                            break;
+
+                        // Checks if this specific milestone cycle strictly belongs to the current calendar month
+                        if (cY == tY && cM == tM) {
+                            isCurrent = true;
+                            hasMilestoneThisMonth = true;
+                        } else if (cY < tY || (cY == tY && cM < tM)) {
+                            isPast = true;
+                        }
+                    }
+
+                    if (isCurrent || isPast) {
+                        highestPassedOrCurrentStep = step;
+                    }
+
+                    // Calculate pending amounts directly matching this step's status
+                    for (String mName : members) {
+                        String payKey = id + "_" + mName + "_" + step;
+                        if (!globalPaymentsCache.contains(payKey)) {
+                            double stepAmt = getSpecificCachedMemberInstallmentAmount(id, mName, step);
+                            if (isCurrent) {
+                                currentMonthChitPending += stepAmt;
+                            } else if (isPast) {
+                                previousArrearsChitPending += stepAmt;
+                            }
                         }
                     }
                 }
-                currentActiveIndex = (elapsedIndex != -1) ? elapsedIndex : 0;
             } catch (Exception ignored) {}
 
-            double currentMonthChitPending = 0.0;
-            double previousArrearsChitPending = 0.0;
-            int displayInstNumber = (currentActiveIndex != -1) ? (currentActiveIndex + 1) : 1;
+            // Assign the visual step number - if it's a gap month, point to the upcoming step safely
+            int displayInstNumber = hasMilestoneThisMonth ? highestPassedOrCurrentStep : Math.min(highestPassedOrCurrentStep + 1, maxInst);
 
-            for (int step = 1; step <= maxInst; step++) {
-                boolean isCurrentMilestone = (currentActiveIndex != -1 && step == (currentActiveIndex + 1));
-                boolean isPreviousMilestone = (currentActiveIndex != -1 && step < (currentActiveIndex + 1));
-                
-                if (currentActiveIndex == -1) {
-                    isCurrentMilestone = false;
-                    isPreviousMilestone = true;
-                }
-
-                for (String mName : members) {
-                    String payKey = id + "_" + mName + "_" + step;
-                    if (!globalPaymentsCache.contains(payKey)) {
-                        double stepAmt = getSpecificCachedMemberInstallmentAmount(id, mName, step);
-                        if (isCurrentMilestone) {
-                            currentMonthChitPending += stepAmt;
-                        } else if (isPreviousMilestone) {
-                            previousArrearsChitPending += stepAmt;
-                        }
-                    }
-                }
+            // =========================================================================
+            // VISIBILITY CONDITION: Hide if no past pending arrears AND no active milestone this month.
+            // Automatically hides completed plans and gap months (e.g., Half-Yearly skips like July).
+            // =========================================================================
+            if (!hasMilestoneThisMonth && previousArrearsChitPending == 0) {
+                continue; 
             }
+
 
             double totalChitOutstanding = currentMonthChitPending + previousArrearsChitPending;
             aggregateCurrentPending += currentMonthChitPending;
