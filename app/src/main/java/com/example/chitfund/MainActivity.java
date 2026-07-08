@@ -1313,7 +1313,7 @@ public class MainActivity extends AppCompatActivity {
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
                 TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tvMem.setGravity(Gravity.CENTER); tr.addView(tvMem);
                 TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
-                TextView tvAdv = new TextView(this); tvAdv.setText("₹" + doc.getDouble("advance_amount")); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tr.addView(tvAdv);
+                TextView tvAdv = new TextView(this); tvAdv.setText("₹" + doc.getDouble("advance_amount")); tvAdv.setPadding(20, 16, 20, 16); tvAdv.setTypeface(null, Typeface.BOLD); tvAdv.setTextColor(Color.parseColor("#E11D48")); tvAdv.setGravity(Gravity.CENTER); tr.addView(tvAdv);
                 TextView tvRate = new TextView(this); tvRate.setText("₹" + doc.getDouble("new_amount")); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tvRate.setGravity(Gravity.CENTER); tr.addView(tvRate);
 
                 tlAdvancesTable.addView(tr);
@@ -1370,7 +1370,7 @@ public class MainActivity extends AppCompatActivity {
                 TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(14, 4, 14, 4); tvInst.setTextColor(Color.parseColor("#475569")); tvInst.setBackgroundResource(R.drawable.badge_unpaid_bg);
                 badgeWrapper.addView(tvInst); tr.addView(badgeWrapper);
                 
-                TextView tvAmt = new TextView(this); tvAmt.setText("₹" + amountPaid); tvAmt.setPadding(20, 16, 20, 16); tvAmt.setTypeface(null, Typeface.BOLD); tvAmt.setTextColor(Color.parseColor("#047857")); tr.addView(tvAmt);
+                TextView tvAmt = new TextView(this); tvAmt.setText("₹" + amountPaid); tvAmt.setPadding(20, 16, 20, 16); tvAmt.setTypeface(null, Typeface.BOLD); tvAmt.setTextColor(Color.parseColor("#047857")); tvAmt.setGravity(Gravity.CENTER); tr.addView(tvAmt);
 
                 tlHistoryTable.addView(tr);
             }
