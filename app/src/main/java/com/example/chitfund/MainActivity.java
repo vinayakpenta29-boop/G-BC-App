@@ -81,8 +81,8 @@ public class MainActivity extends AppCompatActivity {
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
     private HashMap<String, Double> globalAdvanceRateCache = new HashMap<>(); 
+    private HashMap<String, String> globalAdvanceDateCache = new HashMap<>(); // TRACKS ADVANCE DATES
     
-    // FEATURE UPGRADE: Real-time calculation cache for Total Advanced Funds
     private HashMap<String, Double> globalChitTotalAdvancesCache = new HashMap<>();
     
     private HashMap<String, ArrayList<Double>> globalChitAmountsCache = new HashMap<>();
@@ -244,94 +244,77 @@ public class MainActivity extends AppCompatActivity {
             public void onTabReselected(TabLayout.Tab tab) {}
         });
 
-        spChitSelector.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                CloudChitItem selected = globalChitsList.get(position);
-                if (selected != null && !selected.id.equals(chitId)) {
-                    chitId = selected.id;
-                    syncCurrentChitContextFromCloud();
-                }
+        spChitSelector.setOnItemClickListener((parent, view, position, id) -> {
+            CloudChitItem selected = globalChitsList.get(position);
+            if (selected != null && !selected.id.equals(chitId)) {
+                chitId = selected.id;
+                syncCurrentChitContextFromCloud();
             }
         });
 
-        spHistoryFilter.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if (position == 0) {
-                    historyFilterChitId = "ALL";
-                } else {
-                    historyFilterChitId = globalChitsList.get(position - 1).id;
-                }
-                refreshTransactionHistory();
+        spHistoryFilter.setOnItemClickListener((parent, view, position, id) -> {
+            if (position == 0) {
+                historyFilterChitId = "ALL";
+            } else {
+                historyFilterChitId = globalChitsList.get(position - 1).id;
             }
+            refreshTransactionHistory();
         });
 
-        btnToggleMatrixOrientation.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                isMatrixVertical = !isMatrixVertical;
-                if (isMatrixVertical) {
-                    btnToggleMatrixOrientation.setText("View Horizontally (Scroll Right)");
-                } else {
-                    btnToggleMatrixOrientation.setText("View Vertically (Scroll Down)");
-                }
-                refreshFundMatrixTable();
+        btnToggleMatrixOrientation.setOnClickListener(v -> {
+            isMatrixVertical = !isMatrixVertical;
+            if (isMatrixVertical) {
+                btnToggleMatrixOrientation.setText("View Horizontally (Scroll Right)");
+            } else {
+                btnToggleMatrixOrientation.setText("View Vertically (Scroll Down)");
             }
+            refreshFundMatrixTable();
         });
 
-        btnSelectInstallments.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showMultiSelectInstallmentsDialog();
-            }
-        });
+        btnSelectInstallments.setOnClickListener(v -> showMultiSelectInstallmentsDialog());
 
         initGlobalDatabaseSynchronizers();
         refreshTransactionHistory();
 
-        btnAddInstallment.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (chitId == null) {
-                    Toast.makeText(MainActivity.this, "Please create a Chit Fund group first!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                String TylerMember = spMembers.getText().toString().trim();
-                if (TylerMember.isEmpty() || !globalMembersList.contains(TylerMember)) {
-                    Toast.makeText(MainActivity.this, "Please select a valid member!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                if (selectedInstallmentsList.isEmpty()) {
-                    Toast.makeText(MainActivity.this, "Please select at least one installment!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                
-                String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-
-                for (int instNum : selectedInstallmentsList) {
-                    String lookupKey = chitId + "_" + TylerMember + "_" + instNum;
-                    if (!globalPaymentsCache.contains(lookupKey)) {
-                        double currentTargetAmount = getSpecificCachedMemberInstallmentAmount(chitId, TylerMember, instNum);
-                        
-                        Map<String, Object> paymentPayload = new HashMap<>();
-                        paymentPayload.put("chitId", chitId);
-                        paymentPayload.put("installment_num", instNum);
-                        paymentPayload.put("member_name", TylerMember);
-                        paymentPayload.put("amount", currentTargetAmount);
-                        paymentPayload.put("date", currentDate);
-                        paymentPayload.put("timestamp", System.currentTimeMillis());
-
-                        firestore.collection("payments").add(paymentPayload);
-                        globalPaymentsCache.add(lookupKey);
-                    }
-                }
-
-                Toast.makeText(MainActivity.this, "Installments Saved Online!", Toast.LENGTH_SHORT).show();
-                resetInstallmentSelection();
-                refreshFundMatrixTable();
-                refreshTransactionHistory();
+        btnAddInstallment.setOnClickListener(v -> {
+            if (chitId == null) {
+                Toast.makeText(MainActivity.this, "Please create a Chit Fund group first!", Toast.LENGTH_SHORT).show();
+                return;
             }
+            String TylerMember = spMembers.getText().toString().trim();
+            if (TylerMember.isEmpty() || !globalMembersList.contains(TylerMember)) {
+                Toast.makeText(MainActivity.this, "Please select a valid member!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (selectedInstallmentsList.isEmpty()) {
+                Toast.makeText(MainActivity.this, "Please select at least one installment!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+
+            for (int instNum : selectedInstallmentsList) {
+                String lookupKey = chitId + "_" + TylerMember + "_" + instNum;
+                if (!globalPaymentsCache.contains(lookupKey)) {
+                    double currentTargetAmount = getSpecificCachedMemberInstallmentAmount(chitId, TylerMember, instNum);
+                    
+                    Map<String, Object> paymentPayload = new HashMap<>();
+                    paymentPayload.put("chitId", chitId);
+                    paymentPayload.put("installment_num", instNum);
+                    paymentPayload.put("member_name", TylerMember);
+                    paymentPayload.put("amount", currentTargetAmount);
+                    paymentPayload.put("date", currentDate);
+                    paymentPayload.put("timestamp", System.currentTimeMillis());
+
+                    firestore.collection("payments").add(paymentPayload);
+                    globalPaymentsCache.add(lookupKey);
+                }
+            }
+
+            Toast.makeText(MainActivity.this, "Installments Saved Online!", Toast.LENGTH_SHORT).show();
+            resetInstallmentSelection();
+            refreshFundMatrixTable();
+            refreshTransactionHistory();
         });
     }
 
@@ -382,8 +365,7 @@ public class MainActivity extends AppCompatActivity {
                     if (aVal == null) return;
                     globalAdvanceStartCache.clear();
                     globalAdvanceRateCache.clear();
-                    
-                    // NEW ENGINE: Fully clear and rebuild total cached advance payouts per Chit
+                    globalAdvanceDateCache.clear();
                     globalChitTotalAdvancesCache.clear();
                     
                     for (QueryDocumentSnapshot aDoc : aVal) {
@@ -391,8 +373,8 @@ public class MainActivity extends AppCompatActivity {
                         String compositeKey = cId + "_" + aDoc.getString("member_name");
                         globalAdvanceStartCache.put(compositeKey, aDoc.getLong("installment_num").intValue());
                         globalAdvanceRateCache.put(compositeKey, aDoc.getDouble("new_amount"));
+                        globalAdvanceDateCache.put(compositeKey, aDoc.getString("date")); 
                         
-                        // Populate and aggregate Advanced Payout sums 
                         double advAmount = aDoc.getDouble("advance_amount") != null ? aDoc.getDouble("advance_amount") : 0.0;
                         globalChitTotalAdvancesCache.put(cId, globalChitTotalAdvancesCache.getOrDefault(cId, 0.0) + advAmount);
                     }
@@ -465,13 +447,15 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<String> members = globalChitMembersCache.get(id);
             if (members == null) members = new ArrayList<>();
 
-            // =========================================================================
-            // NEW ENGINE: Progressive Step Evaluator (Replaces the old index guessing logic)
-            // =========================================================================
             double currentMonthChitPending = 0.0;
             double previousArrearsChitPending = 0.0;
             boolean hasMilestoneThisMonth = false;
             int highestPassedOrCurrentStep = 0;
+
+            double calcTotalPlanAmount = 0.0;
+            double calcTotalPaidAmount = 0.0;
+            ArrayList<Double> dynamicPlanBreakdown = new ArrayList<>();
+            ArrayList<Integer> pendingStepsList = new ArrayList<>();
 
             try {
                 Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
@@ -504,7 +488,6 @@ public class MainActivity extends AppCompatActivity {
                         int cM = cal.get(Calendar.MONTH);
                         int tM = todayCal.get(Calendar.MONTH);
 
-                        // Checks if this specific milestone cycle strictly belongs to the current calendar month
                         if (cY == tY && cM == tM) {
                             isCurrent = true;
                             hasMilestoneThisMonth = true;
@@ -517,32 +500,40 @@ public class MainActivity extends AppCompatActivity {
                         highestPassedOrCurrentStep = step;
                     }
 
-                    // Calculate pending amounts directly matching this step's status
+                    double stepExpectedTotal = 0.0;
+                    boolean stepIsPending = false;
+
                     for (String mName : members) {
+                        double stepAmt = getSpecificCachedMemberInstallmentAmount(id, mName, step);
+                        stepExpectedTotal += stepAmt;
+
                         String payKey = id + "_" + mName + "_" + step;
                         if (!globalPaymentsCache.contains(payKey)) {
-                            double stepAmt = getSpecificCachedMemberInstallmentAmount(id, mName, step);
+                            if (isCurrent || isPast) stepIsPending = true;
                             if (isCurrent) {
                                 currentMonthChitPending += stepAmt;
                             } else if (isPast) {
                                 previousArrearsChitPending += stepAmt;
                             }
+                        } else {
+                            calcTotalPaidAmount += stepAmt;
                         }
+                    }
+                    
+                    dynamicPlanBreakdown.add(stepExpectedTotal);
+                    calcTotalPlanAmount += stepExpectedTotal;
+                    
+                    if (stepIsPending) {
+                        pendingStepsList.add(step);
                     }
                 }
             } catch (Exception ignored) {}
 
-            // Assign the visual step number - if it's a gap month, point to the upcoming step safely
             int displayInstNumber = hasMilestoneThisMonth ? highestPassedOrCurrentStep : Math.min(highestPassedOrCurrentStep + 1, maxInst);
 
-            // =========================================================================
-            // VISIBILITY CONDITION: Hide if no past pending arrears AND no active milestone this month.
-            // Automatically hides completed plans and gap months (e.g., Half-Yearly skips like July).
-            // =========================================================================
             if (!hasMilestoneThisMonth && previousArrearsChitPending == 0) {
                 continue; 
             }
-
 
             double totalChitOutstanding = currentMonthChitPending + previousArrearsChitPending;
             aggregateCurrentPending += currentMonthChitPending;
@@ -562,7 +553,6 @@ public class MainActivity extends AppCompatActivity {
                 tvName.setTextColor(Color.parseColor("#15803D")); 
             } 
 
-            // RETRIEVAL PIPELINE: Fetch total cache advances dynamically for interactive binding
             final double totalAdvancesTaken = globalChitTotalAdvancesCache.containsKey(id) ? globalChitTotalAdvancesCache.get(id) : 0.0;
             final String targetName = item.name;
             final String targetStartDate = startStr;
@@ -573,13 +563,23 @@ public class MainActivity extends AppCompatActivity {
             final double curMonthDues = currentMonthChitPending;
             final double pastMonthDues = previousArrearsChitPending;
             final double grossDues = totalChitOutstanding;
-            final ArrayList<Double> targetPlanBreakdown = globalChitAmountsCache.get(id);
+            final double calcBalanceToPay = calcTotalPlanAmount - calcTotalPaidAmount;
 
-            // BINDING CLICK: Maps click event to trigger the advanced programatic layout rendering block
+            ArrayList<String> advanceLogsList = new ArrayList<>();
+            for (String mName : members) {
+                String advKey = id + "_" + mName;
+                if (globalAdvanceStartCache.containsKey(advKey)) {
+                    int aStep = globalAdvanceStartCache.get(advKey);
+                    String aDate = globalAdvanceDateCache.containsKey(advKey) ? globalAdvanceDateCache.get(advKey) : "Unknown Date";
+                    advanceLogsList.add(mName + " took Advance at Step #" + aStep + " on " + aDate);
+                }
+            }
+
             tvName.setOnClickListener(v -> {
                 showPremiumChitSummaryDialog(
                     targetName, targetStartDate, targetFreq, targetMaxInst, activeInstNum, 
-                    targetMembers, curMonthDues, pastMonthDues, grossDues, totalAdvancesTaken, targetPlanBreakdown
+                    targetMembers, curMonthDues, pastMonthDues, grossDues, totalAdvancesTaken, 
+                    dynamicPlanBreakdown, pendingStepsList, calcTotalPlanAmount, calcTotalPaidAmount, calcBalanceToPay, advanceLogsList
                 );
             });
 
@@ -607,9 +607,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // =========================================================================================
-    // ADVANCED UI BUILDER: Programmatically generates a highly styled dynamic UI without XML
+    // ADVANCED UI BUILDER: Dynamically creates Premium Dialog incorporating comprehensive stats
     // =========================================================================================
-    private void showPremiumChitSummaryDialog(String name, String startDate, String freq, int maxInst, int activeInst, ArrayList<String> members, double curDues, double pastDues, double grossDues, double totalAdvances, ArrayList<Double> planBreakdown) {
+    private void showPremiumChitSummaryDialog(String name, String startDate, String freq, int maxInst, int activeInst, ArrayList<String> members, double curDues, double pastDues, double grossDues, double totalAdvances, ArrayList<Double> planBreakdown, ArrayList<Integer> pendingSteps, double totalPlanAmount, double totalPaid, double balanceAmount, ArrayList<String> advanceLogs) {
         ScrollView scrollView = new ScrollView(this);
         scrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         
@@ -618,7 +618,6 @@ public class MainActivity extends AppCompatActivity {
         mainLayout.setPadding(60, 60, 60, 60);
         scrollView.addView(mainLayout);
 
-        // 1. HEADER SECTION
         TextView tvTitle = new TextView(this);
         tvTitle.setText(name);
         tvTitle.setTextSize(24);
@@ -634,43 +633,50 @@ public class MainActivity extends AppCompatActivity {
         mainLayout.addView(tvSubtitle);
 
         float cornerRadius = 32f;
-
-        // 2. ADVANCES TAKEN CARD (Bold Highlight Layout)
-        LinearLayout advCard = new LinearLayout(this);
-        advCard.setOrientation(LinearLayout.VERTICAL);
-        advCard.setPadding(50, 40, 50, 40);
-        android.graphics.drawable.GradientDrawable advBg = new android.graphics.drawable.GradientDrawable();
-        advBg.setColor(Color.parseColor("#FEF2F2")); 
-        advBg.setCornerRadius(cornerRadius);
-        advCard.setBackground(advBg);
-        
-        TextView tvAdvLbl = new TextView(this);
-        tvAdvLbl.setText("Total Member Advances Taken");
-        tvAdvLbl.setTextColor(Color.parseColor("#991B1B"));
-        tvAdvLbl.setTextSize(13);
-        tvAdvLbl.setTypeface(null, Typeface.BOLD);
-        
-        TextView tvAdvVal = new TextView(this);
-        tvAdvVal.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalAdvances));
-        tvAdvVal.setTextColor(Color.parseColor("#DC2626"));
-        tvAdvVal.setTextSize(26);
-        tvAdvVal.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        
-        advCard.addView(tvAdvLbl);
-        advCard.addView(tvAdvVal);
-        
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         cardParams.setMargins(0, 0, 0, 30);
-        advCard.setLayoutParams(cardParams);
-        mainLayout.addView(advCard);
 
-        // 3. FINANCIAL SPLIT GRID (Horizontal split cards)
+        // 1. TOTAL PENDING DUES (Combines Active & Arrears w/ Pending Step Identifiers)
+        LinearLayout pendingCard = new LinearLayout(this);
+        pendingCard.setOrientation(LinearLayout.VERTICAL);
+        pendingCard.setPadding(50, 40, 50, 40);
+        android.graphics.drawable.GradientDrawable pendBg = new android.graphics.drawable.GradientDrawable();
+        pendBg.setColor(Color.parseColor("#EFF6FF")); // Soft Indigo Blue
+        pendBg.setCornerRadius(cornerRadius);
+        pendingCard.setBackground(pendBg);
+        pendingCard.setLayoutParams(cardParams);
+        
+        TextView tvPendLbl = new TextView(this);
+        tvPendLbl.setText("Total Pending Dues");
+        tvPendLbl.setTextColor(Color.parseColor("#1D4ED8"));
+        tvPendLbl.setTextSize(13);
+        tvPendLbl.setTypeface(null, Typeface.BOLD);
+        
+        TextView tvPendVal = new TextView(this);
+        tvPendVal.setText("₹" + String.format(Locale.getDefault(), "%.1f", grossDues));
+        tvPendVal.setTextColor(Color.parseColor("#1E3A8A"));
+        tvPendVal.setTextSize(26);
+        tvPendVal.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        
+        pendingCard.addView(tvPendLbl);
+        pendingCard.addView(tvPendVal);
+        
+        TextView tvPendSteps = new TextView(this);
+        String pStepsStr = pendingSteps.isEmpty() ? "None" : pendingSteps.toString().replace("[", "").replace("]", "");
+        tvPendSteps.setText("Pending Installments: " + pStepsStr);
+        tvPendSteps.setTextColor(Color.parseColor("#2563EB"));
+        tvPendSteps.setTextSize(13);
+        tvPendSteps.setPadding(0, 10, 0, 0);
+        pendingCard.addView(tvPendSteps);
+
+        mainLayout.addView(pendingCard);
+
+        // 2. FINANCIAL SPLIT GRID (Active Dues vs Past Arrears)
         LinearLayout finGrid = new LinearLayout(this);
         finGrid.setOrientation(LinearLayout.HORIZONTAL);
         finGrid.setWeightSum(2);
         finGrid.setLayoutParams(cardParams);
 
-        // Left Status: Active Dues
         LinearLayout curCard = new LinearLayout(this);
         curCard.setOrientation(LinearLayout.VERTICAL);
         curCard.setPadding(40, 40, 40, 40);
@@ -696,7 +702,6 @@ public class MainActivity extends AppCompatActivity {
         curCard.setLayoutParams(halfLeft);
         finGrid.addView(curCard);
 
-        // Right Status: Past Arrears
         LinearLayout pastCard = new LinearLayout(this);
         pastCard.setOrientation(LinearLayout.VERTICAL);
         pastCard.setPadding(40, 40, 40, 40);
@@ -724,7 +729,91 @@ public class MainActivity extends AppCompatActivity {
 
         mainLayout.addView(finGrid);
 
-        // 4. INFORMATION METADATA CONTAINER
+        // 3. FINANCIAL FUND OVERVIEW SUMMARY (Plan vs Paid vs Balance)
+        LinearLayout finSumCard = new LinearLayout(this);
+        finSumCard.setOrientation(LinearLayout.VERTICAL);
+        finSumCard.setPadding(50, 40, 50, 40);
+        android.graphics.drawable.GradientDrawable finSumBg = new android.graphics.drawable.GradientDrawable();
+        finSumBg.setColor(Color.parseColor("#F0FDF4")); // Soft Mint Green
+        finSumBg.setCornerRadius(cornerRadius);
+        finSumCard.setBackground(finSumBg);
+        finSumCard.setLayoutParams(cardParams);
+        
+        String[] finLabels = {"Total Plan Amount", "Total Amount Paid", "Balance to be Paid"};
+        String[] finValues = {
+            "₹" + String.format(Locale.getDefault(), "%.1f", totalPlanAmount),
+            "₹" + String.format(Locale.getDefault(), "%.1f", totalPaid),
+            "₹" + String.format(Locale.getDefault(), "%.1f", balanceAmount)
+        };
+        String[] finColors = {"#0F172A", "#15803D", "#B91C1C"};
+
+        for(int i=0; i<3; i++){
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setPadding(0, 10, 0, 10);
+            
+            TextView lbl = new TextView(this);
+            lbl.setText(finLabels[i]);
+            lbl.setTextColor(Color.parseColor("#475569"));
+            lbl.setTextSize(14);
+            lbl.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            
+            TextView val = new TextView(this);
+            val.setText(finValues[i]);
+            val.setTextColor(Color.parseColor(finColors[i]));
+            val.setTextSize(15);
+            val.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            
+            row.addView(lbl);
+            row.addView(val);
+            finSumCard.addView(row);
+        }
+        mainLayout.addView(finSumCard);
+
+        // 4. ADVANCES TAKEN HIGHLIGHT CARD & LOGS
+        LinearLayout advCard = new LinearLayout(this);
+        advCard.setOrientation(LinearLayout.VERTICAL);
+        advCard.setPadding(50, 40, 50, 40);
+        android.graphics.drawable.GradientDrawable advBg = new android.graphics.drawable.GradientDrawable();
+        advBg.setColor(Color.parseColor("#FEF2F2")); 
+        advBg.setCornerRadius(cornerRadius);
+        advCard.setBackground(advBg);
+        
+        TextView tvAdvLbl = new TextView(this);
+        tvAdvLbl.setText("Total Advanced Payouts");
+        tvAdvLbl.setTextColor(Color.parseColor("#991B1B"));
+        tvAdvLbl.setTextSize(13);
+        tvAdvLbl.setTypeface(null, Typeface.BOLD);
+        
+        TextView tvAdvVal = new TextView(this);
+        tvAdvVal.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalAdvances));
+        tvAdvVal.setTextColor(Color.parseColor("#DC2626"));
+        tvAdvVal.setTextSize(26);
+        tvAdvVal.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        
+        advCard.addView(tvAdvLbl);
+        advCard.addView(tvAdvVal);
+        
+        if (!advanceLogs.isEmpty()) {
+            View divider = new View(this);
+            divider.setBackgroundColor(Color.parseColor("#FECACA"));
+            LinearLayout.LayoutParams divParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 2);
+            divParams.setMargins(0, 20, 0, 20);
+            divider.setLayoutParams(divParams);
+            advCard.addView(divider);
+            
+            for(String log : advanceLogs) {
+                TextView tvLog = new TextView(this);
+                tvLog.setText("• " + log);
+                tvLog.setTextColor(Color.parseColor("#991B1B"));
+                tvLog.setTextSize(13);
+                advCard.addView(tvLog);
+            }
+        }
+        advCard.setLayoutParams(cardParams);
+        mainLayout.addView(advCard);
+
+        // 5. METADATA INFORMATION CONTAINER
         LinearLayout infoLayout = new LinearLayout(this);
         infoLayout.setOrientation(LinearLayout.VERTICAL);
         infoLayout.setPadding(50, 40, 50, 40);
@@ -760,7 +849,7 @@ public class MainActivity extends AppCompatActivity {
         }
         mainLayout.addView(infoLayout);
 
-        // 5. REGISTERED MEMBERS LIST 
+        // 6. REGISTERED MEMBERS LIST 
         TextView tvMemTitle = new TextView(this);
         tvMemTitle.setText("Registered Members (" + members.size() + ")");
         tvMemTitle.setTextSize(15);
@@ -792,7 +881,7 @@ public class MainActivity extends AppCompatActivity {
         }
         mainLayout.addView(memLayout);
 
-        // 6. INSTALLMENT MATRIX BREAKDOWN
+        // 7. DYNAMIC INSTALLMENT MATRIX (Automatically accounts for changed Advance Rates)
         TextView tvPlanTitle = new TextView(this);
         tvPlanTitle.setText("Installment Plan Matrix");
         tvPlanTitle.setTextSize(15);
@@ -825,7 +914,7 @@ public class MainActivity extends AppCompatActivity {
                 step.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
                 
                 TextView amt = new TextView(this);
-                amt.setText("₹" + planBreakdown.get(i));
+                amt.setText("₹" + String.format(Locale.getDefault(), "%.1f", planBreakdown.get(i)));
                 amt.setTextColor(Color.parseColor("#0F172A"));
                 amt.setTextSize(14);
                 amt.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
@@ -837,14 +926,12 @@ public class MainActivity extends AppCompatActivity {
         }
         mainLayout.addView(planLayout);
 
-        // 7. DIALOG INVOCATION
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         builder.setView(scrollView);
         builder.setPositiveButton("Dismiss Dashboard", null);
         AlertDialog dialog = builder.create();
         dialog.show();
         
-        // Retains your rounded white dialog styling wrapper
         if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
     }
 
@@ -960,7 +1047,7 @@ public class MainActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
-}
+    }
 
     private void showMultiSelectInstallmentsDialog() {
         if (chitId == null) return;
@@ -990,7 +1077,6 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         cal.add(Calendar.DATE, (i - 1) * 7);
                     }
-
                     dateLabel = "( " + sdfDialogOutput.format(cal.getTime()) + ") ";
                 } catch (Exception ignored) {}
 
@@ -1046,7 +1132,7 @@ public class MainActivity extends AppCompatActivity {
 
         ArrayList<String> calculatedDatesHeaders = new ArrayList<>();
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        SimpleDateFormat sdfOutput = new SimpleDateFormat("d MMM yy", Locale.getDefault());
+        SimpleDateFormat sdfOutput = new SimpleDateFormat("d MMM yyyy", Locale.getDefault());
         int currentActiveIndexId = 0;
         Calendar todayCal = Calendar.getInstance();
 
@@ -1066,7 +1152,6 @@ public class MainActivity extends AppCompatActivity {
                 }
                 calculatedDatesHeaders.add(sdfOutput.format(cal.getTime()));
                 
-                // NEW ENGINE: Progressive cumulative date evaluation
                 if ("Weekly".equals(frequencyType)) {
                     if (cal.getTimeInMillis() <= todayCal.getTimeInMillis() || 
                        (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR))) {
