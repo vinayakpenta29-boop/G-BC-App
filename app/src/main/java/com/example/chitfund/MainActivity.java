@@ -59,6 +59,10 @@ public class MainActivity extends AppCompatActivity {
     private TableLayout tlAdvancesTable;
     private TableLayout tlGlobalSummaryTable; 
     private LinearLayout llGlobalSummaryContainer; 
+    
+    // NEW: Dedicated container for upcoming Half-Yearly Reminders
+    private LinearLayout llRemindersContainer; 
+    
     private TextView tvFundTitle;
     private View llFormContainer;
     
@@ -189,6 +193,21 @@ public class MainActivity extends AppCompatActivity {
         tabContainerCollect = findViewById(R.id.tabContainerCollect);
         tabContainerLedger = findViewById(R.id.tabContainerLedger);
         tabContainerAdvances = findViewById(R.id.tabContainerAdvances);
+
+        // ==========================================================================================
+        // DYNAMIC UI INJECTION: Inserts the Reminders Container between Workspace and Ledger Table
+        // ==========================================================================================
+        llRemindersContainer = new LinearLayout(this);
+        llRemindersContainer.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams remParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        remParams.setMargins(0, 0, 0, 40); 
+        llRemindersContainer.setLayoutParams(remParams);
+
+        ViewGroup parentGroup = (ViewGroup) llGlobalSummaryContainer.getParent();
+        if(parentGroup != null) {
+            int summaryIndex = parentGroup.indexOfChild(llGlobalSummaryContainer);
+            parentGroup.addView(llRemindersContainer, summaryIndex);
+        }
 
         float radiusPx = 24 * getResources().getDisplayMetrics().density;
         final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#F59E0B"), Color.parseColor("#FFF7ED"), radiusPx);
@@ -447,6 +466,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void calculateGlobalMonthlyDuesEngine() {
         tlGlobalSummaryTable.removeAllViews();
+        llRemindersContainer.removeAllViews(); // Clear previous reminders
         if (globalChitsList.isEmpty()) return;
 
         java.util.Collections.sort(globalChitsList, (c1, c2) -> {
@@ -600,18 +620,67 @@ public class MainActivity extends AppCompatActivity {
 
             boolean isPureReminder = (!hasMilestoneThisMonth && previousArrearsChitPending == 0 && isUpcomingHalfYearly);
 
-            if (!hasMilestoneThisMonth && previousArrearsChitPending == 0 && !isPureReminder) {
+            // =========================================================================================
+            // NEW FEATURE: Intercepts pure reminders and renders them as isolated warning cards
+            // =========================================================================================
+            if (isPureReminder) {
+                LinearLayout reminderCard = new LinearLayout(this);
+                reminderCard.setOrientation(LinearLayout.HORIZONTAL);
+                reminderCard.setPadding(40, 30, 40, 30);
+                
+                android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+                bg.setColor(Color.parseColor("#FEF3C7")); // Amber 100
+                bg.setCornerRadius(32f); // Perfect curved card view
+                reminderCard.setBackground(bg);
+                
+                LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                cardParams.setMargins(0, 0, 0, 24);
+                reminderCard.setLayoutParams(cardParams);
+                
+                TextView icon = new TextView(this);
+                icon.setText("⚠️");
+                icon.setTextSize(20);
+                icon.setPadding(0, 0, 20, 0);
+                icon.setGravity(Gravity.CENTER_VERTICAL);
+                reminderCard.addView(icon);
+                
+                TextView msg = new TextView(this);
+                android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder();
+                ssb.append("You have a Half-Yearly installment of ");
+                
+                int startIdx = ssb.length();
+                ssb.append("₹").append(String.format(Locale.getDefault(), "%.0f", upcomingExpectedTotal));
+                ssb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                
+                ssb.append(" due next month for ");
+                startIdx = ssb.length();
+                ssb.append(item.name);
+                ssb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                
+                ssb.append(". (Installment No. ");
+                startIdx = ssb.length();
+                ssb.append("#").append(String.valueOf(upcomingStepNumber));
+                ssb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.append(")");
+                
+                msg.setText(ssb);
+                msg.setTextColor(Color.parseColor("#B45309")); // Amber 700
+                msg.setTextSize(14);
+                msg.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                reminderCard.addView(msg);
+                
+                llRemindersContainer.addView(reminderCard);
+                continue; // Important: Skips rendering this into the main ledger table below!
+            }
+
+            if (!hasMilestoneThisMonth && previousArrearsChitPending == 0) {
                 continue; 
             }
 
-            // RE-ADDED FIX: Define totalChitOutstanding here so it doesn't cause compilation error
             double totalChitOutstanding = currentMonthChitPending + previousArrearsChitPending;
-
-            if (!isPureReminder) {
-                aggregateCurrentPending += currentMonthChitPending;
-                aggregatePreviousPending += previousArrearsChitPending;
-            }
-
+            aggregateCurrentPending += currentMonthChitPending;
+            aggregatePreviousPending += previousArrearsChitPending;
+            
             android.text.SpannableStringBuilder instSpannable = new android.text.SpannableStringBuilder();
 
             if ("Weekly".equals(freq) && !weeklyStepsThisMonth.isEmpty()) {
@@ -632,7 +701,7 @@ public class MainActivity extends AppCompatActivity {
                         instSpannable.append(", ");
                     }
                 }
-            } else if (!isPureReminder) {
+            } else {
                 int displayInstNumber = hasMilestoneThisMonth ? highestPassedOrCurrentStep : Math.min(highestPassedOrCurrentStep + 1, maxInst);
                 instSpannable.append("#").append(String.valueOf(displayInstNumber));
                 
@@ -648,73 +717,17 @@ public class MainActivity extends AppCompatActivity {
 
             TableRow row = new TableRow(this);
             row.setPadding(4, 10, 4, 10);
-            
-            TextView tvName = new TextView(this); 
-            tvName.setPadding(20, 12, 20, 12); 
-            tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-            
-            TextView tvInst = new TextView(this); 
-            tvInst.setPadding(20, 12, 20, 12); 
-            tvInst.setGravity(Gravity.CENTER); 
-            tvInst.setTypeface(Typeface.MONOSPACE); 
-            
-            TextView tvCur = new TextView(this); 
-            tvCur.setPadding(20, 12, 20, 12); 
-            tvCur.setGravity(Gravity.CENTER); 
-            
-            TextView tvPrev = new TextView(this); 
-            tvPrev.setPadding(20, 12, 20, 12); 
-            tvPrev.setGravity(Gravity.CENTER); 
-            
-            TextView tvTot = new TextView(this); 
-            tvTot.setPadding(20, 12, 20, 12); 
-            tvTot.setGravity(Gravity.CENTER); 
+            row.setBackgroundColor(Color.parseColor("#FFF7ED"));
 
-            if (isPureReminder) {
-                row.setBackgroundColor(Color.parseColor("#FEF3C7")); // Amber 100 Background
-                
-                tvName.setText(item.name + "\n(Next Month)");
-                tvName.setTextColor(Color.parseColor("#D97706")); // Amber 600 Text
-                
-                tvInst.setText("#" + upcomingStepNumber);
-                tvInst.setTextColor(Color.parseColor("#D97706"));
-                tvInst.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-                
-                tvCur.setText("Prep: ₹" + String.format(Locale.getDefault(), "%.1f", upcomingExpectedTotal));
-                tvCur.setTextColor(Color.parseColor("#D97706"));
-                tvCur.setTypeface(null, Typeface.BOLD);
-                
-                tvPrev.setText("-");
-                tvPrev.setTextColor(Color.parseColor("#94A3B8"));
-                
-                tvTot.setText("-");
-                tvTot.setTextColor(Color.parseColor("#94A3B8"));
+            TextView tvName = new TextView(this); tvName.setText(item.name); tvName.setPadding(20, 12, 20, 12); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            
+            if (previousArrearsChitPending > 0) {
+                tvName.setTextColor(Color.parseColor("#DC2626")); 
+            } else if (currentMonthChitPending > 0) {
+                tvName.setTextColor(Color.parseColor("#0F172A")); 
             } else {
-                row.setBackgroundColor(Color.parseColor("#FFF7ED"));
-                
-                tvName.setText(item.name);
-                if (previousArrearsChitPending > 0) {
-                    tvName.setTextColor(Color.parseColor("#DC2626")); 
-                } else if (currentMonthChitPending > 0) {
-                    tvName.setTextColor(Color.parseColor("#0F172A")); 
-                } else {
-                    tvName.setTextColor(Color.parseColor("#15803D")); 
-                } 
-                
-                tvInst.setText(instSpannable);
-                tvInst.setTextColor(Color.parseColor("#475569"));
-                
-                tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending));
-                tvCur.setTextColor(Color.parseColor("#1E293B"));
-                
-                tvPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", previousArrearsChitPending));
-                tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); 
-                if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD);
-                
-                tvTot.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding));
-                tvTot.setTextColor(Color.parseColor("#0F172A")); 
-                tvTot.setTypeface(null, Typeface.BOLD); 
-            }
+                tvName.setTextColor(Color.parseColor("#15803D")); 
+            } 
 
             final double totalAdvancesTaken = globalChitTotalAdvancesCache.containsKey(id) ? globalChitTotalAdvancesCache.get(id) : 0.0;
             final String targetName = item.name;
@@ -722,9 +735,9 @@ public class MainActivity extends AppCompatActivity {
             final String targetFreq = freq;
             final int targetMaxInst = maxInst;
             final ArrayList<String> targetMembers = members;
-            final double curMonthDues = isPureReminder ? 0.0 : currentMonthChitPending;
+            final double curMonthDues = currentMonthChitPending;
             final double pastMonthDues = previousArrearsChitPending;
-            final double grossDues = isPureReminder ? 0.0 : totalChitOutstanding;
+            final double grossDues = totalChitOutstanding;
             final double calcBalanceToPay = calcTotalPlanAmount - calcTotalPaidAmount;
 
             ArrayList<String> advanceLogsList = new ArrayList<>();
@@ -748,7 +761,7 @@ public class MainActivity extends AppCompatActivity {
             final ArrayList<String> targetAdvanceLogs = advanceLogsList;
             final ArrayList<Integer> targetActiveSteps = activeStepsList; 
             
-            final String targetActiveInstStr = isPureReminder ? "#" + upcomingStepNumber : instSpannable.toString();
+            final String targetActiveInstStr = instSpannable.toString();
 
             tvName.setOnClickListener(v -> {
                 showPremiumChitSummaryDialog(
@@ -760,10 +773,18 @@ public class MainActivity extends AppCompatActivity {
             });
 
             row.addView(tvName);
+            
+            TextView tvInst = new TextView(this); 
+            tvInst.setText(instSpannable); 
+            tvInst.setPadding(20, 12, 20, 12); 
+            tvInst.setGravity(Gravity.CENTER); 
+            tvInst.setTextColor(Color.parseColor("#475569")); 
+            tvInst.setTypeface(Typeface.MONOSPACE); 
             row.addView(tvInst);
-            row.addView(tvCur);
-            row.addView(tvPrev);
-            row.addView(tvTot); 
+            
+            TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
+            TextView tvPrev = new TextView(this); tvPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", previousArrearsChitPending)); tvPrev.setPadding(20, 12, 20, 12); tvPrev.setGravity(Gravity.CENTER); tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD); row.addView(tvPrev);
+            TextView tvTot = new TextView(this); tvTot.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding)); tvTot.setPadding(20, 12, 20, 12); tvTot.setGravity(Gravity.CENTER); tvTot.setTextColor(Color.parseColor("#0F172A")); tvTot.setTypeface(null, Typeface.BOLD); row.addView(tvTot); 
 
             tlGlobalSummaryTable.addView(row);
         }
