@@ -291,9 +291,6 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             
-            // =========================================================================================
-            // NEW FEATURE: Dynamic Payment Confirmation Pop-up with Optional Notes Injection
-            // =========================================================================================
             LinearLayout wrapperLayout = new LinearLayout(MainActivity.this);
             wrapperLayout.setOrientation(LinearLayout.VERTICAL);
             wrapperLayout.setPadding(60, 40, 60, 0);
@@ -305,9 +302,10 @@ public class MainActivity extends AppCompatActivity {
             tvMsg.setPadding(0, 0, 0, 40);
             wrapperLayout.addView(tvMsg);
 
-            TextInputLayout tlNote = new TextInputLayout(MainActivity.this);
+            // UI FIX: Outlined Material Curved Box applied directly to dynamic code block
+            TextInputLayout tlNote = new TextInputLayout(new android.view.ContextThemeWrapper(MainActivity.this, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox));
             tlNote.setHint("Notes (Optional)");
-            TextInputEditText etNote = new TextInputEditText(MainActivity.this);
+            TextInputEditText etNote = new TextInputEditText(tlNote.getContext());
             tlNote.addView(etNote);
             wrapperLayout.addView(tlNote);
 
@@ -332,7 +330,6 @@ public class MainActivity extends AppCompatActivity {
                         paymentPayload.put("date", currentDate);
                         paymentPayload.put("timestamp", System.currentTimeMillis());
                         
-                        // Saves the custom note into the Firebase Cloud payload
                         paymentPayload.put("notes", noteText);
 
                         firestore.collection("payments").add(paymentPayload);
@@ -574,7 +571,6 @@ public class MainActivity extends AppCompatActivity {
             android.text.SpannableStringBuilder instSpannable = new android.text.SpannableStringBuilder();
 
             if ("Weekly".equals(freq) && !weeklyStepsThisMonth.isEmpty()) {
-                
                 for(int i=0; i < weeklyStepsThisMonth.size(); i++) {
                     int currentStep = weeklyStepsThisMonth.get(i);
                     String stepStr = "#" + String.valueOf(currentStep);
@@ -674,7 +670,7 @@ public class MainActivity extends AppCompatActivity {
             tvInst.setPadding(20, 12, 20, 12); 
             tvInst.setGravity(Gravity.CENTER); 
             tvInst.setTextColor(Color.parseColor("#475569")); 
-            tvInst.setTypeface(Typeface.MONOSPACE); 
+            tvInst.setTypeface(Typeface.MONOSPACE);
             row.addView(tvInst);
             
             TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
@@ -1378,9 +1374,6 @@ public class MainActivity extends AppCompatActivity {
                 TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tr.addView(tvDate);
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
                 
-                // =========================================================================================
-                // NEW FEATURE: Displays the custom "Note" underneath the Member Name dynamically 
-                // =========================================================================================
                 LinearLayout memLayout = new LinearLayout(this);
                 memLayout.setOrientation(LinearLayout.VERTICAL);
                 memLayout.setGravity(Gravity.CENTER);
@@ -1467,9 +1460,6 @@ public class MainActivity extends AppCompatActivity {
 
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
                 
-                // =========================================================================================
-                // NEW FEATURE: Displays the custom "Note" underneath the Member Name dynamically 
-                // =========================================================================================
                 LinearLayout memLayout = new LinearLayout(this);
                 memLayout.setOrientation(LinearLayout.VERTICAL);
                 memLayout.setGravity(Gravity.CENTER);
@@ -1526,20 +1516,18 @@ public class MainActivity extends AppCompatActivity {
         final TextInputEditText etAdvanceAmt = view.findViewById(R.id.etAdvanceAmt);
         final TextInputEditText etAmt = view.findViewById(R.id.etNewAmt);
         
-        // =========================================================================================
-        // NEW FEATURE: Dynamically injects Notes input UI into the bottom of the existing Inflated View
-        // =========================================================================================
         LinearLayout wrapperLayout = new LinearLayout(this);
         wrapperLayout.setOrientation(LinearLayout.VERTICAL);
         wrapperLayout.addView(view);
         
-        TextInputLayout tlNote = new TextInputLayout(this);
+        // UI FIX: Outlined Material Curved Box applied directly to dynamic code block
+        TextInputLayout tlNote = new TextInputLayout(new android.view.ContextThemeWrapper(this, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox));
         tlNote.setHint("Notes (Optional)");
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(60, 0, 60, 40); // perfectly aligned matching margins
+        lp.setMargins(60, 0, 60, 40); 
         tlNote.setLayoutParams(lp);
         
-        TextInputEditText etNote = new TextInputEditText(this);
+        TextInputEditText etNote = new TextInputEditText(tlNote.getContext());
         tlNote.addView(etNote);
         wrapperLayout.addView(tlNote);
 
@@ -1578,7 +1566,6 @@ public class MainActivity extends AppCompatActivity {
             advancePayload.put("member_name", memName); advancePayload.put("advance_amount", advAmt);
             advancePayload.put("new_amount", newAmt); advancePayload.put("date", currentDate);
             
-            // Saves the custom note into the Firebase Cloud advance payload
             advancePayload.put("notes", noteText);
 
             firestore.collection("advances").add(advancePayload).addOnSuccessListener(ref -> {
@@ -1608,11 +1595,14 @@ public class MainActivity extends AppCompatActivity {
         spFrequency.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Monthly", "Weekly", "Half Yearly"}));
         spAmountType.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Fixed Amount", "Random Amount"}));
 
-        TextInputLayout tlMemberWrap = new TextInputLayout(this); tlMemberWrap.setHint("Primary Member Name");
+        // UI FIX: Outlined Material Curved Box applied directly to dynamic code block
+        TextInputLayout tlMemberWrap = new TextInputLayout(new android.view.ContextThemeWrapper(this, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox));
+        tlMemberWrap.setHint("Primary Member Name");
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.setMargins(0, 0, 0, 16); tlMemberWrap.setLayoutParams(lp);
 
-        TextInputEditText etSingleMember = new TextInputEditText(this); tlMemberWrap.addView(etSingleMember);
+        TextInputEditText etSingleMember = new TextInputEditText(tlMemberWrap.getContext()); 
+        tlMemberWrap.addView(etSingleMember);
         llMembersContainer.addView(tlMemberWrap); dynamicMemberFields.add(etSingleMember);
 
         spAmountType.setOnItemClickListener((parent, v, position, id) -> {
@@ -1696,11 +1686,13 @@ public class MainActivity extends AppCompatActivity {
         if (!countStr.trim().isEmpty()) {
             int total = Integer.parseInt(countStr.trim());
             for (int i = 1; i <= total; i++) {
-                TextInputLayout wrap = new TextInputLayout(this); wrap.setHint("Installment " + i + " Amount (₹)");
+                // UI FIX: Outlined Material Curved Box applied directly to dynamic code block
+                TextInputLayout wrap = new TextInputLayout(new android.view.ContextThemeWrapper(this, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox));
+                wrap.setHint("Installment " + i + " Amount (₹)");
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 lp.setMargins(0, 0, 0, 12); wrap.setLayoutParams(lp);
 
-                TextInputEditText etAmtInput = new TextInputEditText(this);
+                TextInputEditText etAmtInput = new TextInputEditText(wrap.getContext());
                 etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
                 wrap.addView(etAmtInput); container.addView(wrap); fieldTrackerList.add(etAmtInput);
             }
