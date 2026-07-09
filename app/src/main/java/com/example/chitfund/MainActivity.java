@@ -631,12 +631,12 @@ public class MainActivity extends AppCompatActivity {
                 
                 android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
                 bg.setColor(Color.parseColor("#FEF3C7")); // Amber 100 Background
-                bg.setCornerRadius(30f); // Perfect curved card view
+                bg.setCornerRadius(32f); // Perfect curved card view
                 reminderCard.setBackground(bg);
                 
                 // FIX 1: Added Left and Right margins (60px) so the card perfectly aligns with your other tables
                 LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                cardParams.setMargins(60, 0, 60, 30); 
+                cardParams.setMargins(50, 0, 50, 20); 
                 reminderCard.setLayoutParams(cardParams);
                 
                 TextView icon = new TextView(this);
@@ -655,11 +655,13 @@ public class MainActivity extends AppCompatActivity {
                 int startIdx = ssb.length();
                 ssb.append("₹").append(String.format(Locale.getDefault(), "%.0f", upcomingExpectedTotal));
                 ssb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 
                 ssb.append(" DUE NEXT MONTH FOR ");
                 startIdx = ssb.length();
-                ssb.append(item.name);
+                ssb.append(item.name.toUpperCase(Locale.getDefault()));
                 ssb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 
                 ssb.append(". (INSTALLMENT NO. ");
                 startIdx = ssb.length();
