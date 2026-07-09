@@ -191,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
         tabContainerAdvances = findViewById(R.id.tabContainerAdvances);
 
         float radiusPx = 24 * getResources().getDisplayMetrics().density;
-        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), Color.parseColor("#F0FDF4"), radiusPx);
+        final SnakeBorderDrawable globalSnakeDrawable = new SnakeBorderDrawable(Color.parseColor("#F59E0B"), Color.parseColor("#FFF7ED"), radiusPx);
         llGlobalSummaryContainer.setBackground(globalSnakeDrawable);
 
         globalSummaryAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
@@ -634,6 +634,7 @@ public class MainActivity extends AppCompatActivity {
             tvInst.setPadding(20, 12, 20, 12); 
             tvInst.setGravity(Gravity.CENTER); 
             tvInst.setTextColor(Color.parseColor("#475569")); // Default gray for unpaid numbers and commas
+            tvInst.setTypeface(Typeface.MONOSPACE);
             row.addView(tvInst);
             
             TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
@@ -1108,7 +1109,7 @@ public class MainActivity extends AppCompatActivity {
         ArrayList<String> filteredOptionsList = new ArrayList<>();
 
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        SimpleDateFormat sdfDialogOutput = new SimpleDateFormat("MMM d, yyyy", Locale.getDefault());
+        SimpleDateFormat sdfDialogOutput = new SimpleDateFormat("d MMM yy", Locale.getDefault());
 
         for (int i = 1; i <= totalInstallmentsCount; i++) {
             if (!globalPaymentsCache.contains(chitId + "_" + member + "_" + i)) {
