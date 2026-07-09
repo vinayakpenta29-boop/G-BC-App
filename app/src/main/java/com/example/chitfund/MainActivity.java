@@ -533,10 +533,10 @@ public class MainActivity extends AppCompatActivity {
             android.text.SpannableStringBuilder instSpannable = new android.text.SpannableStringBuilder();
 
             if ("Weekly".equals(freq) && !weeklyStepsThisMonth.isEmpty()) {
-                instSpannable.append("#");
+                
                 for(int i=0; i < weeklyStepsThisMonth.size(); i++) {
                     int currentStep = weeklyStepsThisMonth.get(i);
-                    String stepStr = String.valueOf(currentStep);
+                    String stepStr = "#" + String.valueOf(currentStep);
                     
                     int startIdx = instSpannable.length();
                     instSpannable.append(stepStr);
@@ -545,6 +545,7 @@ public class MainActivity extends AppCompatActivity {
                     // IF NOT PENDING = FULLY PAID -> Set specifically this number to Emerald Green
                     if (!pendingStepsList.contains(currentStep)) {
                         instSpannable.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), startIdx, endIdx, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        instSpannable.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), 0, instSpannable.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     }
                     
                     if(i < weeklyStepsThisMonth.size() - 1) {
