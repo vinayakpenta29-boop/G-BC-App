@@ -497,6 +497,13 @@ public class MainActivity extends AppCompatActivity {
             boolean hasMilestoneThisMonth = false;
             int highestPassedOrCurrentStep = 0;
 
+            // =========================================================================================
+            // NEW FEATURE: Half Yearly 1-Month Early Warning Tracker Variables
+            // =========================================================================================
+            boolean isUpcomingHalfYearly = false;
+            int upcomingStepNumber = 0;
+            double upcomingExpectedTotal = 0.0;
+
             double calcTotalPlanAmount = 0.0;
             double calcTotalPaidAmount = 0.0;
             int calcPaidInstCount = 0; 
@@ -529,7 +536,10 @@ public class MainActivity extends AppCompatActivity {
                     int cM = cal.get(Calendar.MONTH);
                     int tM = todayCal.get(Calendar.MONTH);
 
-                    // FIX: Unify evaluation to strictly find everything within the current Month/Year block universally!
+                    // Evaluates what month is exactly +1 Month from right now
+                    int nextMonthY = tM == Calendar.DECEMBER ? tY + 1 : tY;
+                    int nextMonthM = tM == Calendar.DECEMBER ? Calendar.JANUARY : tM + 1;
+
                     if (cY == tY && cM == tM) {
                         isCurrent = true;
                         hasMilestoneThisMonth = true;
@@ -538,6 +548,9 @@ public class MainActivity extends AppCompatActivity {
                         }
                     } else if (cY < tY || (cY == tY && cM < tM)) {
                         isPast = true;
+                    } else if ("Half Yearly".equals(freq) && cY == nextMonthY && cM == nextMonthM) {
+                        isUpcomingHalfYearly = true;
+                        upcomingStepNumber = step;
                     }
 
                     if (isCurrent || isPast) {
@@ -563,10 +576,21 @@ public class MainActivity extends AppCompatActivity {
                             } else if (isPast) {
                                 previousArrearsChitPending += stepAmt;
                             }
+                            
+                            if (isUpcomingHalfYearly && step == upcomingStepNumber) {
+                                stepIsPending = true;
+                                upcomingExpectedTotal += stepAmt;
+                            }
+                            
                         } else {
                             calcTotalPaidAmount += stepAmt;
                             calcPaidInstCount++; 
                         }
+                    }
+                    
+                    if (isUpcomingHalfYearly && step == upcomingStepNumber && !stepIsPending) {
+                        isUpcomingHalfYearly = false;
+                        upcomingExpectedTotal = 0.0;
                     }
                     
                     dynamicPlanBreakdown.add(stepExpectedTotal);
@@ -577,6 +601,12 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             } catch (Exception ignored) {}
+
+            boolean isPureReminder = (!hasMilestoneThisMonth && previousArrearsChitPending == 0 && isUpcomingHalfYearly);
+
+            if (!hasMilestoneThisMonth && previousArrearsChitPending == 0 && !isPureReminder) {
+                continue; 
+            }
 
             android.text.SpannableStringBuilder instSpannable = new android.text.SpannableStringBuilder();
 
@@ -598,7 +628,7 @@ public class MainActivity extends AppCompatActivity {
                         instSpannable.append(", ");
                     }
                 }
-            } else {
+            } else if (!isPureReminder) {
                 int displayInstNumber = hasMilestoneThisMonth ? highestPassedOrCurrentStep : Math.min(highestPassedOrCurrentStep + 1, maxInst);
                 instSpannable.append("#").append(String.valueOf(displayInstNumber));
                 
@@ -612,27 +642,83 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            if (!hasMilestoneThisMonth && previousArrearsChitPending == 0) {
-                continue; 
+            if (!isPureReminder) {
+                aggregateCurrentPending += currentMonthChitPending;
+                aggregatePreviousPending += previousArrearsChitPending;
             }
-
-            double totalChitOutstanding = currentMonthChitPending + previousArrearsChitPending;
-            aggregateCurrentPending += currentMonthChitPending;
-            aggregatePreviousPending += previousArrearsChitPending;
             
             TableRow row = new TableRow(this);
             row.setPadding(4, 10, 4, 10);
-            row.setBackgroundColor(Color.parseColor("#FFF7ED"));
-
-            TextView tvName = new TextView(this); tvName.setText(item.name); tvName.setPadding(20, 12, 20, 12); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
             
-            if (previousArrearsChitPending > 0) {
-                tvName.setTextColor(Color.parseColor("#DC2626")); 
-            } else if (currentMonthChitPending > 0) {
-                tvName.setTextColor(Color.parseColor("#0F172A")); 
+            TextView tvName = new TextView(this); 
+            tvName.setPadding(20, 12, 20, 12); 
+            tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            
+            TextView tvInst = new TextView(this); 
+            tvInst.setPadding(20, 12, 20, 12); 
+            tvInst.setGravity(Gravity.CENTER); 
+            tvInst.setTypeface(Typeface.MONOSPACE); 
+            
+            TextView tvCur = new TextView(this); 
+            tvCur.setPadding(20, 12, 20, 12); 
+            tvCur.setGravity(Gravity.CENTER); 
+            
+            TextView tvPrev = new TextView(this); 
+            tvPrev.setPadding(20, 12, 20, 12); 
+            tvPrev.setGravity(Gravity.CENTER); 
+            
+            TextView tvTot = new TextView(this); 
+            tvTot.setPadding(20, 12, 20, 12); 
+            tvTot.setGravity(Gravity.CENTER); 
+
+            // =========================================================================================
+            // NEW FEATURE: Half Yearly Amber Warning Row Injection
+            // =========================================================================================
+            if (isPureReminder) {
+                row.setBackgroundColor(Color.parseColor("#FEF3C7")); // Amber 100 Background
+                
+                tvName.setText(item.name + "\n(Next Month)");
+                tvName.setTextColor(Color.parseColor("#D97706")); // Amber 600 Text
+                
+                tvInst.setText("#" + upcomingStepNumber);
+                tvInst.setTextColor(Color.parseColor("#D97706"));
+                tvInst.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+                
+                tvCur.setText("Prep: ₹" + String.format(Locale.getDefault(), "%.1f", upcomingExpectedTotal));
+                tvCur.setTextColor(Color.parseColor("#D97706"));
+                tvCur.setTypeface(null, Typeface.BOLD);
+                
+                tvPrev.setText("-");
+                tvPrev.setTextColor(Color.parseColor("#94A3B8"));
+                
+                tvTot.setText("-");
+                tvTot.setTextColor(Color.parseColor("#94A3B8"));
             } else {
-                tvName.setTextColor(Color.parseColor("#15803D")); 
-            } 
+                row.setBackgroundColor(Color.parseColor("#FFF7ED"));
+                
+                tvName.setText(item.name);
+                if (previousArrearsChitPending > 0) {
+                    tvName.setTextColor(Color.parseColor("#DC2626")); 
+                } else if (currentMonthChitPending > 0) {
+                    tvName.setTextColor(Color.parseColor("#0F172A")); 
+                } else {
+                    tvName.setTextColor(Color.parseColor("#15803D")); 
+                } 
+                
+                tvInst.setText(instSpannable);
+                tvInst.setTextColor(Color.parseColor("#475569"));
+                
+                tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending));
+                tvCur.setTextColor(Color.parseColor("#1E293B"));
+                
+                tvPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", previousArrearsChitPending));
+                tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); 
+                if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD);
+                
+                tvTot.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding));
+                tvTot.setTextColor(Color.parseColor("#0F172A")); 
+                tvTot.setTypeface(null, Typeface.BOLD); 
+            }
 
             final double totalAdvancesTaken = globalChitTotalAdvancesCache.containsKey(id) ? globalChitTotalAdvancesCache.get(id) : 0.0;
             final String targetName = item.name;
@@ -640,9 +726,9 @@ public class MainActivity extends AppCompatActivity {
             final String targetFreq = freq;
             final int targetMaxInst = maxInst;
             final ArrayList<String> targetMembers = members;
-            final double curMonthDues = currentMonthChitPending;
+            final double curMonthDues = isPureReminder ? 0.0 : currentMonthChitPending;
             final double pastMonthDues = previousArrearsChitPending;
-            final double grossDues = totalChitOutstanding;
+            final double grossDues = isPureReminder ? 0.0 : totalChitOutstanding;
             final double calcBalanceToPay = calcTotalPlanAmount - calcTotalPaidAmount;
 
             ArrayList<String> advanceLogsList = new ArrayList<>();
@@ -666,7 +752,7 @@ public class MainActivity extends AppCompatActivity {
             final ArrayList<String> targetAdvanceLogs = advanceLogsList;
             final ArrayList<Integer> targetActiveSteps = activeStepsList; 
             
-            final String targetActiveInstStr = instSpannable.toString();
+            final String targetActiveInstStr = isPureReminder ? "#" + upcomingStepNumber : instSpannable.toString();
 
             tvName.setOnClickListener(v -> {
                 showPremiumChitSummaryDialog(
@@ -678,18 +764,10 @@ public class MainActivity extends AppCompatActivity {
             });
 
             row.addView(tvName);
-            
-            TextView tvInst = new TextView(this); 
-            tvInst.setText(instSpannable); 
-            tvInst.setPadding(20, 12, 20, 12); 
-            tvInst.setGravity(Gravity.CENTER); 
-            tvInst.setTextColor(Color.parseColor("#475569")); 
-            tvInst.setTypeface(Typeface.MONOSPACE); 
             row.addView(tvInst);
-            
-            TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
-            TextView tvPrev = new TextView(this); tvPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", previousArrearsChitPending)); tvPrev.setPadding(20, 12, 20, 12); tvPrev.setGravity(Gravity.CENTER); tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD); row.addView(tvPrev);
-            TextView tvTot = new TextView(this); tvTot.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding)); tvTot.setPadding(20, 12, 20, 12); tvTot.setGravity(Gravity.CENTER); tvTot.setTextColor(Color.parseColor("#0F172A")); tvTot.setTypeface(null, Typeface.BOLD); row.addView(tvTot); 
+            row.addView(tvCur);
+            row.addView(tvPrev);
+            row.addView(tvTot); 
 
             tlGlobalSummaryTable.addView(row);
         }
@@ -1188,8 +1266,12 @@ public class MainActivity extends AppCompatActivity {
                     int cM = cal.get(Calendar.MONTH);
                     int tM = todayCal.get(Calendar.MONTH);
                     
-                    if (cY == tY && cM == tM) { 
-                        isCurrent = true; 
+                    if ("Weekly".equals(frequencyType)) {
+                        int cW = cal.get(Calendar.WEEK_OF_YEAR);
+                        int tW = todayCal.get(Calendar.WEEK_OF_YEAR);
+                        if (cW == tW && cY == tY) { isCurrent = true; }
+                    } else {
+                        if (cY == tY && cM == tM) { isCurrent = true; }
                     }
                     
                     dateLabel = "( " + sdfDialogOutput.format(cal.getTime()) + ") ";
@@ -1281,8 +1363,15 @@ public class MainActivity extends AppCompatActivity {
                 int cM = cal.get(Calendar.MONTH);
                 int tM = todayCal.get(Calendar.MONTH);
 
-                if (cY == tY && cM == tM) { isCurrent = true; }
-                if (cY < tY || (cY == tY && cM <= tM)) { elapsedIndex = i; }
+                if ("Weekly".equals(frequencyType)) {
+                    int cW = cal.get(Calendar.WEEK_OF_YEAR);
+                    int tW = todayCal.get(Calendar.WEEK_OF_YEAR);
+                    if (cW == tW && cY == tY) { isCurrent = true; }
+                    if (cal.getTimeInMillis() <= todayCal.getTimeInMillis() || isCurrent) { elapsedIndex = i; }
+                } else {
+                    if (cY == tY && cM == tM) { isCurrent = true; }
+                    if (cY < tY || (cY == tY && cM <= tM)) { elapsedIndex = i; }
+                }
                 
                 if (isCurrent) currentActiveIndices.add(i);
             }
