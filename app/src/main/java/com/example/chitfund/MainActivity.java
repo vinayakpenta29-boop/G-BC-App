@@ -302,10 +302,15 @@ public class MainActivity extends AppCompatActivity {
             tvMsg.setPadding(0, 0, 0, 40);
             wrapperLayout.addView(tvMsg);
 
-            // UI FIX: Outlined Material Curved Box applied directly to dynamic code block
-            TextInputLayout tlNote = new TextInputLayout(new android.view.ContextThemeWrapper(MainActivity.this, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox));
+            // UI FIX: Material Component Programmatic Outlined Box Engine
+            TextInputLayout tlNote = new TextInputLayout(MainActivity.this);
+            tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+            tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f); // Applies the clean curve natively
             tlNote.setHint("Notes (Optional)");
+            
             TextInputEditText etNote = new TextInputEditText(tlNote.getContext());
+            // Fixing the layout params explicitly prevents text clipping top bounds
+            etNote.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             tlNote.addView(etNote);
             wrapperLayout.addView(tlNote);
 
@@ -1520,14 +1525,18 @@ public class MainActivity extends AppCompatActivity {
         wrapperLayout.setOrientation(LinearLayout.VERTICAL);
         wrapperLayout.addView(view);
         
-        // UI FIX: Outlined Material Curved Box applied directly to dynamic code block
-        TextInputLayout tlNote = new TextInputLayout(new android.view.ContextThemeWrapper(this, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox));
+        // UI FIX: Material Component Programmatic Outlined Box Engine
+        TextInputLayout tlNote = new TextInputLayout(MainActivity.this);
+        tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f); // Matches the curve of other XML inputs natively
         tlNote.setHint("Notes (Optional)");
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.setMargins(60, 0, 60, 40); 
         tlNote.setLayoutParams(lp);
         
         TextInputEditText etNote = new TextInputEditText(tlNote.getContext());
+        // Forcing WRAP_CONTENT prevents clipping on the top text bounds
+        etNote.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         tlNote.addView(etNote);
         wrapperLayout.addView(tlNote);
 
@@ -1595,13 +1604,18 @@ public class MainActivity extends AppCompatActivity {
         spFrequency.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Monthly", "Weekly", "Half Yearly"}));
         spAmountType.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Fixed Amount", "Random Amount"}));
 
-        // UI FIX: Outlined Material Curved Box applied directly to dynamic code block
-        TextInputLayout tlMemberWrap = new TextInputLayout(new android.view.ContextThemeWrapper(this, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox));
+        // UI FIX: Material Component Programmatic Outlined Box Engine
+        TextInputLayout tlMemberWrap = new TextInputLayout(MainActivity.this);
+        tlMemberWrap.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        tlMemberWrap.setBoxCornerRadii(16f, 16f, 16f, 16f); // Perfect smooth native curves
         tlMemberWrap.setHint("Primary Member Name");
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(0, 0, 0, 16); tlMemberWrap.setLayoutParams(lp);
+        lp.setMargins(0, 0, 0, 24); 
+        tlMemberWrap.setLayoutParams(lp);
 
         TextInputEditText etSingleMember = new TextInputEditText(tlMemberWrap.getContext()); 
+        // Forcing WRAP_CONTENT prevents clipping on the top text bounds
+        etSingleMember.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         tlMemberWrap.addView(etSingleMember);
         llMembersContainer.addView(tlMemberWrap); dynamicMemberFields.add(etSingleMember);
 
@@ -1686,15 +1700,22 @@ public class MainActivity extends AppCompatActivity {
         if (!countStr.trim().isEmpty()) {
             int total = Integer.parseInt(countStr.trim());
             for (int i = 1; i <= total; i++) {
-                // UI FIX: Outlined Material Curved Box applied directly to dynamic code block
-                TextInputLayout wrap = new TextInputLayout(new android.view.ContextThemeWrapper(this, com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox));
+                // UI FIX: Material Component Programmatic Outlined Box Engine
+                TextInputLayout wrap = new TextInputLayout(MainActivity.this);
+                wrap.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+                wrap.setBoxCornerRadii(16f, 16f, 16f, 16f); // Clean, native curve
                 wrap.setHint("Installment " + i + " Amount (₹)");
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                lp.setMargins(0, 0, 0, 12); wrap.setLayoutParams(lp);
+                lp.setMargins(0, 0, 0, 24); 
+                wrap.setLayoutParams(lp);
 
                 TextInputEditText etAmtInput = new TextInputEditText(wrap.getContext());
+                // Forcing WRAP_CONTENT prevents clipping on the top text bounds
+                etAmtInput.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-                wrap.addView(etAmtInput); container.addView(wrap); fieldTrackerList.add(etAmtInput);
+                wrap.addView(etAmtInput); 
+                container.addView(wrap); 
+                fieldTrackerList.add(etAmtInput);
             }
         }
     }
