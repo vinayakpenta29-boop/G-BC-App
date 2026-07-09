@@ -76,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
+    // HIGH-SPEED CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
     private HashSet<String> globalPaymentsCache = new HashSet<>(); 
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
@@ -104,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<CloudChitItem> globalChitsList = new ArrayList<>();
     private ArrayList<String> globalMembersList = new ArrayList<>();
 
+    // Play Store style morphing cursive progress animation snake engine
     private static class SnakeBorderDrawable extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint borderPaint;
         private final android.graphics.Paint fillPaint;
@@ -502,7 +504,7 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<Integer> pendingStepsList = new ArrayList<>();
             
             ArrayList<Integer> weeklyStepsThisMonth = new ArrayList<>();
-            ArrayList<Integer> activeStepsList = new ArrayList<>(); // Extracts exactly which steps are active
+            ArrayList<Integer> activeStepsList = new ArrayList<>(); 
 
             try {
                 Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
@@ -527,23 +529,15 @@ public class MainActivity extends AppCompatActivity {
                     int cM = cal.get(Calendar.MONTH);
                     int tM = todayCal.get(Calendar.MONTH);
 
-                    if ("Weekly".equals(freq)) {
-                        int cW = cal.get(Calendar.WEEK_OF_YEAR);
-                        int tW = todayCal.get(Calendar.WEEK_OF_YEAR);
-                        if (cW == tW && cY == tY) {
-                            isCurrent = true;
-                            hasMilestoneThisMonth = true;
+                    // FIX: Unify evaluation to strictly find everything within the current Month/Year block universally!
+                    if (cY == tY && cM == tM) {
+                        isCurrent = true;
+                        hasMilestoneThisMonth = true;
+                        if ("Weekly".equals(freq)) {
                             weeklyStepsThisMonth.add(step);
-                        } else if (cal.getTimeInMillis() < todayCal.getTimeInMillis()) {
-                            isPast = true;
                         }
-                    } else {
-                        if (cY == tY && cM == tM) {
-                            isCurrent = true;
-                            hasMilestoneThisMonth = true;
-                        } else if (cY < tY || (cY == tY && cM < tM)) {
-                            isPast = true;
-                        }
+                    } else if (cY < tY || (cY == tY && cM < tM)) {
+                        isPast = true;
                     }
 
                     if (isCurrent || isPast) {
@@ -1015,7 +1009,6 @@ public class MainActivity extends AppCompatActivity {
                 TextView amt = new TextView(this);
                 amt.setText("₹" + String.format(Locale.getDefault(), "%.1f", planBreakdown.get(i)));
                 
-                // POP-UP PLAN MATRIX: Highlight Current Steps in Green + Bold
                 if (activeSteps != null && activeSteps.contains(currentStepNum)) {
                     step.setTextColor(Color.parseColor("#15803D"));
                     step.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
@@ -1195,12 +1188,8 @@ public class MainActivity extends AppCompatActivity {
                     int cM = cal.get(Calendar.MONTH);
                     int tM = todayCal.get(Calendar.MONTH);
                     
-                    if ("Weekly".equals(frequencyType)) {
-                        int cW = cal.get(Calendar.WEEK_OF_YEAR);
-                        int tW = todayCal.get(Calendar.WEEK_OF_YEAR);
-                        if (cW == tW && cY == tY) { isCurrent = true; }
-                    } else {
-                        if (cY == tY && cM == tM) { isCurrent = true; }
+                    if (cY == tY && cM == tM) { 
+                        isCurrent = true; 
                     }
                     
                     dateLabel = "( " + sdfDialogOutput.format(cal.getTime()) + ") ";
@@ -1208,7 +1197,6 @@ public class MainActivity extends AppCompatActivity {
 
                 String rawRowStr = dateLabel + "Inst. " + i + " - ₹" + amt;
                 
-                // PAYMENTS INPUT LIST: Highlight the Current Month steps in Green + Bold
                 android.text.SpannableString spRow = new android.text.SpannableString(rawRowStr);
                 if (isCurrent) {
                     spRow.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), 0, rawRowStr.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -1293,21 +1281,13 @@ public class MainActivity extends AppCompatActivity {
                 int cM = cal.get(Calendar.MONTH);
                 int tM = todayCal.get(Calendar.MONTH);
 
-                if ("Weekly".equals(frequencyType)) {
-                    int cW = cal.get(Calendar.WEEK_OF_YEAR);
-                    int tW = todayCal.get(Calendar.WEEK_OF_YEAR);
-                    if (cW == tW && cY == tY) { isCurrent = true; }
-                    if (cal.getTimeInMillis() <= todayCal.getTimeInMillis() || isCurrent) { elapsedIndex = i; }
-                } else {
-                    if (cY == tY && cM == tM) { isCurrent = true; }
-                    if (cY < tY || (cY == tY && cM <= tM)) { elapsedIndex = i; }
-                }
+                if (cY == tY && cM == tM) { isCurrent = true; }
+                if (cY < tY || (cY == tY && cM <= tM)) { elapsedIndex = i; }
                 
                 if (isCurrent) currentActiveIndices.add(i);
             }
         } catch (Exception ignored) {}
 
-        // Fallback for snake animation if currently in a gap month (e.g. half-yearly gap)
         ArrayList<Integer> snakeIndices = new ArrayList<>(currentActiveIndices);
         if (snakeIndices.isEmpty() && elapsedIndex != -1) {
             snakeIndices.add(elapsedIndex);
@@ -1329,7 +1309,6 @@ public class MainActivity extends AppCompatActivity {
                 hDate.setText(dateStr); 
                 hDate.setPadding(24, 16, 24, 16); 
                 
-                // HORIZONTAL MATRIX TABLE: Highlights Date Header in slightly brighter Green for the dark Navy bar
                 if (currentActiveIndices.contains(dateIdx)) {
                     hDate.setTextColor(Color.parseColor("#34D399"));
                 } else {
@@ -1399,7 +1378,6 @@ public class MainActivity extends AppCompatActivity {
                 tvInstDate.setPadding(20, 16, 20, 16); 
                 tvInstDate.setGravity(Gravity.CENTER); 
                 
-                // VERTICAL MATRIX TABLE: Highlights Row Values for the current active month Steps in Bold Green
                 if (currentActiveIndices.contains(colIdx)) {
                     tvInstNum.setTextColor(Color.parseColor("#15803D"));
                     tvInstNum.setTypeface(null, Typeface.BOLD);
