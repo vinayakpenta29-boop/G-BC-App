@@ -302,14 +302,14 @@ public class MainActivity extends AppCompatActivity {
             tvMsg.setPadding(0, 0, 0, 40);
             wrapperLayout.addView(tvMsg);
 
-            // UI FIX: Material Component Programmatic Outlined Box Engine
+            // UI FIX: Material Component Programmatic Outlined Box with Transparent Inside
             TextInputLayout tlNote = new TextInputLayout(MainActivity.this);
             tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
-            tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f); // Applies the clean curve natively
+            tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f); 
+            tlNote.setBoxBackgroundColor(Color.TRANSPARENT); // Enforces transparent (white) inside fill
             tlNote.setHint("Notes (Optional)");
             
             TextInputEditText etNote = new TextInputEditText(tlNote.getContext());
-            // Fixing the layout params explicitly prevents text clipping top bounds
             etNote.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             tlNote.addView(etNote);
             wrapperLayout.addView(tlNote);
@@ -1525,17 +1525,17 @@ public class MainActivity extends AppCompatActivity {
         wrapperLayout.setOrientation(LinearLayout.VERTICAL);
         wrapperLayout.addView(view);
         
-        // UI FIX: Material Component Programmatic Outlined Box Engine
+        // UI FIX: Material Component Programmatic Outlined Box with Transparent Inside
         TextInputLayout tlNote = new TextInputLayout(MainActivity.this);
         tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
-        tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f); // Matches the curve of other XML inputs natively
+        tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f); 
+        tlNote.setBoxBackgroundColor(Color.TRANSPARENT); // Enforces transparent (white) inside fill
         tlNote.setHint("Notes (Optional)");
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.setMargins(60, 0, 60, 40); 
         tlNote.setLayoutParams(lp);
         
         TextInputEditText etNote = new TextInputEditText(tlNote.getContext());
-        // Forcing WRAP_CONTENT prevents clipping on the top text bounds
         etNote.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         tlNote.addView(etNote);
         wrapperLayout.addView(tlNote);
@@ -1604,17 +1604,17 @@ public class MainActivity extends AppCompatActivity {
         spFrequency.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Monthly", "Weekly", "Half Yearly"}));
         spAmountType.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Fixed Amount", "Random Amount"}));
 
-        // UI FIX: Material Component Programmatic Outlined Box Engine
+        // UI FIX: Material Component Programmatic Outlined Box with Transparent Inside
         TextInputLayout tlMemberWrap = new TextInputLayout(MainActivity.this);
         tlMemberWrap.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
-        tlMemberWrap.setBoxCornerRadii(16f, 16f, 16f, 16f); // Perfect smooth native curves
+        tlMemberWrap.setBoxCornerRadii(16f, 16f, 16f, 16f); 
+        tlMemberWrap.setBoxBackgroundColor(Color.TRANSPARENT); // Enforces transparent (white) inside fill
         tlMemberWrap.setHint("Primary Member Name");
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.setMargins(0, 0, 0, 24); 
         tlMemberWrap.setLayoutParams(lp);
 
         TextInputEditText etSingleMember = new TextInputEditText(tlMemberWrap.getContext()); 
-        // Forcing WRAP_CONTENT prevents clipping on the top text bounds
         etSingleMember.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         tlMemberWrap.addView(etSingleMember);
         llMembersContainer.addView(tlMemberWrap); dynamicMemberFields.add(etSingleMember);
@@ -1700,17 +1700,17 @@ public class MainActivity extends AppCompatActivity {
         if (!countStr.trim().isEmpty()) {
             int total = Integer.parseInt(countStr.trim());
             for (int i = 1; i <= total; i++) {
-                // UI FIX: Material Component Programmatic Outlined Box Engine
+                // UI FIX: Material Component Programmatic Outlined Box with Transparent Inside
                 TextInputLayout wrap = new TextInputLayout(MainActivity.this);
                 wrap.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
-                wrap.setBoxCornerRadii(16f, 16f, 16f, 16f); // Clean, native curve
+                wrap.setBoxCornerRadii(16f, 16f, 16f, 16f); 
+                wrap.setBoxBackgroundColor(Color.TRANSPARENT); // Enforces transparent (white) inside fill
                 wrap.setHint("Installment " + i + " Amount (₹)");
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 lp.setMargins(0, 0, 0, 24); 
                 wrap.setLayoutParams(lp);
 
                 TextInputEditText etAmtInput = new TextInputEditText(wrap.getContext());
-                // Forcing WRAP_CONTENT prevents clipping on the top text bounds
                 etAmtInput.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 etAmtInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
                 wrap.addView(etAmtInput); 
