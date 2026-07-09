@@ -76,7 +76,6 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // HIGH-SPEED CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
     private HashSet<String> globalPaymentsCache = new HashSet<>(); 
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
@@ -105,7 +104,6 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<CloudChitItem> globalChitsList = new ArrayList<>();
     private ArrayList<String> globalMembersList = new ArrayList<>();
 
-    // Play Store style morphing cursive progress animation snake engine
     private static class SnakeBorderDrawable extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint borderPaint;
         private final android.graphics.Paint fillPaint;
@@ -302,11 +300,10 @@ public class MainActivity extends AppCompatActivity {
             tvMsg.setPadding(0, 0, 0, 40);
             wrapperLayout.addView(tvMsg);
 
-            // UI FIX: Material Component Programmatic Outlined Box with Transparent Inside
             TextInputLayout tlNote = new TextInputLayout(MainActivity.this);
             tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
             tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f); 
-            tlNote.setBoxBackgroundColor(Color.TRANSPARENT); // Enforces transparent (white) inside fill
+            tlNote.setBoxBackgroundColor(Color.TRANSPARENT); 
             tlNote.setHint("Notes (Optional)");
             
             TextInputEditText etNote = new TextInputEditText(tlNote.getContext());
@@ -505,6 +502,7 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<Integer> pendingStepsList = new ArrayList<>();
             
             ArrayList<Integer> weeklyStepsThisMonth = new ArrayList<>();
+            ArrayList<Integer> activeStepsList = new ArrayList<>(); // Extracts exactly which steps are active
 
             try {
                 Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
@@ -529,18 +527,31 @@ public class MainActivity extends AppCompatActivity {
                     int cM = cal.get(Calendar.MONTH);
                     int tM = todayCal.get(Calendar.MONTH);
 
-                    if (cY == tY && cM == tM) {
-                        isCurrent = true;
-                        hasMilestoneThisMonth = true;
-                        if ("Weekly".equals(freq)) {
+                    if ("Weekly".equals(freq)) {
+                        int cW = cal.get(Calendar.WEEK_OF_YEAR);
+                        int tW = todayCal.get(Calendar.WEEK_OF_YEAR);
+                        if (cW == tW && cY == tY) {
+                            isCurrent = true;
+                            hasMilestoneThisMonth = true;
                             weeklyStepsThisMonth.add(step);
+                        } else if (cal.getTimeInMillis() < todayCal.getTimeInMillis()) {
+                            isPast = true;
                         }
-                    } else if (cY < tY || (cY == tY && cM < tM)) {
-                        isPast = true;
+                    } else {
+                        if (cY == tY && cM == tM) {
+                            isCurrent = true;
+                            hasMilestoneThisMonth = true;
+                        } else if (cY < tY || (cY == tY && cM < tM)) {
+                            isPast = true;
+                        }
                     }
 
                     if (isCurrent || isPast) {
                         highestPassedOrCurrentStep = step;
+                    }
+                    
+                    if (isCurrent) {
+                        activeStepsList.add(step);
                     }
 
                     double stepExpectedTotal = 0.0;
@@ -602,6 +613,9 @@ public class MainActivity extends AppCompatActivity {
                     instSpannable.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), 0, instSpannable.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     instSpannable.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), 0, instSpannable.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
+                if (hasMilestoneThisMonth && activeStepsList.isEmpty()) {
+                    activeStepsList.add(displayInstNumber);
+                }
             }
 
             if (!hasMilestoneThisMonth && previousArrearsChitPending == 0) {
@@ -656,6 +670,7 @@ public class MainActivity extends AppCompatActivity {
             final ArrayList<Double> targetPlanBreakdownList = dynamicPlanBreakdown;
             final ArrayList<Integer> targetPendingSteps = pendingStepsList;
             final ArrayList<String> targetAdvanceLogs = advanceLogsList;
+            final ArrayList<Integer> targetActiveSteps = activeStepsList; 
             
             final String targetActiveInstStr = instSpannable.toString();
 
@@ -664,7 +679,7 @@ public class MainActivity extends AppCompatActivity {
                     targetName, targetStartDate, targetFreq, targetMaxInst, targetActiveInstStr, 
                     targetMembers, curMonthDues, pastMonthDues, grossDues, totalAdvancesTaken, 
                     targetPlanBreakdownList, targetPendingSteps, targetPlanAmount, targetPaidAmount, 
-                    targetBalance, targetAdvanceLogs, targetPaidInstCount, targetRemainingInstCount
+                    targetBalance, targetAdvanceLogs, targetPaidInstCount, targetRemainingInstCount, targetActiveSteps
                 );
             });
 
@@ -675,7 +690,7 @@ public class MainActivity extends AppCompatActivity {
             tvInst.setPadding(20, 12, 20, 12); 
             tvInst.setGravity(Gravity.CENTER); 
             tvInst.setTextColor(Color.parseColor("#475569")); 
-            tvInst.setTypeface(Typeface.MONOSPACE);
+            tvInst.setTypeface(Typeface.MONOSPACE); 
             row.addView(tvInst);
             
             TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
@@ -698,7 +713,7 @@ public class MainActivity extends AppCompatActivity {
         tlGlobalSummaryTable.addView(footerRow);
     }
 
-    private void showPremiumChitSummaryDialog(String name, String startDate, String freq, int maxInst, String activeInstStr, ArrayList<String> members, double curDues, double pastDues, double grossDues, double totalAdvances, ArrayList<Double> planBreakdown, ArrayList<Integer> pendingSteps, double totalPlanAmount, double totalPaid, double balanceAmount, ArrayList<String> advanceLogs, int paidInstCount, int remainingInstCount) {
+    private void showPremiumChitSummaryDialog(String name, String startDate, String freq, int maxInst, String activeInstStr, ArrayList<String> members, double curDues, double pastDues, double grossDues, double totalAdvances, ArrayList<Double> planBreakdown, ArrayList<Integer> pendingSteps, double totalPlanAmount, double totalPaid, double balanceAmount, ArrayList<String> advanceLogs, int paidInstCount, int remainingInstCount, ArrayList<Integer> activeSteps) {
         ScrollView scrollView = new ScrollView(this);
         scrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         
@@ -988,21 +1003,30 @@ public class MainActivity extends AppCompatActivity {
             planLayout.addView(empty);
         } else {
             for(int i=0; i<planBreakdown.size(); i++){
+                int currentStepNum = i + 1;
                 LinearLayout rRow = new LinearLayout(this);
                 rRow.setOrientation(LinearLayout.HORIZONTAL);
                 rRow.setPadding(0, 10, 0, 10);
                 
                 TextView step = new TextView(this);
-                step.setText("Step #" + (i+1));
-                step.setTextColor(Color.parseColor("#64748B"));
-                step.setTextSize(14);
+                step.setText("Step #" + currentStepNum);
                 step.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
                 
                 TextView amt = new TextView(this);
                 amt.setText("₹" + String.format(Locale.getDefault(), "%.1f", planBreakdown.get(i)));
-                amt.setTextColor(Color.parseColor("#0F172A"));
-                amt.setTextSize(14);
-                amt.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+                
+                // POP-UP PLAN MATRIX: Highlight Current Steps in Green + Bold
+                if (activeSteps != null && activeSteps.contains(currentStepNum)) {
+                    step.setTextColor(Color.parseColor("#15803D"));
+                    step.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+                    amt.setTextColor(Color.parseColor("#15803D"));
+                    amt.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+                } else {
+                    step.setTextColor(Color.parseColor("#64748B"));
+                    step.setTextSize(14);
+                    amt.setTextColor(Color.parseColor("#0F172A"));
+                    amt.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+                }
                 
                 rRow.addView(step);
                 rRow.addView(amt);
@@ -1140,10 +1164,11 @@ public class MainActivity extends AppCompatActivity {
         if (member.isEmpty()) return;
 
         final ArrayList<Integer> openInstallmentNumbers = new ArrayList<>();
-        ArrayList<String> filteredOptionsList = new ArrayList<>();
+        ArrayList<CharSequence> filteredOptionsList = new ArrayList<>();
 
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         SimpleDateFormat sdfDialogOutput = new SimpleDateFormat("d MMM yy", Locale.getDefault());
+        Calendar todayCal = Calendar.getInstance();
 
         for (int i = 1; i <= totalInstallmentsCount; i++) {
             if (!globalPaymentsCache.contains(chitId + "_" + member + "_" + i)) {
@@ -1151,6 +1176,8 @@ public class MainActivity extends AppCompatActivity {
                 openInstallmentNumbers.add(i);
 
                 String dateLabel = "";
+                boolean isCurrent = false;
+                
                 try {
                     Date startDate = sdfInput.parse(firstInstallmentDateStr);
                     Calendar cal = Calendar.getInstance();
@@ -1162,10 +1189,32 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         cal.add(Calendar.DATE, (i - 1) * 7);
                     }
+                    
+                    int cY = cal.get(Calendar.YEAR);
+                    int tY = todayCal.get(Calendar.YEAR);
+                    int cM = cal.get(Calendar.MONTH);
+                    int tM = todayCal.get(Calendar.MONTH);
+                    
+                    if ("Weekly".equals(frequencyType)) {
+                        int cW = cal.get(Calendar.WEEK_OF_YEAR);
+                        int tW = todayCal.get(Calendar.WEEK_OF_YEAR);
+                        if (cW == tW && cY == tY) { isCurrent = true; }
+                    } else {
+                        if (cY == tY && cM == tM) { isCurrent = true; }
+                    }
+                    
                     dateLabel = "( " + sdfDialogOutput.format(cal.getTime()) + ") ";
                 } catch (Exception ignored) {}
 
-                filteredOptionsList.add(dateLabel + "Inst. " + i + " - ₹" + amt);
+                String rawRowStr = dateLabel + "Inst. " + i + " - ₹" + amt;
+                
+                // PAYMENTS INPUT LIST: Highlight the Current Month steps in Green + Bold
+                android.text.SpannableString spRow = new android.text.SpannableString(rawRowStr);
+                if (isCurrent) {
+                    spRow.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), 0, rawRowStr.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    spRow.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), 0, rawRowStr.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+                filteredOptionsList.add(spRow);
             }
         }
 
@@ -1174,7 +1223,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        final String[] optionsArray = filteredOptionsList.toArray(new String[0]);
+        final CharSequence[] optionsArray = filteredOptionsList.toArray(new CharSequence[0]);
         final boolean[] localCheckedTracker = new boolean[optionsArray.length];
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
@@ -1218,14 +1267,15 @@ public class MainActivity extends AppCompatActivity {
         ArrayList<String> calculatedDatesHeaders = new ArrayList<>();
         SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         SimpleDateFormat sdfOutput = new SimpleDateFormat("d MMM yyyy", Locale.getDefault());
-        int currentActiveIndexId = 0;
+        
+        ArrayList<Integer> currentActiveIndices = new ArrayList<>();
+        int elapsedIndex = -1;
         Calendar todayCal = Calendar.getInstance();
 
         try {
             Date startDate = sdfInput.parse(firstInstallmentDateStr);
             Calendar cal = Calendar.getInstance();
             
-            int elapsedIndex = -1;
             for (int i = 0; i < totalInstallmentsCount; i++) {
                 cal.setTime(startDate);
                 if ("Monthly".equals(frequencyType)) {
@@ -1237,24 +1287,33 @@ public class MainActivity extends AppCompatActivity {
                 }
                 calculatedDatesHeaders.add(sdfOutput.format(cal.getTime()));
                 
+                boolean isCurrent = false;
+                int cY = cal.get(Calendar.YEAR);
+                int tY = todayCal.get(Calendar.YEAR);
+                int cM = cal.get(Calendar.MONTH);
+                int tM = todayCal.get(Calendar.MONTH);
+
                 if ("Weekly".equals(frequencyType)) {
-                    if (cal.getTimeInMillis() <= todayCal.getTimeInMillis() || 
-                       (cal.get(Calendar.WEEK_OF_YEAR) == todayCal.get(Calendar.WEEK_OF_YEAR) && cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR))) {
-                        elapsedIndex = i;
-                    }
+                    int cW = cal.get(Calendar.WEEK_OF_YEAR);
+                    int tW = todayCal.get(Calendar.WEEK_OF_YEAR);
+                    if (cW == tW && cY == tY) { isCurrent = true; }
+                    if (cal.getTimeInMillis() <= todayCal.getTimeInMillis() || isCurrent) { elapsedIndex = i; }
                 } else {
-                    int cY = cal.get(Calendar.YEAR);
-                    int tY = todayCal.get(Calendar.YEAR);
-                    int cM = cal.get(Calendar.MONTH);
-                    int tM = todayCal.get(Calendar.MONTH);
-                    
-                    if (cY < tY || (cY == tY && cM <= tM)) {
-                        elapsedIndex = i;
-                    }
+                    if (cY == tY && cM == tM) { isCurrent = true; }
+                    if (cY < tY || (cY == tY && cM <= tM)) { elapsedIndex = i; }
                 }
+                
+                if (isCurrent) currentActiveIndices.add(i);
             }
-            currentActiveIndexId = (elapsedIndex != -1) ? elapsedIndex : 0;
         } catch (Exception ignored) {}
+
+        // Fallback for snake animation if currently in a gap month (e.g. half-yearly gap)
+        ArrayList<Integer> snakeIndices = new ArrayList<>(currentActiveIndices);
+        if (snakeIndices.isEmpty() && elapsedIndex != -1) {
+            snakeIndices.add(elapsedIndex);
+        } else if (snakeIndices.isEmpty()) {
+            snakeIndices.add(0);
+        }
 
         if (!isMatrixVertical) {
             TableRow headerRow = new TableRow(this);
@@ -1264,8 +1323,21 @@ public class MainActivity extends AppCompatActivity {
             TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(20, 16, 20, 16); hNo.setTextColor(Color.WHITE); hNo.setTypeface(null, Typeface.BOLD); headerRow.addView(hNo);
             TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextColor(Color.WHITE); hName.setTypeface(null, Typeface.BOLD); hName.setGravity(Gravity.CENTER); headerRow.addView(hName);
 
+            int dateIdx = 0;
             for (String dateStr : calculatedDatesHeaders) {
-                TextView hDate = new TextView(this); hDate.setText(dateStr); hDate.setPadding(24, 16, 24, 16); hDate.setTextColor(Color.WHITE); hDate.setTypeface(null, Typeface.BOLD); headerRow.addView(hDate);
+                TextView hDate = new TextView(this); 
+                hDate.setText(dateStr); 
+                hDate.setPadding(24, 16, 24, 16); 
+                
+                // HORIZONTAL MATRIX TABLE: Highlights Date Header in slightly brighter Green for the dark Navy bar
+                if (currentActiveIndices.contains(dateIdx)) {
+                    hDate.setTextColor(Color.parseColor("#34D399"));
+                } else {
+                    hDate.setTextColor(Color.WHITE);
+                }
+                hDate.setTypeface(null, Typeface.BOLD); 
+                headerRow.addView(hDate);
+                dateIdx++;
             }
             tlFundTable.addView(headerRow);
 
@@ -1288,7 +1360,7 @@ public class MainActivity extends AppCompatActivity {
                         tvStatusCell.setText(" Pending "); tvStatusCell.setTextColor(Color.parseColor("#475569")); tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
                     }
 
-                    if ((i - 1) == currentActiveIndexId) {
+                    if (snakeIndices.contains(i - 1)) {
                         final SnakeBorderDrawable snakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), isPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9"), 32f);
                         cellContainer.setBackground(snakeDrawable);
                         android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofFloat(0f, 1f); anim.setDuration(1600); anim.setRepeatCount(android.animation.ValueAnimator.INFINITE); anim.setInterpolator(new android.view.animation.LinearInterpolator());
@@ -1313,11 +1385,37 @@ public class MainActivity extends AppCompatActivity {
             tlFundTable.addView(headerRow);
 
             for (int i = 1; i <= totalInstallmentsCount; i++) {
+                int colIdx = i - 1;
                 TableRow instRow = new TableRow(this);
                 instRow.setPadding(6, 8, 6, 8);
 
-                TextView tvInstNum = new TextView(this); tvInstNum.setText("#" + i); tvInstNum.setPadding(20, 16, 20, 16); tvInstNum.setTypeface(null, Typeface.BOLD); tvInstNum.setGravity(Gravity.CENTER); instRow.addView(tvInstNum);
-                TextView tvInstDate = new TextView(this); tvInstDate.setText(calculatedDatesHeaders.get(i - 1)); tvInstDate.setPadding(20, 16, 20, 16); tvInstDate.setTextColor(Color.parseColor("#475569")); tvInstDate.setGravity(Gravity.CENTER); instRow.addView(tvInstDate);
+                TextView tvInstNum = new TextView(this); 
+                tvInstNum.setText("#" + i); 
+                tvInstNum.setPadding(20, 16, 20, 16); 
+                tvInstNum.setGravity(Gravity.CENTER);
+                
+                TextView tvInstDate = new TextView(this); 
+                tvInstDate.setText(calculatedDatesHeaders.get(colIdx)); 
+                tvInstDate.setPadding(20, 16, 20, 16); 
+                tvInstDate.setGravity(Gravity.CENTER); 
+                
+                // VERTICAL MATRIX TABLE: Highlights Row Values for the current active month Steps in Bold Green
+                if (currentActiveIndices.contains(colIdx)) {
+                    tvInstNum.setTextColor(Color.parseColor("#15803D"));
+                    tvInstNum.setTypeface(null, Typeface.BOLD);
+                    
+                    tvInstDate.setTextColor(Color.parseColor("#15803D"));
+                    tvInstDate.setTypeface(null, Typeface.BOLD);
+                } else {
+                    tvInstNum.setTextColor(Color.parseColor("#0F172A"));
+                    tvInstNum.setTypeface(null, Typeface.BOLD);
+                    
+                    tvInstDate.setTextColor(Color.parseColor("#475569"));
+                    tvInstDate.setTypeface(null, Typeface.NORMAL);
+                }
+                
+                instRow.addView(tvInstNum);
+                instRow.addView(tvInstDate);
 
                 for (String name : globalMembersList) {
                     LinearLayout cellContainer = new LinearLayout(this); cellContainer.setPadding(12, 8, 12, 8); cellContainer.setGravity(Gravity.CENTER);
@@ -1330,7 +1428,7 @@ public class MainActivity extends AppCompatActivity {
                         tvStatusCell.setText(" Pending "); tvStatusCell.setTextColor(Color.parseColor("#475569")); tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
                     }
 
-                    if ((i - 1) == currentActiveIndexId) {
+                    if (snakeIndices.contains(colIdx)) {
                         final SnakeBorderDrawable snakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), isPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9"), 32f);
                         cellContainer.setBackground(snakeDrawable);
                         android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofFloat(0f, 1f); anim.setDuration(1600); anim.setRepeatCount(android.animation.ValueAnimator.INFINITE); anim.setInterpolator(new android.view.animation.LinearInterpolator());
@@ -1525,11 +1623,10 @@ public class MainActivity extends AppCompatActivity {
         wrapperLayout.setOrientation(LinearLayout.VERTICAL);
         wrapperLayout.addView(view);
         
-        // UI FIX: Material Component Programmatic Outlined Box with Transparent Inside
         TextInputLayout tlNote = new TextInputLayout(MainActivity.this);
         tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f); 
-        tlNote.setBoxBackgroundColor(Color.TRANSPARENT); // Enforces transparent (white) inside fill
+        tlNote.setBoxBackgroundColor(Color.TRANSPARENT); 
         tlNote.setHint("Notes (Optional)");
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.setMargins(60, 0, 60, 40); 
@@ -1604,11 +1701,10 @@ public class MainActivity extends AppCompatActivity {
         spFrequency.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Monthly", "Weekly", "Half Yearly"}));
         spAmountType.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_premium, new String[]{"Fixed Amount", "Random Amount"}));
 
-        // UI FIX: Material Component Programmatic Outlined Box with Transparent Inside
         TextInputLayout tlMemberWrap = new TextInputLayout(MainActivity.this);
         tlMemberWrap.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         tlMemberWrap.setBoxCornerRadii(16f, 16f, 16f, 16f); 
-        tlMemberWrap.setBoxBackgroundColor(Color.TRANSPARENT); // Enforces transparent (white) inside fill
+        tlMemberWrap.setBoxBackgroundColor(Color.TRANSPARENT); 
         tlMemberWrap.setHint("Primary Member Name");
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.setMargins(0, 0, 0, 24); 
@@ -1700,11 +1796,10 @@ public class MainActivity extends AppCompatActivity {
         if (!countStr.trim().isEmpty()) {
             int total = Integer.parseInt(countStr.trim());
             for (int i = 1; i <= total; i++) {
-                // UI FIX: Material Component Programmatic Outlined Box with Transparent Inside
                 TextInputLayout wrap = new TextInputLayout(MainActivity.this);
                 wrap.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
                 wrap.setBoxCornerRadii(16f, 16f, 16f, 16f); 
-                wrap.setBoxBackgroundColor(Color.TRANSPARENT); // Enforces transparent (white) inside fill
+                wrap.setBoxBackgroundColor(Color.TRANSPARENT); 
                 wrap.setHint("Installment " + i + " Amount (₹)");
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 lp.setMargins(0, 0, 0, 24); 
