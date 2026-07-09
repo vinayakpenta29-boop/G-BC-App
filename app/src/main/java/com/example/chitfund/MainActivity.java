@@ -497,9 +497,6 @@ public class MainActivity extends AppCompatActivity {
             boolean hasMilestoneThisMonth = false;
             int highestPassedOrCurrentStep = 0;
 
-            // =========================================================================================
-            // NEW FEATURE: Half Yearly 1-Month Early Warning Tracker Variables
-            // =========================================================================================
             boolean isUpcomingHalfYearly = false;
             int upcomingStepNumber = 0;
             double upcomingExpectedTotal = 0.0;
@@ -536,7 +533,6 @@ public class MainActivity extends AppCompatActivity {
                     int cM = cal.get(Calendar.MONTH);
                     int tM = todayCal.get(Calendar.MONTH);
 
-                    // Evaluates what month is exactly +1 Month from right now
                     int nextMonthY = tM == Calendar.DECEMBER ? tY + 1 : tY;
                     int nextMonthM = tM == Calendar.DECEMBER ? Calendar.JANUARY : tM + 1;
 
@@ -608,6 +604,14 @@ public class MainActivity extends AppCompatActivity {
                 continue; 
             }
 
+            // RE-ADDED FIX: Define totalChitOutstanding here so it doesn't cause compilation error
+            double totalChitOutstanding = currentMonthChitPending + previousArrearsChitPending;
+
+            if (!isPureReminder) {
+                aggregateCurrentPending += currentMonthChitPending;
+                aggregatePreviousPending += previousArrearsChitPending;
+            }
+
             android.text.SpannableStringBuilder instSpannable = new android.text.SpannableStringBuilder();
 
             if ("Weekly".equals(freq) && !weeklyStepsThisMonth.isEmpty()) {
@@ -642,11 +646,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            if (!isPureReminder) {
-                aggregateCurrentPending += currentMonthChitPending;
-                aggregatePreviousPending += previousArrearsChitPending;
-            }
-            
             TableRow row = new TableRow(this);
             row.setPadding(4, 10, 4, 10);
             
@@ -671,9 +670,6 @@ public class MainActivity extends AppCompatActivity {
             tvTot.setPadding(20, 12, 20, 12); 
             tvTot.setGravity(Gravity.CENTER); 
 
-            // =========================================================================================
-            // NEW FEATURE: Half Yearly Amber Warning Row Injection
-            // =========================================================================================
             if (isPureReminder) {
                 row.setBackgroundColor(Color.parseColor("#FEF3C7")); // Amber 100 Background
                 
