@@ -60,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
     private TableLayout tlGlobalSummaryTable; 
     private LinearLayout llGlobalSummaryContainer; 
     
-    // NEW: Dedicated container for upcoming Half-Yearly Reminders
     private LinearLayout llRemindersContainer; 
     
     private TextView tvFundTitle;
@@ -80,7 +79,6 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // HIGH-SPEED CACHE LOOKUP FIELDS FOR REAL-TIME RENDERING
     private HashSet<String> globalPaymentsCache = new HashSet<>(); 
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
@@ -109,7 +107,6 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<CloudChitItem> globalChitsList = new ArrayList<>();
     private ArrayList<String> globalMembersList = new ArrayList<>();
 
-    // Play Store style morphing cursive progress animation snake engine
     private static class SnakeBorderDrawable extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint borderPaint;
         private final android.graphics.Paint fillPaint;
@@ -194,9 +191,6 @@ public class MainActivity extends AppCompatActivity {
         tabContainerLedger = findViewById(R.id.tabContainerLedger);
         tabContainerAdvances = findViewById(R.id.tabContainerAdvances);
 
-        // ==========================================================================================
-        // DYNAMIC UI INJECTION: Inserts the Reminders Container between Workspace and Ledger Table
-        // ==========================================================================================
         llRemindersContainer = new LinearLayout(this);
         llRemindersContainer.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams remParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -466,7 +460,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void calculateGlobalMonthlyDuesEngine() {
         tlGlobalSummaryTable.removeAllViews();
-        llRemindersContainer.removeAllViews(); // Clear previous reminders
+        llRemindersContainer.removeAllViews(); 
         if (globalChitsList.isEmpty()) return;
 
         java.util.Collections.sort(globalChitsList, (c1, c2) -> {
@@ -620,28 +614,24 @@ public class MainActivity extends AppCompatActivity {
 
             boolean isPureReminder = (!hasMilestoneThisMonth && previousArrearsChitPending == 0 && isUpcomingHalfYearly);
 
-            // =========================================================================================
-            // NEW FEATURE: Intercepts pure reminders and renders them as isolated warning cards
-            // =========================================================================================
             if (isPureReminder) {
                 LinearLayout reminderCard = new LinearLayout(this);
                 reminderCard.setOrientation(LinearLayout.HORIZONTAL);
-                reminderCard.setPadding(50, 40, 50, 50); // Increased padding slightly for better breathing room
+                reminderCard.setPadding(50, 40, 50, 50); 
                 reminderCard.setGravity(Gravity.CENTER_VERTICAL);
                 
                 android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-                bg.setColor(Color.parseColor("#FEF3C7")); // Amber 100 Background
-                bg.setCornerRadius(32f); // Perfect curved card view
+                bg.setColor(Color.parseColor("#FEF3C7")); 
+                bg.setCornerRadius(32f); 
                 reminderCard.setBackground(bg);
                 
-                // FIX 1: Added Left and Right margins (60px) so the card perfectly aligns with your other tables
                 LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                cardParams.setMargins(50, 0, 50, 20); 
+                cardParams.setMargins(60, 0, 60, 30); 
                 reminderCard.setLayoutParams(cardParams);
                 
                 TextView icon = new TextView(this);
                 icon.setText("⚠️");
-                icon.setTextSize(16);
+                icon.setTextSize(20);
                 icon.setPadding(0, 0, 20, 0);
                 icon.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 reminderCard.addView(icon);
@@ -649,39 +639,39 @@ public class MainActivity extends AppCompatActivity {
                 TextView msg = new TextView(this);
                 android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder();
                 
-                // Corrected Grammar String
                 ssb.append("YOU HAVE A HALF-YEARLY INSTALLMENT OF ");
                 
                 int startIdx = ssb.length();
-                ssb.append("₹").append(String.format(Locale.getDefault(), "%.0f", upcomingExpectedTotal));
+                ssb.append("₹").append(String.format(Locale.getDefault(), "%,.0f", upcomingExpectedTotal));
                 ssb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 ssb.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 
                 ssb.append(" DUE NEXT MONTH FOR ");
+                
                 startIdx = ssb.length();
                 ssb.append(item.name.toUpperCase(Locale.getDefault()));
                 ssb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 ssb.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 
                 ssb.append(". (INSTALLMENT NO. ");
+                
                 startIdx = ssb.length();
                 ssb.append("#").append(String.valueOf(upcomingStepNumber));
                 ssb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 ssb.append(")");
                 
                 msg.setText(ssb);
-                msg.setTextColor(Color.parseColor("#B45309")); // Amber 700
-                msg.setTextSize(12f);
+                msg.setTextColor(Color.parseColor("#B45309")); 
+                
+                msg.setTextSize(12f); 
                 msg.setTypeface(Typeface.MONOSPACE);
                 
-                // FIX 3: Added weight (1f) to the layout params and line spacing so text wraps properly and doesn't cut off at the bottom
                 msg.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-                msg.setLineSpacing(0, 1.2f); 
                 
                 reminderCard.addView(msg);
                 
                 llRemindersContainer.addView(reminderCard);
-                continue; // Important: Skips rendering this into the main ledger table below!
+                continue; 
             }
 
             if (!hasMilestoneThisMonth && previousArrearsChitPending == 0) {
@@ -689,9 +679,12 @@ public class MainActivity extends AppCompatActivity {
             }
 
             double totalChitOutstanding = currentMonthChitPending + previousArrearsChitPending;
-            aggregateCurrentPending += currentMonthChitPending;
-            aggregatePreviousPending += previousArrearsChitPending;
             
+            if (!isPureReminder) {
+                aggregateCurrentPending += currentMonthChitPending;
+                aggregatePreviousPending += previousArrearsChitPending;
+            }
+
             android.text.SpannableStringBuilder instSpannable = new android.text.SpannableStringBuilder();
 
             if ("Weekly".equals(freq) && !weeklyStepsThisMonth.isEmpty()) {
@@ -712,7 +705,7 @@ public class MainActivity extends AppCompatActivity {
                         instSpannable.append(", ");
                     }
                 }
-            } else {
+            } else if (!isPureReminder) {
                 int displayInstNumber = hasMilestoneThisMonth ? highestPassedOrCurrentStep : Math.min(highestPassedOrCurrentStep + 1, maxInst);
                 instSpannable.append("#").append(String.valueOf(displayInstNumber));
                 
@@ -793,9 +786,9 @@ public class MainActivity extends AppCompatActivity {
             tvInst.setTypeface(Typeface.MONOSPACE); 
             row.addView(tvInst);
             
-            TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
-            TextView tvPrev = new TextView(this); tvPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", previousArrearsChitPending)); tvPrev.setPadding(20, 12, 20, 12); tvPrev.setGravity(Gravity.CENTER); tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD); row.addView(tvPrev);
-            TextView tvTot = new TextView(this); tvTot.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding)); tvTot.setPadding(20, 12, 20, 12); tvTot.setGravity(Gravity.CENTER); tvTot.setTextColor(Color.parseColor("#0F172A")); tvTot.setTypeface(null, Typeface.BOLD); row.addView(tvTot); 
+            TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%,.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
+            TextView tvPrev = new TextView(this); tvPrev.setText("₹" + String.format(Locale.getDefault(), "%,.1f", previousArrearsChitPending)); tvPrev.setPadding(20, 12, 20, 12); tvPrev.setGravity(Gravity.CENTER); tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD); row.addView(tvPrev);
+            TextView tvTot = new TextView(this); tvTot.setText("₹" + String.format(Locale.getDefault(), "%,.1f", totalChitOutstanding)); tvTot.setPadding(20, 12, 20, 12); tvTot.setGravity(Gravity.CENTER); tvTot.setTextColor(Color.parseColor("#0F172A")); tvTot.setTypeface(null, Typeface.BOLD); row.addView(tvTot); 
 
             tlGlobalSummaryTable.addView(row);
         }
@@ -806,9 +799,9 @@ public class MainActivity extends AppCompatActivity {
 
         TextView tvTotalLbl = new TextView(this); tvTotalLbl.setText("GRAND TOTALS"); tvTotalLbl.setPadding(20, 12, 20, 12); tvTotalLbl.setTextColor(Color.parseColor("#0F172A")); tvTotalLbl.setTypeface(null, Typeface.BOLD); footerRow.addView(tvTotalLbl);
         TextView tvEmpty = new TextView(this); tvEmpty.setText("-"); tvEmpty.setPadding(20, 12, 20, 12); tvEmpty.setGravity(Gravity.CENTER); tvEmpty.setTextColor(Color.TRANSPARENT); footerRow.addView(tvEmpty);
-        TextView tvSumCur = new TextView(this); tvSumCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", aggregateCurrentPending)); tvSumCur.setPadding(20, 12, 20, 12); tvSumCur.setGravity(Gravity.CENTER); tvSumCur.setTextColor(Color.parseColor("#15803D")); tvSumCur.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumCur);
-        TextView tvSumPrev = new TextView(this); tvSumPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", aggregatePreviousPending)); tvSumPrev.setPadding(20, 12, 20, 12); tvSumPrev.setGravity(Gravity.CENTER); tvSumPrev.setTextColor(Color.parseColor("#B91C1C")); tvSumPrev.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumPrev);
-        TextView tvSumGrand = new TextView(this); tvSumGrand.setText("₹" + String.format(Locale.getDefault(), "%.1f", (aggregateCurrentPending + aggregatePreviousPending))); tvSumGrand.setPadding(20, 12, 20, 12); tvSumGrand.setGravity(Gravity.CENTER); tvSumGrand.setTextColor(Color.parseColor("#0F172A")); tvSumGrand.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumGrand);
+        TextView tvSumCur = new TextView(this); tvSumCur.setText("₹" + String.format(Locale.getDefault(), "%,.1f", aggregateCurrentPending)); tvSumCur.setPadding(20, 12, 20, 12); tvSumCur.setGravity(Gravity.CENTER); tvSumCur.setTextColor(Color.parseColor("#15803D")); tvSumCur.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumCur);
+        TextView tvSumPrev = new TextView(this); tvSumPrev.setText("₹" + String.format(Locale.getDefault(), "%,.1f", aggregatePreviousPending)); tvSumPrev.setPadding(20, 12, 20, 12); tvSumPrev.setGravity(Gravity.CENTER); tvSumPrev.setTextColor(Color.parseColor("#B91C1C")); tvSumPrev.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumPrev);
+        TextView tvSumGrand = new TextView(this); tvSumGrand.setText("₹" + String.format(Locale.getDefault(), "%,.1f", (aggregateCurrentPending + aggregatePreviousPending))); tvSumGrand.setPadding(20, 12, 20, 12); tvSumGrand.setGravity(Gravity.CENTER); tvSumGrand.setTextColor(Color.parseColor("#0F172A")); tvSumGrand.setTypeface(null, Typeface.BOLD); footerRow.addView(tvSumGrand);
 
         tlGlobalSummaryTable.addView(footerRow);
     }
@@ -856,7 +849,7 @@ public class MainActivity extends AppCompatActivity {
         tvPendLbl.setTypeface(null, Typeface.BOLD);
         
         TextView tvPendVal = new TextView(this);
-        tvPendVal.setText("₹" + String.format(Locale.getDefault(), "%.1f", grossDues));
+        tvPendVal.setText("₹" + String.format(Locale.getDefault(), "%,.1f", grossDues));
         tvPendVal.setTextColor(Color.parseColor("#1E3A8A"));
         tvPendVal.setTextSize(26);
         tvPendVal.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
@@ -892,7 +885,7 @@ public class MainActivity extends AppCompatActivity {
         tvCurLbl.setTextColor(Color.parseColor("#475569"));
         tvCurLbl.setTextSize(12);
         TextView tvCurVal = new TextView(this);
-        tvCurVal.setText("₹" + String.format(Locale.getDefault(), "%.1f", curDues));
+        tvCurVal.setText("₹" + String.format(Locale.getDefault(), "%,.1f", curDues));
         tvCurVal.setTextColor(Color.parseColor("#0F172A"));
         tvCurVal.setTextSize(18);
         tvCurVal.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
@@ -917,7 +910,7 @@ public class MainActivity extends AppCompatActivity {
         tvPastLbl.setTextColor(Color.parseColor("#C2410C"));
         tvPastLbl.setTextSize(12);
         TextView tvPastVal = new TextView(this);
-        tvPastVal.setText("₹" + String.format(Locale.getDefault(), "%.1f", pastDues));
+        tvPastVal.setText("₹" + String.format(Locale.getDefault(), "%,.1f", pastDues));
         tvPastVal.setTextColor(Color.parseColor("#EA580C"));
         tvPastVal.setTextSize(18);
         tvPastVal.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
@@ -942,9 +935,9 @@ public class MainActivity extends AppCompatActivity {
         
         String[] finLabels = {"Total Plan Amount", "Total Amount Paid", "Balance to be Paid", "Paid Installments", "Remaining Installments"};
         String[] finValues = {
-            "₹" + String.format(Locale.getDefault(), "%.1f", totalPlanAmount),
-            "₹" + String.format(Locale.getDefault(), "%.1f", totalPaid),
-            "₹" + String.format(Locale.getDefault(), "%.1f", balanceAmount),
+            "₹" + String.format(Locale.getDefault(), "%,.1f", totalPlanAmount),
+            "₹" + String.format(Locale.getDefault(), "%,.1f", totalPaid),
+            "₹" + String.format(Locale.getDefault(), "%,.1f", balanceAmount),
             String.valueOf(paidInstCount),
             String.valueOf(remainingInstCount)
         };
@@ -988,7 +981,7 @@ public class MainActivity extends AppCompatActivity {
         tvAdvLbl.setTypeface(null, Typeface.BOLD);
         
         TextView tvAdvVal = new TextView(this);
-        tvAdvVal.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalAdvances));
+        tvAdvVal.setText("₹" + String.format(Locale.getDefault(), "%,.1f", totalAdvances));
         tvAdvVal.setTextColor(Color.parseColor("#DC2626"));
         tvAdvVal.setTextSize(26);
         tvAdvVal.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
@@ -1113,7 +1106,7 @@ public class MainActivity extends AppCompatActivity {
                 step.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
                 
                 TextView amt = new TextView(this);
-                amt.setText("₹" + String.format(Locale.getDefault(), "%.1f", planBreakdown.get(i)));
+                amt.setText("₹" + String.format(Locale.getDefault(), "%,.1f", planBreakdown.get(i)));
                 
                 if (activeSteps != null && activeSteps.contains(currentStepNum)) {
                     step.setTextColor(Color.parseColor("#15803D"));
@@ -1305,7 +1298,7 @@ public class MainActivity extends AppCompatActivity {
                     dateLabel = "( " + sdfDialogOutput.format(cal.getTime()) + ") ";
                 } catch (Exception ignored) {}
 
-                String rawRowStr = dateLabel + "Inst. " + i + " - ₹" + amt;
+                String rawRowStr = dateLabel + "Inst. " + i + " - ₹" + String.format(Locale.getDefault(), "%,.1f", amt);
                 
                 android.text.SpannableString spRow = new android.text.SpannableString(rawRowStr);
                 if (isCurrent) {
@@ -1600,14 +1593,14 @@ public class MainActivity extends AppCompatActivity {
                 TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
                 
                 TextView tvAdv = new TextView(this); 
-                tvAdv.setText("₹" + doc.getDouble("advance_amount")); 
+                tvAdv.setText("₹" + String.format(Locale.getDefault(), "%,.1f", doc.getDouble("advance_amount"))); 
                 tvAdv.setPadding(20, 16, 20, 16); 
                 tvAdv.setTypeface(null, Typeface.BOLD); 
                 tvAdv.setTextColor(Color.parseColor("#E11D48")); 
                 tvAdv.setGravity(Gravity.CENTER); 
                 tr.addView(tvAdv);
                 
-                TextView tvRate = new TextView(this); tvRate.setText("₹" + doc.getDouble("new_amount")); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tvRate.setGravity(Gravity.CENTER); tr.addView(tvRate);
+                TextView tvRate = new TextView(this); tvRate.setText("₹" + String.format(Locale.getDefault(), "%,.1f", doc.getDouble("new_amount"))); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tvRate.setGravity(Gravity.CENTER); tr.addView(tvRate);
 
                 tlAdvancesTable.addView(tr);
             }
@@ -1688,7 +1681,7 @@ public class MainActivity extends AppCompatActivity {
                 badgeWrapper.addView(tvInst); tr.addView(badgeWrapper);
                 
                 TextView tvAmt = new TextView(this); 
-                tvAmt.setText("₹" + amountPaid); 
+                tvAmt.setText("₹" + String.format(Locale.getDefault(), "%,.1f", amountPaid)); 
                 tvAmt.setPadding(20, 16, 20, 16); 
                 tvAmt.setTypeface(null, Typeface.BOLD); 
                 tvAmt.setTextColor(Color.parseColor("#047857")); 
@@ -1697,7 +1690,7 @@ public class MainActivity extends AppCompatActivity {
 
                 tlHistoryTable.addView(tr);
             }
-            tvHistorySummary.setText("Total Funds Collected: ₹" + runningCashTotal + "  |  Total Transactions: " + transactionEntriesCount);
+            tvHistorySummary.setText("Total Funds Collected: ₹" + String.format(Locale.getDefault(), "%,.1f", runningCashTotal) + "  |  Total Transactions: " + transactionEntriesCount);
         });
     }
 
