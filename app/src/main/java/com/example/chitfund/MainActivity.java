@@ -626,12 +626,12 @@ public class MainActivity extends AppCompatActivity {
                 reminderCard.setBackground(bg);
                 
                 LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                cardParams.setMargins(60, 0, 60, 30); 
+                cardParams.setMargins(50, 0, 50, 15); 
                 reminderCard.setLayoutParams(cardParams);
                 
                 TextView icon = new TextView(this);
                 icon.setText("⚠️");
-                icon.setTextSize(20);
+                icon.setTextSize(16);
                 icon.setPadding(0, 0, 20, 0);
                 icon.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 reminderCard.addView(icon);
