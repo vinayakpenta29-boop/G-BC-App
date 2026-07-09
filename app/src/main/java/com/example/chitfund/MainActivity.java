@@ -414,6 +414,19 @@ public class MainActivity extends AppCompatActivity {
         tlGlobalSummaryTable.removeAllViews();
         if (globalChitsList.isEmpty()) return;
 
+        // ==========================================================================================
+        // NEW FEATURE: SORTS THE GLOBAL CHITS LIST BY FREQUENCY (Weekly -> Monthly -> Half Yearly)
+        // ==========================================================================================
+        java.util.Collections.sort(globalChitsList, (c1, c2) -> {
+            String f1 = globalChitFrequenciesCache.containsKey(c1.id) ? globalChitFrequenciesCache.get(c1.id) : "";
+            String f2 = globalChitFrequenciesCache.containsKey(c2.id) ? globalChitFrequenciesCache.get(c2.id) : "";
+            
+            int w1 = "Weekly".equals(f1) ? 1 : ("Monthly".equals(f1) ? 2 : ("Half Yearly".equals(f1) ? 3 : 4));
+            int w2 = "Weekly".equals(f2) ? 1 : ("Monthly".equals(f2) ? 2 : ("Half Yearly".equals(f2) ? 3 : 4));
+            
+            return Integer.compare(w1, w2);
+        });
+
         android.graphics.drawable.GradientDrawable rowLine = new android.graphics.drawable.GradientDrawable();
         rowLine.setColor(Color.parseColor("#E2E8F0"));
         rowLine.setSize(2, 2);
@@ -528,7 +541,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception ignored) {}
 
             // ==========================================================================================
-            // RICH TEXT SPANNABLE ENGINE: Individually colors specific paid milestone numbers Green
+            // RICH TEXT SPANNABLE ENGINE: Individually colors paid milestones Green + Bold universally!
             // ==========================================================================================
             android.text.SpannableStringBuilder instSpannable = new android.text.SpannableStringBuilder();
 
@@ -542,10 +555,9 @@ public class MainActivity extends AppCompatActivity {
                     instSpannable.append(stepStr);
                     int endIdx = instSpannable.length();
                     
-                    // IF NOT PENDING = FULLY PAID -> Set specifically this number to Emerald Green
                     if (!pendingStepsList.contains(currentStep)) {
                         instSpannable.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), startIdx, endIdx, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        instSpannable.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), 0, instSpannable.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        instSpannable.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, endIdx, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     }
                     
                     if(i < weeklyStepsThisMonth.size() - 1) {
@@ -559,6 +571,7 @@ public class MainActivity extends AppCompatActivity {
                 boolean isStepActiveOrPast = displayInstNumber <= highestPassedOrCurrentStep;
                 if (!pendingStepsList.contains(displayInstNumber) && isStepActiveOrPast) {
                     instSpannable.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), 0, instSpannable.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    instSpannable.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), 0, instSpannable.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
             }
 
@@ -615,7 +628,6 @@ public class MainActivity extends AppCompatActivity {
             final ArrayList<Integer> targetPendingSteps = pendingStepsList;
             final ArrayList<String> targetAdvanceLogs = advanceLogsList;
             
-            // Extracts plain-text version dynamically for the pop-up detail screen
             final String targetActiveInstStr = instSpannable.toString();
 
             tvName.setOnClickListener(v -> {
@@ -630,11 +642,11 @@ public class MainActivity extends AppCompatActivity {
             row.addView(tvName);
             
             TextView tvInst = new TextView(this); 
-            tvInst.setText(instSpannable); // Applies the multi-color spanned text directly
+            tvInst.setText(instSpannable); 
             tvInst.setPadding(20, 12, 20, 12); 
             tvInst.setGravity(Gravity.CENTER); 
-            tvInst.setTextColor(Color.parseColor("#475569")); // Default gray for unpaid numbers and commas
-            tvInst.setTypeface(Typeface.MONOSPACE);
+            tvInst.setTextColor(Color.parseColor("#475569")); 
+            tvInst.setTypeface(Typeface.MONOSPACE); // Monospace applied cleanly across the board!
             row.addView(tvInst);
             
             TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
