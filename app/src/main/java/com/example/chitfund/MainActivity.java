@@ -458,7 +458,6 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<Double> dynamicPlanBreakdown = new ArrayList<>();
             ArrayList<Integer> pendingStepsList = new ArrayList<>();
             
-            // NEW LIST: Tracks exactly which sequence numbers belong to the current calendar month for Weekly views
             ArrayList<Integer> weeklyStepsThisMonth = new ArrayList<>();
 
             try {
@@ -484,7 +483,6 @@ public class MainActivity extends AppCompatActivity {
                     int cM = cal.get(Calendar.MONTH);
                     int tM = todayCal.get(Calendar.MONTH);
 
-                    // POWERFUL NEW GROUPING ENGINE: Both Weekly and Monthly evaluate against the exact Calendar Month
                     if (cY == tY && cM == tM) {
                         isCurrent = true;
                         hasMilestoneThisMonth = true;
@@ -529,18 +527,38 @@ public class MainActivity extends AppCompatActivity {
                 }
             } catch (Exception ignored) {}
 
-            // NEW MULTI-FORMATTER: If Weekly, merges (#23, 24, 25, 26). Otherwise, uses the standard #14.
-            String displayInstNumberStr = "";
+            // ==========================================================================================
+            // RICH TEXT SPANNABLE ENGINE: Individually colors specific paid milestone numbers Green
+            // ==========================================================================================
+            android.text.SpannableStringBuilder instSpannable = new android.text.SpannableStringBuilder();
+
             if ("Weekly".equals(freq) && !weeklyStepsThisMonth.isEmpty()) {
-                StringBuilder sb = new StringBuilder("#");
+                instSpannable.append("#");
                 for(int i=0; i < weeklyStepsThisMonth.size(); i++) {
-                    sb.append(weeklyStepsThisMonth.get(i));
-                    if(i < weeklyStepsThisMonth.size() - 1) sb.append(", ");
+                    int currentStep = weeklyStepsThisMonth.get(i);
+                    String stepStr = String.valueOf(currentStep);
+                    
+                    int startIdx = instSpannable.length();
+                    instSpannable.append(stepStr);
+                    int endIdx = instSpannable.length();
+                    
+                    // IF NOT PENDING = FULLY PAID -> Set specifically this number to Emerald Green
+                    if (!pendingStepsList.contains(currentStep)) {
+                        instSpannable.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), startIdx, endIdx, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    
+                    if(i < weeklyStepsThisMonth.size() - 1) {
+                        instSpannable.append(", ");
+                    }
                 }
-                displayInstNumberStr = sb.toString();
             } else {
                 int displayInstNumber = hasMilestoneThisMonth ? highestPassedOrCurrentStep : Math.min(highestPassedOrCurrentStep + 1, maxInst);
-                displayInstNumberStr = "#" + displayInstNumber;
+                instSpannable.append("#").append(String.valueOf(displayInstNumber));
+                
+                boolean isStepActiveOrPast = displayInstNumber <= highestPassedOrCurrentStep;
+                if (!pendingStepsList.contains(displayInstNumber) && isStepActiveOrPast) {
+                    instSpannable.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), 0, instSpannable.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
             }
 
             if (!hasMilestoneThisMonth && previousArrearsChitPending == 0) {
@@ -595,7 +613,9 @@ public class MainActivity extends AppCompatActivity {
             final ArrayList<Double> targetPlanBreakdownList = dynamicPlanBreakdown;
             final ArrayList<Integer> targetPendingSteps = pendingStepsList;
             final ArrayList<String> targetAdvanceLogs = advanceLogsList;
-            final String targetActiveInstStr = displayInstNumberStr;
+            
+            // Extracts plain-text version dynamically for the pop-up detail screen
+            final String targetActiveInstStr = instSpannable.toString();
 
             tvName.setOnClickListener(v -> {
                 showPremiumChitSummaryDialog(
@@ -608,7 +628,13 @@ public class MainActivity extends AppCompatActivity {
 
             row.addView(tvName);
             
-            TextView tvInst = new TextView(this); tvInst.setText(displayInstNumberStr); tvInst.setPadding(20, 12, 20, 12); tvInst.setGravity(Gravity.CENTER); tvInst.setTextColor(Color.parseColor("#475569")); row.addView(tvInst);
+            TextView tvInst = new TextView(this); 
+            tvInst.setText(instSpannable); // Applies the multi-color spanned text directly
+            tvInst.setPadding(20, 12, 20, 12); 
+            tvInst.setGravity(Gravity.CENTER); 
+            tvInst.setTextColor(Color.parseColor("#475569")); // Default gray for unpaid numbers and commas
+            row.addView(tvInst);
+            
             TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
             TextView tvPrev = new TextView(this); tvPrev.setText("₹" + String.format(Locale.getDefault(), "%.1f", previousArrearsChitPending)); tvPrev.setPadding(20, 12, 20, 12); tvPrev.setGravity(Gravity.CENTER); tvPrev.setTextColor(previousArrearsChitPending > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#64748B")); if(previousArrearsChitPending > 0) tvPrev.setTypeface(null, Typeface.BOLD); row.addView(tvPrev);
             TextView tvTot = new TextView(this); tvTot.setText("₹" + String.format(Locale.getDefault(), "%.1f", totalChitOutstanding)); tvTot.setPadding(20, 12, 20, 12); tvTot.setGravity(Gravity.CENTER); tvTot.setTextColor(Color.parseColor("#0F172A")); tvTot.setTypeface(null, Typeface.BOLD); row.addView(tvTot); 
