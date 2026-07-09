@@ -626,11 +626,12 @@ public class MainActivity extends AppCompatActivity {
             if (isPureReminder) {
                 LinearLayout reminderCard = new LinearLayout(this);
                 reminderCard.setOrientation(LinearLayout.HORIZONTAL);
-                reminderCard.setPadding(50, 40, 50, 40); // Increased padding slightly for better breathing room
+                reminderCard.setPadding(50, 40, 50, 50); // Increased padding slightly for better breathing room
+                reminderCard.setGravity(Gravity.CENTER_VERTICAL);
                 
                 android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
                 bg.setColor(Color.parseColor("#FEF3C7")); // Amber 100 Background
-                bg.setCornerRadius(32f); // Perfect curved card view
+                bg.setCornerRadius(30f); // Perfect curved card view
                 reminderCard.setBackground(bg);
                 
                 // FIX 1: Added Left and Right margins (60px) so the card perfectly aligns with your other tables
@@ -640,7 +641,7 @@ public class MainActivity extends AppCompatActivity {
                 
                 TextView icon = new TextView(this);
                 icon.setText("⚠️");
-                icon.setTextSize(20);
+                icon.setTextSize(16);
                 icon.setPadding(0, 0, 20, 0);
                 icon.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 reminderCard.addView(icon);
@@ -649,18 +650,18 @@ public class MainActivity extends AppCompatActivity {
                 android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder();
                 
                 // Corrected Grammar String
-                ssb.append("You have a Half-Yearly installment of ");
+                ssb.append("YOU HAVE A HALF-YEARLY INSTALLMENT OF ");
                 
                 int startIdx = ssb.length();
                 ssb.append("₹").append(String.format(Locale.getDefault(), "%.0f", upcomingExpectedTotal));
                 ssb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 
-                ssb.append(" due next month for ");
+                ssb.append(" DUE NEXT MONTH FOR ");
                 startIdx = ssb.length();
                 ssb.append(item.name);
                 ssb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 
-                ssb.append(". (Installment No. ");
+                ssb.append(". (INSTALLMENT NO. ");
                 startIdx = ssb.length();
                 ssb.append("#").append(String.valueOf(upcomingStepNumber));
                 ssb.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -668,9 +669,7 @@ public class MainActivity extends AppCompatActivity {
                 
                 msg.setText(ssb);
                 msg.setTextColor(Color.parseColor("#B45309")); // Amber 700
-                msg.setTextSize(14);
-                
-                // FIX 2: Added Monospace Font
+                msg.setTextSize(12f);
                 msg.setTypeface(Typeface.MONOSPACE);
                 
                 // FIX 3: Added weight (1f) to the layout params and line spacing so text wraps properly and doesn't cut off at the bottom
