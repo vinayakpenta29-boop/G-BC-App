@@ -626,26 +626,29 @@ public class MainActivity extends AppCompatActivity {
             if (isPureReminder) {
                 LinearLayout reminderCard = new LinearLayout(this);
                 reminderCard.setOrientation(LinearLayout.HORIZONTAL);
-                reminderCard.setPadding(40, 30, 40, 30);
+                reminderCard.setPadding(50, 40, 50, 40); // Increased padding slightly for better breathing room
                 
                 android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-                bg.setColor(Color.parseColor("#FEF3C7")); // Amber 100
+                bg.setColor(Color.parseColor("#FEF3C7")); // Amber 100 Background
                 bg.setCornerRadius(32f); // Perfect curved card view
                 reminderCard.setBackground(bg);
                 
+                // FIX 1: Added Left and Right margins (60px) so the card perfectly aligns with your other tables
                 LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                cardParams.setMargins(0, 0, 0, 24);
+                cardParams.setMargins(60, 0, 60, 30); 
                 reminderCard.setLayoutParams(cardParams);
                 
                 TextView icon = new TextView(this);
                 icon.setText("⚠️");
                 icon.setTextSize(20);
                 icon.setPadding(0, 0, 20, 0);
-                icon.setGravity(Gravity.CENTER_VERTICAL);
+                icon.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 reminderCard.addView(icon);
                 
                 TextView msg = new TextView(this);
                 android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder();
+                
+                // Corrected Grammar String
                 ssb.append("You have a Half-Yearly installment of ");
                 
                 int startIdx = ssb.length();
@@ -666,7 +669,14 @@ public class MainActivity extends AppCompatActivity {
                 msg.setText(ssb);
                 msg.setTextColor(Color.parseColor("#B45309")); // Amber 700
                 msg.setTextSize(14);
-                msg.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                
+                // FIX 2: Added Monospace Font
+                msg.setTypeface(Typeface.MONOSPACE);
+                
+                // FIX 3: Added weight (1f) to the layout params and line spacing so text wraps properly and doesn't cut off at the bottom
+                msg.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                msg.setLineSpacing(0, 1.2f); 
+                
                 reminderCard.addView(msg);
                 
                 llRemindersContainer.addView(reminderCard);
