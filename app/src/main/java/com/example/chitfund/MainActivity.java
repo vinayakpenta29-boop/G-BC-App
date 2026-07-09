@@ -291,30 +291,64 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             
-            String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+            // =========================================================================================
+            // NEW FEATURE: Dynamic Payment Confirmation Pop-up with Optional Notes Injection
+            // =========================================================================================
+            LinearLayout wrapperLayout = new LinearLayout(MainActivity.this);
+            wrapperLayout.setOrientation(LinearLayout.VERTICAL);
+            wrapperLayout.setPadding(60, 40, 60, 0);
 
-            for (int instNum : selectedInstallmentsList) {
-                String lookupKey = chitId + "_" + TylerMember + "_" + instNum;
-                if (!globalPaymentsCache.contains(lookupKey)) {
-                    double currentTargetAmount = getSpecificCachedMemberInstallmentAmount(chitId, TylerMember, instNum);
-                    
-                    Map<String, Object> paymentPayload = new HashMap<>();
-                    paymentPayload.put("chitId", chitId);
-                    paymentPayload.put("installment_num", instNum);
-                    paymentPayload.put("member_name", TylerMember);
-                    paymentPayload.put("amount", currentTargetAmount);
-                    paymentPayload.put("date", currentDate);
-                    paymentPayload.put("timestamp", System.currentTimeMillis());
+            TextView tvMsg = new TextView(MainActivity.this);
+            tvMsg.setText("You are saving " + selectedInstallmentsList.size() + " installment(s) for " + TylerMember + ". You can optionally add a note below:");
+            tvMsg.setTextColor(Color.parseColor("#475569"));
+            tvMsg.setTextSize(15);
+            tvMsg.setPadding(0, 0, 0, 40);
+            wrapperLayout.addView(tvMsg);
 
-                    firestore.collection("payments").add(paymentPayload);
-                    globalPaymentsCache.add(lookupKey);
+            TextInputLayout tlNote = new TextInputLayout(MainActivity.this);
+            tlNote.setHint("Notes (Optional)");
+            TextInputEditText etNote = new TextInputEditText(MainActivity.this);
+            tlNote.addView(etNote);
+            wrapperLayout.addView(tlNote);
+
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MainActivity.this);
+            builder.setTitle("Confirm Payment");
+            builder.setView(wrapperLayout);
+            builder.setPositiveButton("Confirm & Save", (dialog, which) -> {
+                
+                String noteText = etNote.getText().toString().trim();
+                String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+
+                for (int instNum : selectedInstallmentsList) {
+                    String lookupKey = chitId + "_" + TylerMember + "_" + instNum;
+                    if (!globalPaymentsCache.contains(lookupKey)) {
+                        double currentTargetAmount = getSpecificCachedMemberInstallmentAmount(chitId, TylerMember, instNum);
+                        
+                        Map<String, Object> paymentPayload = new HashMap<>();
+                        paymentPayload.put("chitId", chitId);
+                        paymentPayload.put("installment_num", instNum);
+                        paymentPayload.put("member_name", TylerMember);
+                        paymentPayload.put("amount", currentTargetAmount);
+                        paymentPayload.put("date", currentDate);
+                        paymentPayload.put("timestamp", System.currentTimeMillis());
+                        
+                        // Saves the custom note into the Firebase Cloud payload
+                        paymentPayload.put("notes", noteText);
+
+                        firestore.collection("payments").add(paymentPayload);
+                        globalPaymentsCache.add(lookupKey);
+                    }
                 }
-            }
 
-            Toast.makeText(MainActivity.this, "Installments Saved Online!", Toast.LENGTH_SHORT).show();
-            resetInstallmentSelection();
-            refreshFundMatrixTable();
-            refreshTransactionHistory();
+                Toast.makeText(MainActivity.this, "Installments & Notes Saved Online!", Toast.LENGTH_SHORT).show();
+                resetInstallmentSelection();
+                refreshFundMatrixTable();
+                refreshTransactionHistory();
+            });
+            builder.setNegativeButton("Cancel", null);
+            AlertDialog confDialog = builder.create(); 
+            confDialog.show();
+            if (confDialog.getWindow() != null) confDialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
         });
     }
 
@@ -414,9 +448,6 @@ public class MainActivity extends AppCompatActivity {
         tlGlobalSummaryTable.removeAllViews();
         if (globalChitsList.isEmpty()) return;
 
-        // ==========================================================================================
-        // NEW FEATURE: SORTS THE GLOBAL CHITS LIST BY FREQUENCY (Weekly -> Monthly -> Half Yearly)
-        // ==========================================================================================
         java.util.Collections.sort(globalChitsList, (c1, c2) -> {
             String f1 = globalChitFrequenciesCache.containsKey(c1.id) ? globalChitFrequenciesCache.get(c1.id) : "";
             String f2 = globalChitFrequenciesCache.containsKey(c2.id) ? globalChitFrequenciesCache.get(c2.id) : "";
@@ -540,9 +571,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             } catch (Exception ignored) {}
 
-            // ==========================================================================================
-            // RICH TEXT SPANNABLE ENGINE: Individually colors paid milestones Green + Bold universally!
-            // ==========================================================================================
             android.text.SpannableStringBuilder instSpannable = new android.text.SpannableStringBuilder();
 
             if ("Weekly".equals(freq) && !weeklyStepsThisMonth.isEmpty()) {
@@ -646,7 +674,7 @@ public class MainActivity extends AppCompatActivity {
             tvInst.setPadding(20, 12, 20, 12); 
             tvInst.setGravity(Gravity.CENTER); 
             tvInst.setTextColor(Color.parseColor("#475569")); 
-            tvInst.setTypeface(Typeface.MONOSPACE); // Monospace applied cleanly across the board!
+            tvInst.setTypeface(Typeface.MONOSPACE); 
             row.addView(tvInst);
             
             TextView tvCur = new TextView(this); tvCur.setText("₹" + String.format(Locale.getDefault(), "%.1f", currentMonthChitPending)); tvCur.setPadding(20, 12, 20, 12); tvCur.setGravity(Gravity.CENTER); tvCur.setTextColor(Color.parseColor("#1E293B")); row.addView(tvCur);
@@ -696,12 +724,11 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         cardParams.setMargins(0, 0, 0, 30);
 
-        // 1. TOTAL PENDING DUES (Combines Active & Arrears w/ Pending Step Identifiers)
         LinearLayout pendingCard = new LinearLayout(this);
         pendingCard.setOrientation(LinearLayout.VERTICAL);
         pendingCard.setPadding(50, 40, 50, 40);
         android.graphics.drawable.GradientDrawable pendBg = new android.graphics.drawable.GradientDrawable();
-        pendBg.setColor(Color.parseColor("#EFF6FF")); // Soft Indigo Blue
+        pendBg.setColor(Color.parseColor("#EFF6FF")); 
         pendBg.setCornerRadius(cornerRadius);
         pendingCard.setBackground(pendBg);
         pendingCard.setLayoutParams(cardParams);
@@ -731,7 +758,6 @@ public class MainActivity extends AppCompatActivity {
 
         mainLayout.addView(pendingCard);
 
-        // 2. FINANCIAL SPLIT GRID (Active Dues vs Past Arrears)
         LinearLayout finGrid = new LinearLayout(this);
         finGrid.setOrientation(LinearLayout.HORIZONTAL);
         finGrid.setWeightSum(2);
@@ -789,12 +815,11 @@ public class MainActivity extends AppCompatActivity {
 
         mainLayout.addView(finGrid);
 
-        // 3. FINANCIAL FUND OVERVIEW SUMMARY (Plan vs Paid vs Balance + Installment Counts)
         LinearLayout finSumCard = new LinearLayout(this);
         finSumCard.setOrientation(LinearLayout.VERTICAL);
         finSumCard.setPadding(50, 40, 50, 40);
         android.graphics.drawable.GradientDrawable finSumBg = new android.graphics.drawable.GradientDrawable();
-        finSumBg.setColor(Color.parseColor("#F0FDF4")); // Soft Mint Green
+        finSumBg.setColor(Color.parseColor("#F0FDF4")); 
         finSumBg.setCornerRadius(cornerRadius);
         finSumCard.setBackground(finSumBg);
         finSumCard.setLayoutParams(cardParams);
@@ -832,7 +857,6 @@ public class MainActivity extends AppCompatActivity {
         }
         mainLayout.addView(finSumCard);
 
-        // 4. ADVANCES TAKEN HIGHLIGHT CARD & LOGS
         LinearLayout advCard = new LinearLayout(this);
         advCard.setOrientation(LinearLayout.VERTICAL);
         advCard.setPadding(50, 40, 50, 40);
@@ -875,7 +899,6 @@ public class MainActivity extends AppCompatActivity {
         advCard.setLayoutParams(cardParams);
         mainLayout.addView(advCard);
 
-        // 5. METADATA INFORMATION CONTAINER
         LinearLayout infoLayout = new LinearLayout(this);
         infoLayout.setOrientation(LinearLayout.VERTICAL);
         infoLayout.setPadding(50, 40, 50, 40);
@@ -912,7 +935,6 @@ public class MainActivity extends AppCompatActivity {
         }
         mainLayout.addView(infoLayout);
 
-        // 6. REGISTERED MEMBERS LIST 
         TextView tvMemTitle = new TextView(this);
         tvMemTitle.setText("Registered Members (" + members.size() + ")");
         tvMemTitle.setTextSize(15);
@@ -944,7 +966,6 @@ public class MainActivity extends AppCompatActivity {
         }
         mainLayout.addView(memLayout);
 
-        // 7. DYNAMIC INSTALLMENT MATRIX 
         TextView tvPlanTitle = new TextView(this);
         tvPlanTitle.setText("Installment Plan Matrix");
         tvPlanTitle.setTextSize(15);
@@ -1356,7 +1377,35 @@ public class MainActivity extends AppCompatActivity {
 
                 TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tr.addView(tvDate);
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
-                TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tvMem.setGravity(Gravity.CENTER); tr.addView(tvMem);
+                
+                // =========================================================================================
+                // NEW FEATURE: Displays the custom "Note" underneath the Member Name dynamically 
+                // =========================================================================================
+                LinearLayout memLayout = new LinearLayout(this);
+                memLayout.setOrientation(LinearLayout.VERTICAL);
+                memLayout.setGravity(Gravity.CENTER);
+                
+                TextView tvMem = new TextView(this); 
+                tvMem.setText(doc.getString("member_name")); 
+                tvMem.setPadding(20, 16, 20, 16); 
+                tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
+                tvMem.setTextColor(Color.parseColor("#1E293B")); 
+                tvMem.setGravity(Gravity.CENTER); 
+                memLayout.addView(tvMem);
+                
+                String note = doc.getString("notes");
+                if (note != null && !note.trim().isEmpty()) {
+                    tvMem.setPadding(20, 16, 20, 0); 
+                    TextView tvNote = new TextView(this);
+                    tvNote.setText("📝 " + note);
+                    tvNote.setTextSize(11);
+                    tvNote.setTextColor(Color.parseColor("#64748B"));
+                    tvNote.setPadding(20, 0, 20, 16);
+                    tvNote.setGravity(Gravity.CENTER);
+                    memLayout.addView(tvNote);
+                }
+                tr.addView(memLayout);
+                
                 TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
                 
                 TextView tvAdv = new TextView(this); 
@@ -1417,7 +1466,34 @@ public class MainActivity extends AppCompatActivity {
                 for (CloudChitItem item : globalChitsList) { if (item.id.equals(cId)) cName = item.name; }
 
                 TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
-                TextView tvMem = new TextView(this); tvMem.setText(doc.getString("member_name")); tvMem.setPadding(20, 16, 20, 16); tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvMem.setTextColor(Color.parseColor("#1E293B")); tvMem.setGravity(Gravity.CENTER); tr.addView(tvMem);
+                
+                // =========================================================================================
+                // NEW FEATURE: Displays the custom "Note" underneath the Member Name dynamically 
+                // =========================================================================================
+                LinearLayout memLayout = new LinearLayout(this);
+                memLayout.setOrientation(LinearLayout.VERTICAL);
+                memLayout.setGravity(Gravity.CENTER);
+                
+                TextView tvMem = new TextView(this); 
+                tvMem.setText(doc.getString("member_name")); 
+                tvMem.setPadding(20, 16, 20, 16); 
+                tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
+                tvMem.setTextColor(Color.parseColor("#1E293B")); 
+                tvMem.setGravity(Gravity.CENTER); 
+                memLayout.addView(tvMem);
+                
+                String note = doc.getString("notes");
+                if (note != null && !note.trim().isEmpty()) {
+                    tvMem.setPadding(20, 16, 20, 0); 
+                    TextView tvNote = new TextView(this);
+                    tvNote.setText("📝 " + note);
+                    tvNote.setTextSize(11);
+                    tvNote.setTextColor(Color.parseColor("#64748B"));
+                    tvNote.setPadding(20, 0, 20, 16);
+                    tvNote.setGravity(Gravity.CENTER);
+                    memLayout.addView(tvNote);
+                }
+                tr.addView(memLayout);
                 
                 LinearLayout badgeWrapper = new LinearLayout(this); badgeWrapper.setPadding(10, 6, 10, 6); badgeWrapper.setGravity(Gravity.CENTER);
                 TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(14, 4, 14, 4); tvInst.setTextColor(Color.parseColor("#475569")); tvInst.setBackgroundResource(R.drawable.badge_unpaid_bg);
@@ -1449,9 +1525,26 @@ public class MainActivity extends AppCompatActivity {
         final TextInputEditText etInst = view.findViewById(R.id.etInstNum);
         final TextInputEditText etAdvanceAmt = view.findViewById(R.id.etAdvanceAmt);
         final TextInputEditText etAmt = view.findViewById(R.id.etNewAmt);
+        
+        // =========================================================================================
+        // NEW FEATURE: Dynamically injects Notes input UI into the bottom of the existing Inflated View
+        // =========================================================================================
+        LinearLayout wrapperLayout = new LinearLayout(this);
+        wrapperLayout.setOrientation(LinearLayout.VERTICAL);
+        wrapperLayout.addView(view);
+        
+        TextInputLayout tlNote = new TextInputLayout(this);
+        tlNote.setHint("Notes (Optional)");
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(60, 0, 60, 40); // perfectly aligned matching margins
+        tlNote.setLayoutParams(lp);
+        
+        TextInputEditText etNote = new TextInputEditText(this);
+        tlNote.addView(etNote);
+        wrapperLayout.addView(tlNote);
 
         acMem.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList));
-        builder.setView(view);
+        builder.setView(wrapperLayout);
         builder.setPositiveButton("Save Advance Rules", null);
         builder.setNegativeButton("Cancel", null);
 
@@ -1463,6 +1556,7 @@ public class MainActivity extends AppCompatActivity {
             String instStr = etInst.getText().toString().trim();
             String advAmtStr = etAdvanceAmt.getText().toString().trim();
             String amtStr = etAmt.getText().toString().trim();
+            String noteText = etNote.getText().toString().trim();
 
             if (memName.isEmpty() || instStr.isEmpty() || advAmtStr.isEmpty() || amtStr.isEmpty()) {
                 Toast.makeText(MainActivity.this, "Please fill out all fields completely.", Toast.LENGTH_SHORT).show();
@@ -1483,6 +1577,9 @@ public class MainActivity extends AppCompatActivity {
             advancePayload.put("chitId", chitId); advancePayload.put("installment_num", instNum);
             advancePayload.put("member_name", memName); advancePayload.put("advance_amount", advAmt);
             advancePayload.put("new_amount", newAmt); advancePayload.put("date", currentDate);
+            
+            // Saves the custom note into the Firebase Cloud advance payload
+            advancePayload.put("notes", noteText);
 
             firestore.collection("advances").add(advancePayload).addOnSuccessListener(ref -> {
                 Toast.makeText(MainActivity.this, "Advance configuration saved to Cloud!", Toast.LENGTH_SHORT).show();
