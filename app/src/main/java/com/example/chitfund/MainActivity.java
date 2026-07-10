@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout llGlobalSummaryContainer; 
     
     private LinearLayout llRemindersContainer; 
+    private LinearLayout globalNoteContainer;
     
     private TextView tvFundTitle;
     private View llFormContainer;
@@ -287,6 +288,7 @@ public class MainActivity extends AppCompatActivity {
         btnSelectInstallments.setOnClickListener(v -> showMultiSelectInstallmentsDialog());
 
         initGlobalDatabaseSynchronizers();
+        refreshGlobalNoteCard();
         refreshTransactionHistory();
 
         btnAddInstallment.setOnClickListener(v -> {
@@ -369,6 +371,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.home_menu, menu);
+        menu.add(Menu.NONE, 1001, Menu.NONE, "Add Notes").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
         return true;
     }
 
@@ -377,6 +380,7 @@ public class MainActivity extends AppCompatActivity {
         if (item.getItemId() == R.id.menu_new_chit) { showNewChitDialog(); return true; }
         if (item.getItemId() == R.id.menu_log_advance) { showLogAdvanceDialog(); return true; }
         if (item.getItemId() == R.id.menu_delete_chit) { showDeleteChitSelectionDialog(); return true; }
+        if (item.getItemId() == 1001) { showAddNotesDialog(); return true; }
         return super.onOptionsItemSelected(item);
     }
 
@@ -2014,6 +2018,146 @@ public class MainActivity extends AppCompatActivity {
                 container.addView(wrap); 
                 fieldTrackerList.add(etAmtInput);
             }
+        }
+    }
+
+    // =========================================================================================
+    // NEW FEATURE: Swipeable Global Notes Engine
+    // =========================================================================================
+    private void showAddNotesDialog() {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        LinearLayout wrapperLayout = new LinearLayout(this);
+        wrapperLayout.setOrientation(LinearLayout.VERTICAL);
+        wrapperLayout.setPadding(60, 60, 60, 0);
+
+        TextInputLayout tlNote = new TextInputLayout(this);
+        tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f);
+        tlNote.setBoxBackgroundColor(Color.TRANSPARENT);
+        tlNote.setHint("Write your pinned note here...");
+
+        TextInputEditText etNote = new TextInputEditText(tlNote.getContext());
+        etNote.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        etNote.setTypeface(Typeface.MONOSPACE);
+
+        // Pre-fill existing note if one exists
+        android.content.SharedPreferences prefs = getSharedPreferences("ChitPrefs", MODE_PRIVATE);
+        etNote.setText(prefs.getString("global_note", ""));
+
+        tlNote.addView(etNote);
+        wrapperLayout.addView(tlNote);
+
+        builder.setView(wrapperLayout);
+        builder.setTitle("Pin a Note");
+        builder.setPositiveButton("Save Note", (dialog, which) -> {
+            String noteText = etNote.getText().toString().trim();
+            // Saves note to local Android Memory and makes it visible
+            prefs.edit().putString("global_note", noteText).putBoolean("note_visible", true).apply();
+            refreshGlobalNoteCard();
+            Toast.makeText(MainActivity.this, "Note pinned to Collect tab!", Toast.LENGTH_SHORT).show();
+        });
+        builder.setNegativeButton("Cancel", null);
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
+    }
+
+    private void refreshGlobalNoteCard() {
+        android.content.SharedPreferences prefs = getSharedPreferences("ChitPrefs", MODE_PRIVATE);
+        String note = prefs.getString("global_note", "");
+        boolean isVisible = prefs.getBoolean("note_visible", false);
+
+        if (globalNoteContainer == null) {
+            globalNoteContainer = new LinearLayout(this);
+            globalNoteContainer.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(60, 40, 60, 20); // Aligns perfectly with Workspace card
+            globalNoteContainer.setLayoutParams(lp);
+
+            ViewGroup targetGroup = (ViewGroup) tabContainerCollect;
+            if (targetGroup instanceof ScrollView) {
+                targetGroup = (ViewGroup) targetGroup.getChildAt(0);
+            }
+            // Injects it at Index 0 (The very top of the Collect Tab)
+            targetGroup.addView(globalNoteContainer, 0);
+        }
+
+        globalNoteContainer.removeAllViews();
+
+        if (isVisible && !note.isEmpty()) {
+            globalNoteContainer.setVisibility(View.VISIBLE);
+            globalNoteContainer.setAlpha(1f);
+            globalNoteContainer.setTranslationX(0f);
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.HORIZONTAL);
+            card.setPadding(50, 40, 50, 40);
+            card.setGravity(Gravity.CENTER_VERTICAL);
+
+            // Premium White Curved Card
+            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            bg.setColor(Color.WHITE);
+            bg.setCornerRadius(32f);
+            bg.setStroke(2, Color.parseColor("#E2E8F0")); // Subtle border to make it pop
+            card.setBackground(bg);
+
+            TextView icon = new TextView(this);
+            icon.setText("📌");
+            icon.setTextSize(20);
+            icon.setPadding(0, 0, 30, 0);
+            card.addView(icon);
+
+            TextView tvNote = new TextView(this);
+            tvNote.setText(note);
+            tvNote.setTextColor(Color.parseColor("#1E293B"));
+            tvNote.setTextSize(14f);
+            tvNote.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            tvNote.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            card.addView(tvNote);
+
+            // Premium Notification Swipe-to-Dismiss Physics Engine
+            card.setOnTouchListener(new View.OnTouchListener() {
+                private float startX;
+                private float startTouchX;
+
+                @Override
+                public boolean onTouch(View view, android.view.MotionEvent event) {
+                    switch (event.getAction()) {
+                        case android.view.MotionEvent.ACTION_DOWN:
+                            startX = view.getTranslationX();
+                            startTouchX = event.getRawX();
+                            view.getParent().requestDisallowInterceptTouchEvent(true); // Stop scroll interference
+                            return true;
+                        case android.view.MotionEvent.ACTION_MOVE:
+                            float dX = event.getRawX() - startTouchX;
+                            if (dX > 0) { // Only allow swiping to the right
+                                view.setTranslationX(startX + dX);
+                                view.setAlpha(1f - (dX / view.getWidth()));
+                            }
+                            return true;
+                        case android.view.MotionEvent.ACTION_UP:
+                        case android.view.MotionEvent.ACTION_CANCEL:
+                            view.getParent().requestDisallowInterceptTouchEvent(false);
+                            if (view.getTranslationX() > view.getWidth() / 3) { // Passed the swipe threshold
+                                view.animate().translationX(view.getWidth()).alpha(0).setDuration(250)
+                                        .withEndAction(() -> {
+                                            globalNoteContainer.setVisibility(View.GONE);
+                                            // Tell Android memory to hide it permanently until added again
+                                            prefs.edit().putBoolean("note_visible", false).apply();
+                                        }).start();
+                            } else { // Snap back if user didn't swipe far enough
+                                view.animate().translationX(0).alpha(1).setDuration(250).start();
+                            }
+                            return true;
+                    }
+                    return false;
+                }
+            });
+
+            globalNoteContainer.addView(card);
+        } else {
+            globalNoteContainer.setVisibility(View.GONE);
         }
     }
 }
