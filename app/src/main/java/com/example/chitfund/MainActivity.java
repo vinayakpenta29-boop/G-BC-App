@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
     private Runnable notesAnimationRunnable;
     private int currentGlobalNoteIndex = 0;
     private ArrayList<String> currentGlobalNotesList = new ArrayList<>();
+    private android.animation.ValueAnimator noteCardAnimator = null;
     
     private TextView tvFundTitle;
     private View llFormContainer;
@@ -2205,17 +2206,32 @@ public class MainActivity extends AppCompatActivity {
         // Guarantees visibility is restored if the app is re-opened or a new note is added
         globalNoteContainer.setVisibility(View.VISIBLE);
         
-        // Build the Premium White Curved Card
+                // Build the Premium White Curved Card
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setPadding(50, 40, 50, 40);
         card.setGravity(Gravity.CENTER_VERTICAL);
 
-        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-        bg.setColor(Color.WHITE);
-        bg.setCornerRadius(32f);
-        bg.setStroke(2, Color.parseColor("#E2E8F0")); 
-        card.setBackground(bg);
+        // Cancel previous snake animation if active to prevent glitches on refresh
+        if (noteCardAnimator != null) {
+            noteCardAnimator.cancel();
+        }
+
+        // Apply Premium Snake Border Animation (Deep Navy-Black Stroke, White Background)
+        float noteRadius = 16 * getResources().getDisplayMetrics().density; // Ensures perfect curve scaling on all screens
+        final SnakeBorderDrawable snakeBg = new SnakeBorderDrawable(Color.parseColor("#0F172A"), Color.WHITE, noteRadius);
+        card.setBackground(snakeBg);
+
+        noteCardAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
+        noteCardAnimator.setDuration(1600); // Speed of the snake
+        noteCardAnimator.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        noteCardAnimator.setInterpolator(new android.view.animation.LinearInterpolator());
+        noteCardAnimator.addUpdateListener(animation -> {
+            snakeBg.setAnimationProgress(-(float) animation.getAnimatedValue());
+            card.postInvalidateOnAnimation();
+        });
+        noteCardAnimator.start();
+
 
         TextView icon = new TextView(this);
         icon.setText("📌");
