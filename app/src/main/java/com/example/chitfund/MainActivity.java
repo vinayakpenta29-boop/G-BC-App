@@ -635,7 +635,7 @@ public class MainActivity extends AppCompatActivity {
                 reminderCard.setBackground(bg);
                 
                 LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                cardParams.setMargins(50, 0, 50, 15); 
+                cardParams.setMargins(50, 10, 50, 15); 
                 reminderCard.setLayoutParams(cardParams);
                 
                 TextView icon = new TextView(this);
@@ -2206,7 +2206,7 @@ public class MainActivity extends AppCompatActivity {
         // Guarantees visibility is restored if the app is re-opened or a new note is added
         globalNoteContainer.setVisibility(View.VISIBLE);
         
-                // Build the Premium White Curved Card
+        // Build the Premium White Curved Card
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setPadding(50, 40, 50, 40);
@@ -2221,6 +2221,16 @@ public class MainActivity extends AppCompatActivity {
         float noteRadius = 16 * getResources().getDisplayMetrics().density; // Ensures perfect curve scaling on all screens
         final SnakeBorderDrawable snakeBg = new SnakeBorderDrawable(Color.parseColor("#0F172A"), Color.WHITE, noteRadius);
         card.setBackground(snakeBg);
+
+        card.setElevation(12f); // Adds the soft drop shadow
+        card.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override
+            public void getOutline(View view, android.graphics.Outline outline) {
+                // Tells Android to strictly follow the custom rounded corners when casting the shadow
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), noteRadius);
+            }
+        });
+        card.setClipToOutline(true);
 
         noteCardAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
         noteCardAnimator.setDuration(1600); // Speed of the snake
