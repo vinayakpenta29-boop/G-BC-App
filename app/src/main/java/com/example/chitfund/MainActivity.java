@@ -62,6 +62,10 @@ public class MainActivity extends AppCompatActivity {
     
     private LinearLayout llRemindersContainer; 
     private LinearLayout globalNoteContainer;
+    private android.os.Handler notesAnimationHandler = new android.os.Handler();
+    private Runnable notesAnimationRunnable;
+    private int currentGlobalNoteIndex = 0;
+    private ArrayList<String> currentGlobalNotesList = new ArrayList<>();
     
     private TextView tvFundTitle;
     private View llFormContainer;
@@ -2022,7 +2026,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // =========================================================================================
-    // NEW FEATURE: Swipeable Global Notes Engine
+    // NEW FEATURE: Swipeable, Multi-Note Carousel Engine with Long-Press Delete
     // =========================================================================================
     private void showAddNotesDialog() {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
@@ -2034,27 +2038,32 @@ public class MainActivity extends AppCompatActivity {
         tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f);
         tlNote.setBoxBackgroundColor(Color.TRANSPARENT);
-        tlNote.setHint("Write your pinned note here...");
+        tlNote.setHint("Write a new pinned note...");
 
         TextInputEditText etNote = new TextInputEditText(tlNote.getContext());
         etNote.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         etNote.setTypeface(Typeface.MONOSPACE);
 
-        // Pre-fill existing note if one exists
-        android.content.SharedPreferences prefs = getSharedPreferences("ChitPrefs", MODE_PRIVATE);
-        etNote.setText(prefs.getString("global_note", ""));
-
         tlNote.addView(etNote);
         wrapperLayout.addView(tlNote);
 
         builder.setView(wrapperLayout);
-        builder.setTitle("Pin a Note");
+        builder.setTitle("Add a Pinned Note");
         builder.setPositiveButton("Save Note", (dialog, which) -> {
             String noteText = etNote.getText().toString().trim();
-            // Saves note to local Android Memory and makes it visible
-            prefs.edit().putString("global_note", noteText).putBoolean("note_visible", true).apply();
-            refreshGlobalNoteCard();
-            Toast.makeText(MainActivity.this, "Note pinned to Collect tab!", Toast.LENGTH_SHORT).show();
+            if (!noteText.isEmpty()) {
+                android.content.SharedPreferences prefs = getSharedPreferences("ChitPrefs", MODE_PRIVATE);
+                
+                // Safely load the existing list of notes and add the new one
+                java.util.Set<String> existingNotes = prefs.getStringSet("global_notes_set", new java.util.HashSet<>());
+                java.util.HashSet<String> updatedNotes = new java.util.HashSet<>(existingNotes);
+                updatedNotes.add(noteText);
+                
+                prefs.edit().putStringSet("global_notes_set", updatedNotes).apply();
+                
+                refreshGlobalNoteCard(); // Restarts the carousel
+                Toast.makeText(MainActivity.this, "Note added to the carousel!", Toast.LENGTH_SHORT).show();
+            }
         });
         builder.setNegativeButton("Cancel", null);
 
@@ -2065,99 +2074,156 @@ public class MainActivity extends AppCompatActivity {
 
     private void refreshGlobalNoteCard() {
         android.content.SharedPreferences prefs = getSharedPreferences("ChitPrefs", MODE_PRIVATE);
-        String note = prefs.getString("global_note", "");
-        boolean isVisible = prefs.getBoolean("note_visible", false);
+        java.util.Set<String> notesSet = prefs.getStringSet("global_notes_set", new java.util.HashSet<>());
+        
+        currentGlobalNotesList.clear();
+        currentGlobalNotesList.addAll(notesSet);
+
+        // Reset any existing animations to prevent glitches
+        if (notesAnimationRunnable != null) {
+            notesAnimationHandler.removeCallbacks(notesAnimationRunnable);
+        }
 
         if (globalNoteContainer == null) {
             globalNoteContainer = new LinearLayout(this);
             globalNoteContainer.setOrientation(LinearLayout.VERTICAL);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.setMargins(60, 40, 60, 20); // Aligns perfectly with Workspace card
+            lp.setMargins(60, 40, 60, 20); 
             globalNoteContainer.setLayoutParams(lp);
 
             ViewGroup targetGroup = (ViewGroup) tabContainerCollect;
             if (targetGroup instanceof ScrollView) {
                 targetGroup = (ViewGroup) targetGroup.getChildAt(0);
             }
-            // Injects it at Index 0 (The very top of the Collect Tab)
             targetGroup.addView(globalNoteContainer, 0);
         }
 
         globalNoteContainer.removeAllViews();
 
-        if (isVisible && !note.isEmpty()) {
-            globalNoteContainer.setVisibility(View.VISIBLE);
-            globalNoteContainer.setAlpha(1f);
-            globalNoteContainer.setTranslationX(0f);
-
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.HORIZONTAL);
-            card.setPadding(50, 40, 50, 40);
-            card.setGravity(Gravity.CENTER_VERTICAL);
-
-            // Premium White Curved Card
-            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-            bg.setColor(Color.WHITE);
-            bg.setCornerRadius(32f);
-            bg.setStroke(2, Color.parseColor("#E2E8F0")); // Subtle border to make it pop
-            card.setBackground(bg);
-
-            TextView icon = new TextView(this);
-            icon.setText("📌");
-            icon.setTextSize(20);
-            icon.setPadding(0, 0, 30, 0);
-            card.addView(icon);
-
-            TextView tvNote = new TextView(this);
-            tvNote.setText(note);
-            tvNote.setTextColor(Color.parseColor("#1E293B"));
-            tvNote.setTextSize(14f);
-            tvNote.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-            tvNote.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            card.addView(tvNote);
-
-            // Premium Notification Swipe-to-Dismiss Physics Engine
-            card.setOnTouchListener(new View.OnTouchListener() {
-                private float startX;
-                private float startTouchX;
-
-                @Override
-                public boolean onTouch(View view, android.view.MotionEvent event) {
-                    switch (event.getAction()) {
-                        case android.view.MotionEvent.ACTION_DOWN:
-                            startX = view.getTranslationX();
-                            startTouchX = event.getRawX();
-                            view.getParent().requestDisallowInterceptTouchEvent(true); // Stop scroll interference
-                            return true;
-                        case android.view.MotionEvent.ACTION_MOVE:
-                            float dX = event.getRawX() - startTouchX;
-                            if (dX > 0) { // Only allow swiping to the right
-                                view.setTranslationX(startX + dX);
-                                view.setAlpha(1f - (dX / view.getWidth()));
-                            }
-                            return true;
-                        case android.view.MotionEvent.ACTION_UP:
-                        case android.view.MotionEvent.ACTION_CANCEL:
-                            view.getParent().requestDisallowInterceptTouchEvent(false);
-                            if (view.getTranslationX() > view.getWidth() / 3) { // Passed the swipe threshold
-                                view.animate().translationX(view.getWidth()).alpha(0).setDuration(250)
-                                        .withEndAction(() -> {
-                                            globalNoteContainer.setVisibility(View.GONE);
-                                            // Tell Android memory to hide it permanently until added again
-                                            prefs.edit().putBoolean("note_visible", false).apply();
-                                        }).start();
-                            } else { // Snap back if user didn't swipe far enough
-                                view.animate().translationX(0).alpha(1).setDuration(250).start();
-                            }
-                            return true;
-                    }
-                    return false;
-                }
-            });
-
-            globalNoteContainer.addView(card);
-        } else {
+        // If no notes exist, hide the entire container
+        if (currentGlobalNotesList.isEmpty()) {
             globalNoteContainer.setVisibility(View.GONE);
+            return;
+        }
+
+        globalNoteContainer.setVisibility(View.VISIBLE);
+        
+        // Build the Premium White Curved Card
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setPadding(50, 40, 50, 40);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(Color.WHITE);
+        bg.setCornerRadius(32f);
+        bg.setStroke(2, Color.parseColor("#E2E8F0")); 
+        card.setBackground(bg);
+
+        TextView icon = new TextView(this);
+        icon.setText("📌");
+        icon.setTextSize(20);
+        icon.setPadding(0, 0, 30, 0);
+        card.addView(icon);
+
+        TextView tvNote = new TextView(this);
+        tvNote.setTextColor(Color.parseColor("#1E293B"));
+        tvNote.setTextSize(14f);
+        tvNote.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        tvNote.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        card.addView(tvNote);
+
+        globalNoteContainer.addView(card);
+
+        // =======================================================
+        // LONG PRESS: Show the Delete Dialog for the CURRENT Note
+        // =======================================================
+        card.setOnLongClickListener(v -> {
+            if (currentGlobalNotesList.isEmpty()) return true;
+            String noteToDelete = currentGlobalNotesList.get(currentGlobalNoteIndex % currentGlobalNotesList.size());
+            
+            new MaterialAlertDialogBuilder(MainActivity.this)
+                    .setTitle("Delete Pinned Note?")
+                    .setMessage("Remove this note from the carousel?\n\n\"" + noteToDelete + "\"")
+                    .setPositiveButton("Delete", (dialog, which) -> {
+                        currentGlobalNotesList.remove(noteToDelete);
+                        prefs.edit().putStringSet("global_notes_set", new java.util.HashSet<>(currentGlobalNotesList)).apply();
+                        refreshGlobalNoteCard();
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            return true;
+        });
+
+        // =======================================================
+        // SWIPE TO DISMISS: Swiping removes the CURRENT Note
+        // =======================================================
+        card.setOnTouchListener(new View.OnTouchListener() {
+            private float startX;
+            private float startTouchX;
+
+            @Override
+            public boolean onTouch(View view, android.view.MotionEvent event) {
+                switch (event.getAction()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        startX = view.getTranslationX();
+                        startTouchX = event.getRawX();
+                        view.getParent().requestDisallowInterceptTouchEvent(true);
+                        return true;
+                    case android.view.MotionEvent.ACTION_MOVE:
+                        float dX = event.getRawX() - startTouchX;
+                        if (dX > 0) { // Swipe Right
+                            view.setTranslationX(startX + dX);
+                            view.setAlpha(1f - (dX / view.getWidth()));
+                        }
+                        return true;
+                    case android.view.MotionEvent.ACTION_UP:
+                    case android.view.MotionEvent.ACTION_CANCEL:
+                        view.getParent().requestDisallowInterceptTouchEvent(false);
+                        if (view.getTranslationX() > view.getWidth() / 3) {
+                            view.animate().translationX(view.getWidth()).alpha(0).setDuration(250)
+                                    .withEndAction(() -> {
+                                        if (!currentGlobalNotesList.isEmpty()) {
+                                            String noteToRemove = currentGlobalNotesList.get(currentGlobalNoteIndex % currentGlobalNotesList.size());
+                                            currentGlobalNotesList.remove(noteToRemove);
+                                            prefs.edit().putStringSet("global_notes_set", new java.util.HashSet<>(currentGlobalNotesList)).apply();
+                                        }
+                                        refreshGlobalNoteCard(); // Re-renders the next note in line
+                                    }).start();
+                        } else { 
+                            view.animate().translationX(0).alpha(1).setDuration(250).start();
+                        }
+                        return true;
+                }
+                return false;
+            }
+        });
+
+        // =======================================================
+        // AUTO-FADE CAROUSEL ANIMATION ENGINE
+        // =======================================================
+        currentGlobalNoteIndex = 0;
+        tvNote.setText(currentGlobalNotesList.get(currentGlobalNoteIndex));
+        
+        // Only trigger the looping carousel animation if there is more than 1 note
+        if (currentGlobalNotesList.size() > 1) {
+            notesAnimationRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    // Fade out current note
+                    tvNote.animate().alpha(0f).setDuration(600).withEndAction(() -> {
+                        // Switch text to the next note while invisible
+                        currentGlobalNoteIndex = (currentGlobalNoteIndex + 1) % currentGlobalNotesList.size();
+                        tvNote.setText(currentGlobalNotesList.get(currentGlobalNoteIndex));
+                        // Fade in new note
+                        tvNote.animate().alpha(1f).setDuration(600).start();
+                    }).start();
+                    
+                    // Re-trigger this cycle every 4.5 seconds
+                    notesAnimationHandler.postDelayed(this, 4500);
+                }
+            };
+            notesAnimationHandler.postDelayed(notesAnimationRunnable, 4500);
         }
     }
 }
