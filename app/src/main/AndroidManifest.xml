@@ -3,6 +3,8 @@
 
     <application
         android:allowBackup="true"
+        android:icon="@drawable/ic_premium_logo"
+        android:roundIcon="@drawable/ic_premium_logo"
         android:label="Chit Fund Manager"
         android:supportsRtl="true"
         android:theme="@style/Theme.ChitFundManager">
