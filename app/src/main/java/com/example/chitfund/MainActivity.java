@@ -2185,7 +2185,7 @@ public class MainActivity extends AppCompatActivity {
             globalNoteContainer = new LinearLayout(this);
             globalNoteContainer.setOrientation(LinearLayout.VERTICAL);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.setMargins(60, 40, 60, 20); 
+            lp.setMargins(50, 40, 50, 30); 
             globalNoteContainer.setLayoutParams(lp);
 
             ViewGroup targetGroup = (ViewGroup) tabContainerCollect;
