@@ -2048,12 +2048,22 @@ public class MainActivity extends AppCompatActivity {
         tlNote.addView(etNote);
         wrapperLayout.addView(tlNote);
 
-        Button btnAdd = new Button(this);
+                Button btnAdd = new Button(this);
         btnAdd.setText("Add to Carousel");
+        btnAdd.setTextColor(Color.WHITE); // Set text color to white
+        btnAdd.setAllCaps(false); // Prevents default Android all-caps to match your image's elegant text style
+        
+        // Creates the Dark Navy/Black background with rounded corners
+        android.graphics.drawable.GradientDrawable btnBg = new android.graphics.drawable.GradientDrawable();
+        btnBg.setColor(Color.parseColor("#0F172A")); // Deep Navy/Black matching your app's theme
+        btnBg.setCornerRadius(24f); // Perfectly rounded corners
+        btnAdd.setBackground(btnBg);
+        
         LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         btnParams.setMargins(0, 20, 0, 40);
         btnAdd.setLayoutParams(btnParams);
         wrapperLayout.addView(btnAdd);
+
 
         // --- 2. EXISTING NOTES LIST ---
         TextView tvListHeader = new TextView(this);
