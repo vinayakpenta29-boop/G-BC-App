@@ -4,28 +4,27 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Deep Navy Squircle Shadow/Base -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M 0,0 L 108,0 L 108,108 L 0,108 Z" />
+
     <path
         android:fillColor="#0B1120"
         android:pathData="M54,2 C89,2 106,19 106,54 C106,89 89,106 54,106 C19,106 2,89 2,54 C2,19 19,2 54,2 Z" />
 
-    <!-- Lighter Navy Main Surface (Matches your App Headers) -->
     <path
         android:fillColor="#0F172A"
         android:pathData="M54,6 C86,6 102,22 102,54 C102,86 86,102 54,102 C22,102 6,86 6,54 C6,22 22,6 54,6 Z" />
 
-    <!-- Premium Glassmorphism Diagonal Light Reflection -->
     <path
         android:fillColor="#1AFFFFFF"
         android:pathData="M54,6 C86,6 102,22 102,54 C102,60 100,66 96,71 L37,12 C42,8 48,6 54,6 Z" />
 
-    <!-- Inner Amber Gold Trim -->
     <path
         android:strokeWidth="2.5"
         android:strokeColor="#F59E0B"
         android:pathData="M54,12 C82,12 96,26 96,54 C96,82 82,96 54,96 C26,96 12,82 12,54 C12,26 26,12 54,12 Z" />
 
-    <!-- Emerald Green Rotation Arrows (Represents the Chit Cycle) -->
     <group
         android:scaleX="3.2"
         android:scaleY="3.2"
@@ -37,7 +36,6 @@
             android:pathData="M12,4V1L8,5l4,4V6c3.31,0 6,2.69 6,6c0,1.01 -0.25,1.97 -0.7,2.8l1.46,1.46C19.54,15.03 20,13.57 20,12C20,7.58 16.42,4 12,4zM12,18c-3.31,0 -6,-2.69 -6,-6c0,-1.01 0.25,-1.97 0.7,-2.8L5.24,7.74C4.46,8.97 4,10.43 4,12c0,4.42 3.58,8 8,8v3l4,-4l-4,-4V18z" />
     </group>
 
-    <!-- Connected Community Nodes (Represents Members Pooling Money) -->
     <path
         android:strokeWidth="1.5"
         android:strokeColor="#FFFFFF"
@@ -54,7 +52,6 @@
         android:fillColor="#F1F5F9"
         android:pathData="M 70 25.5 C 71.4 25.5 72.5 26.6 72.5 28 C 72.5 29.4 71.4 30.5 70 30.5 C 68.6 30.5 67.5 29.4 67.5 28 C 67.5 26.6 68.6 25.5 70 25.5 Z" />
 
-    <!-- Bold Amber Gold Rupee Symbol (Anchored Center) -->
     <group
         android:scaleX="2.5"
         android:scaleY="2.5"
