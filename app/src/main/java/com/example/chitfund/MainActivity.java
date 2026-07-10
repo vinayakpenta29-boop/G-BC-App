@@ -2026,14 +2026,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // =========================================================================================
-    // NEW FEATURE: Swipeable, Multi-Note Carousel Engine with Long-Press Delete
+    // NEW FEATURE: Swipeable Multi-Note Carousel Engine & Management Dashboard
     // =========================================================================================
     private void showAddNotesDialog() {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         LinearLayout wrapperLayout = new LinearLayout(this);
         wrapperLayout.setOrientation(LinearLayout.VERTICAL);
-        wrapperLayout.setPadding(60, 60, 60, 0);
+        wrapperLayout.setPadding(60, 60, 60, 20);
 
+        // --- 1. ADD NEW NOTE INPUT ---
         TextInputLayout tlNote = new TextInputLayout(this);
         tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f);
@@ -2047,29 +2048,114 @@ public class MainActivity extends AppCompatActivity {
         tlNote.addView(etNote);
         wrapperLayout.addView(tlNote);
 
+        Button btnAdd = new Button(this);
+        btnAdd.setText("Add to Carousel");
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        btnParams.setMargins(0, 20, 0, 40);
+        btnAdd.setLayoutParams(btnParams);
+        wrapperLayout.addView(btnAdd);
+
+        // --- 2. EXISTING NOTES LIST ---
+        TextView tvListHeader = new TextView(this);
+        tvListHeader.setText("Saved Notes (Long-press to delete)");
+        tvListHeader.setTextSize(14);
+        tvListHeader.setTextColor(Color.parseColor("#64748B"));
+        tvListHeader.setPadding(0, 0, 0, 20);
+        wrapperLayout.addView(tvListHeader);
+
+        ScrollView scrollView = new ScrollView(this);
+        LinearLayout notesListContainer = new LinearLayout(this);
+        notesListContainer.setOrientation(LinearLayout.VERTICAL);
+        scrollView.addView(notesListContainer);
+        
+        // Limits the scroll view height so it doesn't take up the whole screen
+        LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 500); 
+        scrollView.setLayoutParams(scrollParams);
+        wrapperLayout.addView(scrollView);
+
         builder.setView(wrapperLayout);
-        builder.setTitle("Add a Pinned Note");
-        builder.setPositiveButton("Save Note", (dialog, which) -> {
+        builder.setTitle("Manage Pinned Notes");
+        builder.setPositiveButton("Close Dashboard", null);
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
+
+        android.content.SharedPreferences prefs = getSharedPreferences("ChitPrefs", MODE_PRIVATE);
+
+        // Dynamic rendering engine for the notes list
+        Runnable renderNotesList = new Runnable() {
+            @Override
+            public void run() {
+                notesListContainer.removeAllViews();
+                java.util.Set<String> existingNotes = prefs.getStringSet("global_notes_set", new java.util.HashSet<>());
+                
+                if (existingNotes.isEmpty()) {
+                    TextView empty = new TextView(MainActivity.this);
+                    empty.setText("No notes added yet.");
+                    empty.setTextColor(Color.parseColor("#94A3B8"));
+                    notesListContainer.addView(empty);
+                    return;
+                }
+
+                for (String noteStr : existingNotes) {
+                    TextView tv = new TextView(MainActivity.this);
+                    tv.setText("• " + noteStr);
+                    tv.setPadding(30, 30, 30, 30);
+                    tv.setTextColor(Color.parseColor("#1E293B"));
+                    tv.setTypeface(Typeface.MONOSPACE);
+                    
+                    // Creates a soft curved background for each listed note
+                    android.graphics.drawable.GradientDrawable noteBg = new android.graphics.drawable.GradientDrawable();
+                    noteBg.setColor(Color.parseColor("#F1F5F9"));
+                    noteBg.setCornerRadius(20f);
+                    tv.setBackground(noteBg);
+                    
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    lp.setMargins(0, 0, 0, 15);
+                    tv.setLayoutParams(lp);
+
+                    // LONG-PRESS: Permanent Deletion Mechanism
+                    tv.setOnLongClickListener(v -> {
+                        new MaterialAlertDialogBuilder(MainActivity.this)
+                            .setTitle("Delete Note")
+                            .setMessage("Are you sure you want to permanently delete this note?\n\n\"" + noteStr + "\"")
+                            .setPositiveButton("Delete Permanently", (d, w) -> {
+                                java.util.HashSet<String> updatedNotes = new java.util.HashSet<>(prefs.getStringSet("global_notes_set", new java.util.HashSet<>()));
+                                updatedNotes.remove(noteStr);
+                                prefs.edit().putStringSet("global_notes_set", updatedNotes).apply();
+                                
+                                this.run(); // Re-render the list
+                                refreshGlobalNoteCard(); // Re-render the Collect Tab dashboard
+                                Toast.makeText(MainActivity.this, "Note deleted permanently", Toast.LENGTH_SHORT).show();
+                            })
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                        return true;
+                    });
+                    notesListContainer.addView(tv);
+                }
+            }
+        };
+
+        renderNotesList.run(); // Initial List Render
+
+        // ADD BUTTON ACTION
+        btnAdd.setOnClickListener(v -> {
             String noteText = etNote.getText().toString().trim();
             if (!noteText.isEmpty()) {
-                android.content.SharedPreferences prefs = getSharedPreferences("ChitPrefs", MODE_PRIVATE);
-                
-                // Safely load the existing list of notes and add the new one
                 java.util.Set<String> existingNotes = prefs.getStringSet("global_notes_set", new java.util.HashSet<>());
                 java.util.HashSet<String> updatedNotes = new java.util.HashSet<>(existingNotes);
                 updatedNotes.add(noteText);
                 
                 prefs.edit().putStringSet("global_notes_set", updatedNotes).apply();
                 
-                refreshGlobalNoteCard(); // Restarts the carousel
-                Toast.makeText(MainActivity.this, "Note added to the carousel!", Toast.LENGTH_SHORT).show();
+                etNote.setText(""); // Clear input field
+                renderNotesList.run(); // Instantly update the list visually
+                refreshGlobalNoteCard(); // Update the Collect Tab dashboard
+                Toast.makeText(MainActivity.this, "Note added to Carousel!", Toast.LENGTH_SHORT).show();
             }
         });
-        builder.setNegativeButton("Cancel", null);
-
-        AlertDialog dialog = builder.create();
-        dialog.show();
-        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
     }
 
     private void refreshGlobalNoteCard() {
@@ -2106,6 +2192,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        // Guarantees visibility is restored if the app is re-opened or a new note is added
         globalNoteContainer.setVisibility(View.VISIBLE);
         
         // Build the Premium White Curved Card
@@ -2136,27 +2223,7 @@ public class MainActivity extends AppCompatActivity {
         globalNoteContainer.addView(card);
 
         // =======================================================
-        // LONG PRESS: Show the Delete Dialog for the CURRENT Note
-        // =======================================================
-        card.setOnLongClickListener(v -> {
-            if (currentGlobalNotesList.isEmpty()) return true;
-            String noteToDelete = currentGlobalNotesList.get(currentGlobalNoteIndex % currentGlobalNotesList.size());
-            
-            new MaterialAlertDialogBuilder(MainActivity.this)
-                    .setTitle("Delete Pinned Note?")
-                    .setMessage("Remove this note from the carousel?\n\n\"" + noteToDelete + "\"")
-                    .setPositiveButton("Delete", (dialog, which) -> {
-                        currentGlobalNotesList.remove(noteToDelete);
-                        prefs.edit().putStringSet("global_notes_set", new java.util.HashSet<>(currentGlobalNotesList)).apply();
-                        refreshGlobalNoteCard();
-                    })
-                    .setNegativeButton("Cancel", null)
-                    .show();
-            return true;
-        });
-
-        // =======================================================
-        // SWIPE TO DISMISS: Swiping removes the CURRENT Note
+        // SWIPE TO DISMISS: Swiping temporarily hides the container (Restores on App Re-Open)
         // =======================================================
         card.setOnTouchListener(new View.OnTouchListener() {
             private float startX;
@@ -2183,12 +2250,12 @@ public class MainActivity extends AppCompatActivity {
                         if (view.getTranslationX() > view.getWidth() / 3) {
                             view.animate().translationX(view.getWidth()).alpha(0).setDuration(250)
                                     .withEndAction(() -> {
-                                        if (!currentGlobalNotesList.isEmpty()) {
-                                            String noteToRemove = currentGlobalNotesList.get(currentGlobalNoteIndex % currentGlobalNotesList.size());
-                                            currentGlobalNotesList.remove(noteToRemove);
-                                            prefs.edit().putStringSet("global_notes_set", new java.util.HashSet<>(currentGlobalNotesList)).apply();
-                                        }
-                                        refreshGlobalNoteCard(); // Re-renders the next note in line
+                                        // ONLY hides the view. Does NOT delete it from memory.
+                                        globalNoteContainer.setVisibility(View.GONE);
+                                        
+                                        // Reset translation/alpha for when it reappears next session
+                                        view.setTranslationX(0);
+                                        view.setAlpha(1);
                                     }).start();
                         } else { 
                             view.animate().translationX(0).alpha(1).setDuration(250).start();
