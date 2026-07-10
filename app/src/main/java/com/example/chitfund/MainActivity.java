@@ -1602,6 +1602,19 @@ public class MainActivity extends AppCompatActivity {
                 
                 TextView tvRate = new TextView(this); tvRate.setText("₹" + String.format(Locale.getDefault(), "%,.1f", doc.getDouble("new_amount"))); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tvRate.setGravity(Gravity.CENTER); tr.addView(tvRate);
 
+                final QueryDocumentSnapshot finalDoc = doc; // Secure reference for the click listener
+                tr.setOnLongClickListener(v -> {
+                    new MaterialAlertDialogBuilder(MainActivity.this)
+                            .setTitle("Advance Options")
+                            .setItems(new String[]{"Edit Advance Record"}, (dialogInterface, which) -> {
+                                if (which == 0) {
+                                    showEditAdvanceDialog(finalDoc);
+                                }
+                            })
+                            .show();
+                    return true;
+                });
+
                 tlAdvancesTable.addView(tr);
             }
         });
@@ -1765,6 +1778,107 @@ public class MainActivity extends AppCompatActivity {
             firestore.collection("advances").add(advancePayload).addOnSuccessListener(ref -> {
                 Toast.makeText(MainActivity.this, "Advance configuration saved to Cloud!", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
+            });
+        });
+    }
+
+    // =========================================================================================
+    // NEW FEATURE: Edit Advance Engine (Pre-fills existing data into premium layout)
+    // =========================================================================================
+    private void showEditAdvanceDialog(QueryDocumentSnapshot doc) {
+        String docId = doc.getId();
+        String currentChitId = doc.getString("chitId");
+        String currentMember = doc.getString("member_name");
+        long currentInst = doc.getLong("installment_num") != null ? doc.getLong("installment_num") : 0;
+        double currentAdvAmt = doc.getDouble("advance_amount") != null ? doc.getDouble("advance_amount") : 0.0;
+        double currentNewAmt = doc.getDouble("new_amount") != null ? doc.getDouble("new_amount") : 0.0;
+        String currentNotes = doc.getString("notes") != null ? doc.getString("notes") : "";
+
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_log_advance, null);
+
+        final AutoCompleteTextView acMem = view.findViewById(R.id.acMem);
+        final TextInputEditText etInst = view.findViewById(R.id.etInstNum);
+        final TextInputEditText etAdvanceAmt = view.findViewById(R.id.etAdvanceAmt);
+        final TextInputEditText etAmt = view.findViewById(R.id.etNewAmt);
+        
+        // Pre-fill fields with existing transaction data
+        acMem.setText(currentMember, false);
+        etInst.setText(String.valueOf(currentInst));
+        
+        // Use standard number formatting for the edit inputs (no commas so it parses back correctly)
+        etAdvanceAmt.setText(String.format(Locale.getDefault(), "%.1f", currentAdvAmt).replace(".0", ""));
+        etAmt.setText(String.format(Locale.getDefault(), "%.1f", currentNewAmt).replace(".0", ""));
+
+        LinearLayout wrapperLayout = new LinearLayout(this);
+        wrapperLayout.setOrientation(LinearLayout.VERTICAL);
+        wrapperLayout.addView(view);
+        
+        // Re-inject the transparent curved Notes box
+        TextInputLayout tlNote = new TextInputLayout(MainActivity.this);
+        tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f); 
+        tlNote.setBoxBackgroundColor(Color.TRANSPARENT); 
+        tlNote.setHint("Notes (Optional)");
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(60, 0, 60, 40); 
+        tlNote.setLayoutParams(lp);
+        
+        TextInputEditText etNote = new TextInputEditText(tlNote.getContext());
+        etNote.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        etNote.setText(currentNotes); // Pre-fill notes
+        tlNote.addView(etNote);
+        wrapperLayout.addView(tlNote);
+
+        // Fetch member list specific to the Chit Group of this advance
+        ArrayList<String> availableMembers = globalChitMembersCache.containsKey(currentChitId) ? globalChitMembersCache.get(currentChitId) : new ArrayList<>();
+        acMem.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_member, availableMembers));
+
+        builder.setView(wrapperLayout);
+        builder.setTitle("Edit Advance Record");
+        builder.setPositiveButton("Save Updates", null);
+        builder.setNegativeButton("Cancel", null);
+
+        final AlertDialog dialog = builder.create(); dialog.show();
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
+
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String memName = acMem.getText().toString().trim();
+            String instStr = etInst.getText().toString().trim();
+            String advAmtStr = etAdvanceAmt.getText().toString().trim();
+            String amtStr = etAmt.getText().toString().trim();
+            String noteText = etNote.getText().toString().trim();
+
+            if (memName.isEmpty() || instStr.isEmpty() || advAmtStr.isEmpty() || amtStr.isEmpty()) {
+                Toast.makeText(MainActivity.this, "Please fill out all fields completely.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            int instNum = Integer.parseInt(instStr);
+            double advAmt = Double.parseDouble(advAmtStr);
+            double newAmt = Double.parseDouble(amtStr);
+
+            int maxInstForChit = globalChitInstallmentsCountCache.containsKey(currentChitId) ? globalChitInstallmentsCountCache.get(currentChitId) : 999;
+
+            if (instNum < 1 || instNum > maxInstForChit) {
+                Toast.makeText(MainActivity.this, "Invalid installment milestone number.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Map<String, Object> updatePayload = new HashMap<>();
+            updatePayload.put("installment_num", instNum);
+            updatePayload.put("member_name", memName);
+            updatePayload.put("advance_amount", advAmt);
+            updatePayload.put("new_amount", newAmt);
+            updatePayload.put("notes", noteText);
+            
+            // Note: We intentionally do NOT update the "date" or "chitId" so it preserves the original log time
+
+            firestore.collection("advances").document(docId).update(updatePayload).addOnSuccessListener(ref -> {
+                Toast.makeText(MainActivity.this, "Advance record updated successfully!", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            }).addOnFailureListener(e -> {
+                Toast.makeText(MainActivity.this, "Error updating record.", Toast.LENGTH_SHORT).show();
             });
         });
     }
