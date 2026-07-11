@@ -263,8 +263,9 @@ public class MainActivity extends AppCompatActivity {
             public void onTabReselected(TabLayout.Tab tab) {}
         });
 
-        spChitSelector.setOnItemClickListener((parent, view, position, id) -> {
-            CloudChitItem selected = globalChitsList.get(position);
+                spChitSelector.setOnItemClickListener((parent, view, position, id) -> {
+            // FIX 1: Retrieve the exact object directly from the UI dropdown to prevent sorting mismatches
+            CloudChitItem selected = (CloudChitItem) parent.getItemAtPosition(position);
             if (selected != null && !selected.id.equals(chitId)) {
                 chitId = selected.id;
                 syncCurrentChitContextFromCloud();
@@ -272,10 +273,18 @@ public class MainActivity extends AppCompatActivity {
         });
 
         spHistoryFilter.setOnItemClickListener((parent, view, position, id) -> {
-            if (position == 0) {
+            // FIX 2: Find the Chit ID by matching the exact String name, ignoring index positions entirely
+            String selectedName = parent.getItemAtPosition(position).toString();
+            
+            if (selectedName.equals("All Chits")) {
                 historyFilterChitId = "ALL";
             } else {
-                historyFilterChitId = globalChitsList.get(position - 1).id;
+                for (CloudChitItem item : globalChitsList) {
+                    if (item.name.equals(selectedName)) {
+                        historyFilterChitId = item.id;
+                        break;
+                    }
+                }
             }
             refreshTransactionHistory();
         });
