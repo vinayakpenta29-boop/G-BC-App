@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseFirestore firestore;
     private String chitId = null; 
     private String historyFilterChitId = "ALL"; 
+    private String currentMemberSearch = ""; // NEW: Tracks live search filtering
 
     private AutoCompleteTextView spChitSelector;
     private AutoCompleteTextView spMembers;
@@ -85,14 +86,14 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    private HashSet<String> globalPaymentsCache = new HashSet<>(); 
+    // UPGRADED: Now tracks exact Double amounts instead of just existence for Partial Payments
+    private HashMap<String, Double> globalPaymentsCache = new HashMap<>(); 
+    
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
     private HashMap<String, Double> globalAdvanceRateCache = new HashMap<>(); 
     private HashMap<String, String> globalAdvanceDateCache = new HashMap<>(); 
-    
     private HashMap<String, Double> globalChitTotalAdvancesCache = new HashMap<>();
-    
     private HashMap<String, ArrayList<Double>> globalChitAmountsCache = new HashMap<>();
     private HashMap<String, String> globalChitStartDatesCache = new HashMap<>();
     private HashMap<String, String> globalChitFrequenciesCache = new HashMap<>();
@@ -179,6 +180,11 @@ public class MainActivity extends AppCompatActivity {
         spChitSelector = findViewById(R.id.spChitSelector);
         spMembers = findViewById(R.id.spMembers);
         spHistoryFilter = findViewById(R.id.spHistoryFilter);
+        
+        // BUG FIX: Prevents typing in the dropdowns which causes filter desync
+        spChitSelector.setInputType(android.text.InputType.TYPE_NULL);
+        spHistoryFilter.setInputType(android.text.InputType.TYPE_NULL);
+
         btnSelectInstallments = findViewById(R.id.btnSelectInstallments);
         btnToggleMatrixOrientation = findViewById(R.id.btnToggleMatrixOrientation);
         Button btnAddInstallment = findViewById(R.id.btnAddInstallment);
@@ -263,8 +269,7 @@ public class MainActivity extends AppCompatActivity {
             public void onTabReselected(TabLayout.Tab tab) {}
         });
 
-                spChitSelector.setOnItemClickListener((parent, view, position, id) -> {
-            // FIX 1: Retrieve the exact object directly from the UI dropdown to prevent sorting mismatches
+        spChitSelector.setOnItemClickListener((parent, view, position, id) -> {
             CloudChitItem selected = (CloudChitItem) parent.getItemAtPosition(position);
             if (selected != null && !selected.id.equals(chitId)) {
                 chitId = selected.id;
@@ -273,9 +278,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         spHistoryFilter.setOnItemClickListener((parent, view, position, id) -> {
-            // FIX 2: Find the Chit ID by matching the exact String name, ignoring index positions entirely
             String selectedName = parent.getItemAtPosition(position).toString();
-            
             if (selectedName.equals("All Chits")) {
                 historyFilterChitId = "ALL";
             } else {
@@ -324,12 +327,36 @@ public class MainActivity extends AppCompatActivity {
             wrapperLayout.setOrientation(LinearLayout.VERTICAL);
             wrapperLayout.setPadding(60, 40, 60, 0);
 
+            // Calculate exact total remaining due for selected installments
+            double totalDue = 0.0;
+            for (int instNum : selectedInstallmentsList) {
+                double expectedAmt = getSpecificCachedMemberInstallmentAmount(chitId, TylerMember, instNum);
+                double paidAmt = globalPaymentsCache.containsKey(chitId + "_" + TylerMember + "_" + instNum) ? globalPaymentsCache.get(chitId + "_" + TylerMember + "_" + instNum) : 0.0;
+                totalDue += (expectedAmt - paidAmt);
+            }
+
             TextView tvMsg = new TextView(MainActivity.this);
-            tvMsg.setText("You are saving " + selectedInstallmentsList.size() + " installment(s) for " + TylerMember + ". You can optionally add a note below:");
+            tvMsg.setText("Recording payments for " + selectedInstallmentsList.size() + " installment(s). Total Remaining Due: ₹" + String.format(Locale.getDefault(), "%,.1f", totalDue));
             tvMsg.setTextColor(Color.parseColor("#475569"));
-            tvMsg.setTextSize(15);
+            tvMsg.setTextSize(14);
             tvMsg.setPadding(0, 0, 0, 40);
             wrapperLayout.addView(tvMsg);
+            
+            // UPGRADE: Input box for Partial or Full Payments
+            TextInputLayout tlPay = new TextInputLayout(MainActivity.this);
+            tlPay.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+            tlPay.setBoxCornerRadii(16f, 16f, 16f, 16f);
+            tlPay.setBoxBackgroundColor(Color.TRANSPARENT);
+            tlPay.setHint("Amount Being Paid (₹)");
+            LinearLayout.LayoutParams payLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            payLp.setMargins(0, 0, 0, 30);
+            tlPay.setLayoutParams(payLp);
+            
+            TextInputEditText etPay = new TextInputEditText(tlPay.getContext());
+            etPay.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+            etPay.setText(String.format(Locale.getDefault(), "%.0f", totalDue)); // Default to paying full balance
+            tlPay.addView(etPay);
+            wrapperLayout.addView(tlPay);
 
             TextInputLayout tlNote = new TextInputLayout(MainActivity.this);
             tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
@@ -349,28 +376,37 @@ public class MainActivity extends AppCompatActivity {
                 
                 String noteText = etNote.getText().toString().trim();
                 String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+                String payStr = etPay.getText().toString().trim();
+                if (payStr.isEmpty()) payStr = "0";
+                
+                double amountToDistribute = Double.parseDouble(payStr);
 
+                // Distribute payment across selected milestones
                 for (int instNum : selectedInstallmentsList) {
-                    String lookupKey = chitId + "_" + TylerMember + "_" + instNum;
-                    if (!globalPaymentsCache.contains(lookupKey)) {
-                        double currentTargetAmount = getSpecificCachedMemberInstallmentAmount(chitId, TylerMember, instNum);
+                    if (amountToDistribute <= 0) break;
+                    
+                    double expectedAmt = getSpecificCachedMemberInstallmentAmount(chitId, TylerMember, instNum);
+                    double alreadyPaid = globalPaymentsCache.containsKey(chitId + "_" + TylerMember + "_" + instNum) ? globalPaymentsCache.get(chitId + "_" + TylerMember + "_" + instNum) : 0.0;
+                    double remainingForThisStep = expectedAmt - alreadyPaid;
+                    
+                    if (remainingForThisStep > 0) {
+                        double paymentForThisStep = Math.min(remainingForThisStep, amountToDistribute);
+                        amountToDistribute -= paymentForThisStep;
                         
                         Map<String, Object> paymentPayload = new HashMap<>();
                         paymentPayload.put("chitId", chitId);
                         paymentPayload.put("installment_num", instNum);
                         paymentPayload.put("member_name", TylerMember);
-                        paymentPayload.put("amount", currentTargetAmount);
+                        paymentPayload.put("amount", paymentForThisStep);
                         paymentPayload.put("date", currentDate);
                         paymentPayload.put("timestamp", System.currentTimeMillis());
-                        
                         paymentPayload.put("notes", noteText);
 
                         firestore.collection("payments").add(paymentPayload);
-                        globalPaymentsCache.add(lookupKey);
                     }
                 }
 
-                Toast.makeText(MainActivity.this, "Installments & Notes Saved Online!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Payments Saved & Distributed Successfully!", Toast.LENGTH_SHORT).show();
                 resetInstallmentSelection();
                 refreshFundMatrixTable();
                 refreshTransactionHistory();
@@ -450,7 +486,11 @@ public class MainActivity extends AppCompatActivity {
                         globalPaymentsCache.clear();
                         for (QueryDocumentSnapshot pDoc : pVal) {
                             String compositeKey = pDoc.getString("chitId") + "_" + pDoc.getString("member_name") + "_" + pDoc.getLong("installment_num").intValue();
-                            globalPaymentsCache.add(compositeKey);
+                            double amt = pDoc.getDouble("amount") != null ? pDoc.getDouble("amount") : 0.0;
+                            
+                            // UPGRADE: Accurately sums partial payments for the exact same installment
+                            double currentSum = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
+                            globalPaymentsCache.put(compositeKey, currentSum + amt);
                         }
                         
                         calculateGlobalMonthlyDuesEngine();
@@ -597,23 +637,26 @@ public class MainActivity extends AppCompatActivity {
                         stepExpectedTotal += stepAmt;
 
                         String payKey = id + "_" + mName + "_" + step;
-                        if (!globalPaymentsCache.contains(payKey)) {
+                        double paidAmt = globalPaymentsCache.containsKey(payKey) ? globalPaymentsCache.get(payKey) : 0.0;
+                        
+                        // UPGRADE: Evaluates mathematical balance instead of just pure existence
+                        if (paidAmt < stepAmt) {
+                            double pendingForThisStep = stepAmt - paidAmt;
                             if (isCurrent || isPast) stepIsPending = true;
                             if (isCurrent) {
-                                currentMonthChitPending += stepAmt;
+                                currentMonthChitPending += pendingForThisStep;
                             } else if (isPast) {
-                                previousArrearsChitPending += stepAmt;
+                                previousArrearsChitPending += pendingForThisStep;
                             }
                             
                             if (isUpcomingHalfYearly && step == upcomingStepNumber) {
                                 stepIsPending = true;
-                                upcomingExpectedTotal += stepAmt;
+                                upcomingExpectedTotal += pendingForThisStep;
                             }
-                            
-                        } else {
-                            calcTotalPaidAmount += stepAmt;
-                            calcPaidInstCount++; 
-                        }
+                        } 
+                        
+                        calcTotalPaidAmount += paidAmt;
+                        if (paidAmt >= stepAmt && stepAmt > 0) calcPaidInstCount++; 
                     }
                     
                     if (isUpcomingHalfYearly && step == upcomingStepNumber && !stepIsPending) {
@@ -1281,8 +1324,14 @@ public class MainActivity extends AppCompatActivity {
         Calendar todayCal = Calendar.getInstance();
 
         for (int i = 1; i <= totalInstallmentsCount; i++) {
-            if (!globalPaymentsCache.contains(chitId + "_" + member + "_" + i)) {
-                double amt = getSpecificCachedMemberInstallmentAmount(chitId, member, i);
+            
+            // UPGRADE: Evaluates exact remaining balance instead of just whether any payment exists
+            double expectedAmt = getSpecificCachedMemberInstallmentAmount(chitId, member, i);
+            String compositeKey = chitId + "_" + member + "_" + i;
+            double paidAmt = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
+            double remainingAmt = expectedAmt - paidAmt;
+
+            if (remainingAmt > 0) {
                 openInstallmentNumbers.add(i);
 
                 String dateLabel = "";
@@ -1316,7 +1365,7 @@ public class MainActivity extends AppCompatActivity {
                     dateLabel = "( " + sdfDialogOutput.format(cal.getTime()) + ") ";
                 } catch (Exception ignored) {}
 
-                String rawRowStr = dateLabel + "Inst. " + i + " - ₹" + String.format(Locale.getDefault(), "%,.1f", amt);
+                String rawRowStr = dateLabel + "Inst. " + i + " - ₹" + String.format(Locale.getDefault(), "%,.1f", remainingAmt) + " Due";
                 
                 android.text.SpannableString spRow = new android.text.SpannableString(rawRowStr);
                 if (isCurrent) {
@@ -1328,7 +1377,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (openInstallmentNumbers.isEmpty()) {
-            Toast.makeText(this, "All installments are already paid!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "All installments are already fully paid!", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -1460,15 +1509,26 @@ public class MainActivity extends AppCompatActivity {
                     LinearLayout cellContainer = new LinearLayout(this); cellContainer.setPadding(12, 8, 12, 8); cellContainer.setGravity(Gravity.CENTER);
                     TextView tvStatusCell = new TextView(this); tvStatusCell.setTextSize(13); tvStatusCell.setPadding(16, 6, 16, 6); tvStatusCell.setTypeface(null, Typeface.BOLD);
                     
-                    boolean isPaid = globalPaymentsCache.contains(chitId + "_" + name + "_" + i);
-                    if (isPaid) {
+                    // UPGRADE: Matrix displays Paid, Partial, or Pending based on amounts
+                    double expectedAmt = getSpecificCachedMemberInstallmentAmount(chitId, name, i);
+                    String compositeKey = chitId + "_" + name + "_" + i;
+                    double paidAmt = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
+                    
+                    boolean isFullyPaid = (paidAmt >= expectedAmt && expectedAmt > 0);
+
+                    if (isFullyPaid) {
                         tvStatusCell.setText(" Paid ✅ "); tvStatusCell.setTextColor(Color.parseColor("#047857")); tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
+                    } else if (paidAmt > 0) {
+                        tvStatusCell.setText(" Part ⏳ "); tvStatusCell.setTextColor(Color.parseColor("#B45309")); 
+                        android.graphics.drawable.GradientDrawable partBg = new android.graphics.drawable.GradientDrawable();
+                        partBg.setColor(Color.parseColor("#FEF3C7")); partBg.setCornerRadius(16f);
+                        tvStatusCell.setBackground(partBg);
                     } else {
                         tvStatusCell.setText(" Pending "); tvStatusCell.setTextColor(Color.parseColor("#475569")); tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
                     }
 
                     if (snakeIndices.contains(i - 1)) {
-                        final SnakeBorderDrawable snakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), isPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9"), 32f);
+                        final SnakeBorderDrawable snakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), isFullyPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9"), 32f);
                         cellContainer.setBackground(snakeDrawable);
                         android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofFloat(0f, 1f); anim.setDuration(1600); anim.setRepeatCount(android.animation.ValueAnimator.INFINITE); anim.setInterpolator(new android.view.animation.LinearInterpolator());
                         anim.addUpdateListener(animation -> snakeDrawable.setAnimationProgress(-(float) animation.getAnimatedValue()));
@@ -1527,15 +1587,25 @@ public class MainActivity extends AppCompatActivity {
                     LinearLayout cellContainer = new LinearLayout(this); cellContainer.setPadding(12, 8, 12, 8); cellContainer.setGravity(Gravity.CENTER);
                     TextView tvStatusCell = new TextView(this); tvStatusCell.setTextSize(13); tvStatusCell.setPadding(16, 6, 16, 6); tvStatusCell.setTypeface(null, Typeface.BOLD);
                     
-                    boolean isPaid = globalPaymentsCache.contains(chitId + "_" + name + "_" + i);
-                    if (isPaid) {
+                    double expectedAmt = getSpecificCachedMemberInstallmentAmount(chitId, name, i);
+                    String compositeKey = chitId + "_" + name + "_" + i;
+                    double paidAmt = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
+                    
+                    boolean isFullyPaid = (paidAmt >= expectedAmt && expectedAmt > 0);
+
+                    if (isFullyPaid) {
                         tvStatusCell.setText(" Paid ✅ "); tvStatusCell.setTextColor(Color.parseColor("#047857")); tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
+                    } else if (paidAmt > 0) {
+                        tvStatusCell.setText(" Part ⏳ "); tvStatusCell.setTextColor(Color.parseColor("#B45309")); 
+                        android.graphics.drawable.GradientDrawable partBg = new android.graphics.drawable.GradientDrawable();
+                        partBg.setColor(Color.parseColor("#FEF3C7")); partBg.setCornerRadius(16f);
+                        tvStatusCell.setBackground(partBg);
                     } else {
                         tvStatusCell.setText(" Pending "); tvStatusCell.setTextColor(Color.parseColor("#475569")); tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
                     }
 
                     if (snakeIndices.contains(colIdx)) {
-                        final SnakeBorderDrawable snakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), isPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9"), 32f);
+                        final SnakeBorderDrawable snakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), isFullyPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9"), 32f);
                         cellContainer.setBackground(snakeDrawable);
                         android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofFloat(0f, 1f); anim.setDuration(1600); anim.setRepeatCount(android.animation.ValueAnimator.INFINITE); anim.setInterpolator(new android.view.animation.LinearInterpolator());
                         anim.addUpdateListener(animation -> snakeDrawable.setAnimationProgress(-(float) animation.getAnimatedValue()));
@@ -1639,6 +1709,53 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshTransactionHistory() {
+        // =========================================================================================
+        // NEW FEATURE: Dynamic Search Bar and CSV Export Engine injected above the Ledger table
+        // =========================================================================================
+        ViewGroup parentGroup = (ViewGroup) tlHistoryTable.getParent();
+        if (parentGroup != null && parentGroup.findViewById(8888) == null) {
+            LinearLayout controlsLayout = new LinearLayout(this);
+            controlsLayout.setId(8888);
+            controlsLayout.setOrientation(LinearLayout.HORIZONTAL);
+            controlsLayout.setPadding(0, 20, 0, 30);
+            controlsLayout.setGravity(Gravity.CENTER_VERTICAL);
+            
+            TextInputLayout tlSearch = new TextInputLayout(this);
+            tlSearch.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+            tlSearch.setBoxCornerRadii(16f, 16f, 16f, 16f);
+            tlSearch.setHint("Search Member Name...");
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp.setMargins(0, 0, 20, 0);
+            tlSearch.setLayoutParams(lp);
+            
+            TextInputEditText etSearch = new TextInputEditText(tlSearch.getContext());
+            etSearch.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override public void afterTextChanged(Editable s) {
+                    currentMemberSearch = s.toString().toLowerCase(Locale.getDefault());
+                    refreshTransactionHistory();
+                }
+            });
+            tlSearch.addView(etSearch);
+            
+            Button btnExport = new Button(this);
+            btnExport.setText("Export CSV");
+            btnExport.setTextColor(Color.WHITE);
+            btnExport.setAllCaps(false);
+            android.graphics.drawable.GradientDrawable btnBg = new android.graphics.drawable.GradientDrawable();
+            btnBg.setColor(Color.parseColor("#15803D")); // Emerald Green matching your branding
+            btnBg.setCornerRadius(20f);
+            btnExport.setBackground(btnBg);
+            btnExport.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            btnExport.setOnClickListener(v -> exportLedgerToCSV());
+            
+            controlsLayout.addView(tlSearch);
+            controlsLayout.addView(btnExport);
+            
+            parentGroup.addView(controlsLayout, parentGroup.indexOfChild(tlHistoryTable));
+        }
+
         tlHistoryTable.removeAllViews();
         TableRow headRow = new TableRow(this);
         headRow.setBackgroundResource(R.drawable.table_header_bg);
@@ -1668,6 +1785,11 @@ public class MainActivity extends AppCompatActivity {
             for (QueryDocumentSnapshot doc : value) {
                 String cId = doc.getString("chitId");
                 if (!"ALL".equals(historyFilterChitId) && !historyFilterChitId.equals(cId)) continue;
+                
+                String rawMemName = doc.getString("member_name");
+                if (!currentMemberSearch.isEmpty() && rawMemName != null && !rawMemName.toLowerCase(Locale.getDefault()).contains(currentMemberSearch)) {
+                    continue; // NEW: Skips row if it doesn't match your live search
+                }
 
                 double amountPaid = doc.getDouble("amount");
                 runningCashTotal += amountPaid;
@@ -1687,7 +1809,7 @@ public class MainActivity extends AppCompatActivity {
                 memLayout.setGravity(Gravity.CENTER);
                 
                 TextView tvMem = new TextView(this); 
-                tvMem.setText(doc.getString("member_name")); 
+                tvMem.setText(rawMemName); 
                 tvMem.setPadding(20, 16, 20, 16); 
                 tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
                 tvMem.setTextColor(Color.parseColor("#1E293B")); 
@@ -1723,6 +1845,47 @@ public class MainActivity extends AppCompatActivity {
             }
             tvHistorySummary.setText("Total Funds Collected: ₹" + String.format(Locale.getDefault(), "%,.1f", runningCashTotal) + "  |  Total Transactions: " + transactionEntriesCount);
         });
+    }
+
+    // =========================================================================================
+    // NEW FEATURE: Fast CSV Generation Engine
+    // =========================================================================================
+    private void exportLedgerToCSV() {
+        if (tlHistoryTable.getChildCount() <= 1) {
+            Toast.makeText(this, "No data available to export.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        StringBuilder csv = new StringBuilder("Date,Chit Group,Member Name,Installment,Amount Paid\n");
+        for (int i = 1; i < tlHistoryTable.getChildCount(); i++) {
+            try {
+                TableRow row = (TableRow) tlHistoryTable.getChildAt(i);
+                String date = ((TextView) row.getChildAt(0)).getText().toString();
+                String group = ((TextView) row.getChildAt(1)).getText().toString();
+                
+                LinearLayout memLayout = (LinearLayout) row.getChildAt(2);
+                String member = ((TextView) memLayout.getChildAt(0)).getText().toString();
+                
+                LinearLayout badgeWrapper = (LinearLayout) row.getChildAt(3);
+                String inst = ((TextView) badgeWrapper.getChildAt(0)).getText().toString();
+                
+                String amount = ((TextView) row.getChildAt(4)).getText().toString().replace("₹", "").replace(",", "");
+                
+                // Fields are wrapped in quotes to prevent internal commas from breaking the CSV
+                csv.append("\"").append(date).append("\",\"").append(group).append("\",\"").append(member).append("\",\"").append(inst).append("\",\"").append(amount).append("\"\n");
+            } catch (Exception ignored) {}
+        }
+        
+        try {
+            java.io.File file = new java.io.File(getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS), "Chit_Fund_Ledger_" + System.currentTimeMillis() + ".csv");
+            java.io.FileWriter writer = new java.io.FileWriter(file);
+            writer.append(csv.toString());
+            writer.flush();
+            writer.close();
+            Toast.makeText(this, "Exported successfully to Downloads folder!", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showLogAdvanceDialog() {
@@ -1800,9 +1963,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // =========================================================================================
-    // NEW FEATURE: Edit Advance Engine (Pre-fills existing data into premium layout)
-    // =========================================================================================
     private void showEditAdvanceDialog(QueryDocumentSnapshot doc) {
         String docId = doc.getId();
         String currentChitId = doc.getString("chitId");
@@ -1820,11 +1980,9 @@ public class MainActivity extends AppCompatActivity {
         final TextInputEditText etAdvanceAmt = view.findViewById(R.id.etAdvanceAmt);
         final TextInputEditText etAmt = view.findViewById(R.id.etNewAmt);
         
-        // Pre-fill fields with existing transaction data
         acMem.setText(currentMember, false);
         etInst.setText(String.valueOf(currentInst));
         
-        // Use standard number formatting for the edit inputs (no commas so it parses back correctly)
         etAdvanceAmt.setText(String.format(Locale.getDefault(), "%.1f", currentAdvAmt).replace(".0", ""));
         etAmt.setText(String.format(Locale.getDefault(), "%.1f", currentNewAmt).replace(".0", ""));
 
@@ -1832,7 +1990,6 @@ public class MainActivity extends AppCompatActivity {
         wrapperLayout.setOrientation(LinearLayout.VERTICAL);
         wrapperLayout.addView(view);
         
-        // Re-inject the transparent curved Notes box
         TextInputLayout tlNote = new TextInputLayout(MainActivity.this);
         tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f); 
@@ -1844,11 +2001,10 @@ public class MainActivity extends AppCompatActivity {
         
         TextInputEditText etNote = new TextInputEditText(tlNote.getContext());
         etNote.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        etNote.setText(currentNotes); // Pre-fill notes
+        etNote.setText(currentNotes); 
         tlNote.addView(etNote);
         wrapperLayout.addView(tlNote);
 
-        // Fetch member list specific to the Chit Group of this advance
         ArrayList<String> availableMembers = globalChitMembersCache.containsKey(currentChitId) ? globalChitMembersCache.get(currentChitId) : new ArrayList<>();
         acMem.setAdapter(new ArrayAdapter<>(this, R.layout.list_item_member, availableMembers));
 
@@ -1890,8 +2046,6 @@ public class MainActivity extends AppCompatActivity {
             updatePayload.put("new_amount", newAmt);
             updatePayload.put("notes", noteText);
             
-            // Note: We intentionally do NOT update the "date" or "chitId" so it preserves the original log time
-
             firestore.collection("advances").document(docId).update(updatePayload).addOnSuccessListener(ref -> {
                 Toast.makeText(MainActivity.this, "Advance record updated successfully!", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
@@ -2035,16 +2189,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // =========================================================================================
-    // NEW FEATURE: Swipeable Multi-Note Carousel Engine & Management Dashboard
-    // =========================================================================================
     private void showAddNotesDialog() {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         LinearLayout wrapperLayout = new LinearLayout(this);
         wrapperLayout.setOrientation(LinearLayout.VERTICAL);
         wrapperLayout.setPadding(60, 60, 60, 20);
 
-        // --- 1. ADD NEW NOTE INPUT ---
         TextInputLayout tlNote = new TextInputLayout(this);
         tlNote.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         tlNote.setBoxCornerRadii(16f, 16f, 16f, 16f);
@@ -2058,15 +2208,14 @@ public class MainActivity extends AppCompatActivity {
         tlNote.addView(etNote);
         wrapperLayout.addView(tlNote);
 
-                Button btnAdd = new Button(this);
+        Button btnAdd = new Button(this);
         btnAdd.setText("Add to Carousel");
-        btnAdd.setTextColor(Color.WHITE); // Set text color to white
-        btnAdd.setAllCaps(false); // Prevents default Android all-caps to match your image's elegant text style
+        btnAdd.setTextColor(Color.WHITE); 
+        btnAdd.setAllCaps(false); 
         
-        // Creates the Dark Navy/Black background with rounded corners
         android.graphics.drawable.GradientDrawable btnBg = new android.graphics.drawable.GradientDrawable();
-        btnBg.setColor(Color.parseColor("#0F172A")); // Deep Navy/Black matching your app's theme
-        btnBg.setCornerRadius(24f); // Perfectly rounded corners
+        btnBg.setColor(Color.parseColor("#0F172A")); 
+        btnBg.setCornerRadius(24f); 
         btnAdd.setBackground(btnBg);
         
         LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -2074,8 +2223,6 @@ public class MainActivity extends AppCompatActivity {
         btnAdd.setLayoutParams(btnParams);
         wrapperLayout.addView(btnAdd);
 
-
-        // --- 2. EXISTING NOTES LIST ---
         TextView tvListHeader = new TextView(this);
         tvListHeader.setText("Saved Notes (Long-press to delete)");
         tvListHeader.setTextSize(14);
@@ -2088,7 +2235,6 @@ public class MainActivity extends AppCompatActivity {
         notesListContainer.setOrientation(LinearLayout.VERTICAL);
         scrollView.addView(notesListContainer);
         
-        // Limits the scroll view height so it doesn't take up the whole screen
         LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 500); 
         scrollView.setLayoutParams(scrollParams);
         wrapperLayout.addView(scrollView);
@@ -2103,7 +2249,6 @@ public class MainActivity extends AppCompatActivity {
 
         android.content.SharedPreferences prefs = getSharedPreferences("ChitPrefs", MODE_PRIVATE);
 
-        // Dynamic rendering engine for the notes list
         Runnable renderNotesList = new Runnable() {
             @Override
             public void run() {
@@ -2125,7 +2270,6 @@ public class MainActivity extends AppCompatActivity {
                     tv.setTextColor(Color.parseColor("#1E293B"));
                     tv.setTypeface(Typeface.MONOSPACE);
                     
-                    // Creates a soft curved background for each listed note
                     android.graphics.drawable.GradientDrawable noteBg = new android.graphics.drawable.GradientDrawable();
                     noteBg.setColor(Color.parseColor("#F1F5F9"));
                     noteBg.setCornerRadius(20f);
@@ -2135,7 +2279,6 @@ public class MainActivity extends AppCompatActivity {
                     lp.setMargins(0, 0, 0, 15);
                     tv.setLayoutParams(lp);
 
-                    // LONG-PRESS: Permanent Deletion Mechanism
                     tv.setOnLongClickListener(v -> {
                         new MaterialAlertDialogBuilder(MainActivity.this)
                             .setTitle("Delete Note")
@@ -2145,8 +2288,8 @@ public class MainActivity extends AppCompatActivity {
                                 updatedNotes.remove(noteStr);
                                 prefs.edit().putStringSet("global_notes_set", updatedNotes).apply();
                                 
-                                this.run(); // Re-render the list
-                                refreshGlobalNoteCard(); // Re-render the Collect Tab dashboard
+                                this.run(); 
+                                refreshGlobalNoteCard(); 
                                 Toast.makeText(MainActivity.this, "Note deleted permanently", Toast.LENGTH_SHORT).show();
                             })
                             .setNegativeButton("Cancel", null)
@@ -2158,9 +2301,8 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        renderNotesList.run(); // Initial List Render
+        renderNotesList.run(); 
 
-        // ADD BUTTON ACTION
         btnAdd.setOnClickListener(v -> {
             String noteText = etNote.getText().toString().trim();
             if (!noteText.isEmpty()) {
@@ -2170,9 +2312,9 @@ public class MainActivity extends AppCompatActivity {
                 
                 prefs.edit().putStringSet("global_notes_set", updatedNotes).apply();
                 
-                etNote.setText(""); // Clear input field
-                renderNotesList.run(); // Instantly update the list visually
-                refreshGlobalNoteCard(); // Update the Collect Tab dashboard
+                etNote.setText(""); 
+                renderNotesList.run(); 
+                refreshGlobalNoteCard(); 
                 Toast.makeText(MainActivity.this, "Note added to Carousel!", Toast.LENGTH_SHORT).show();
             }
         });
@@ -2185,7 +2327,6 @@ public class MainActivity extends AppCompatActivity {
         currentGlobalNotesList.clear();
         currentGlobalNotesList.addAll(notesSet);
 
-        // Reset any existing animations to prevent glitches
         if (notesAnimationRunnable != null) {
             notesAnimationHandler.removeCallbacks(notesAnimationRunnable);
         }
@@ -2206,43 +2347,37 @@ public class MainActivity extends AppCompatActivity {
 
         globalNoteContainer.removeAllViews();
 
-        // If no notes exist, hide the entire container
         if (currentGlobalNotesList.isEmpty()) {
             globalNoteContainer.setVisibility(View.GONE);
             return;
         }
 
-        // Guarantees visibility is restored if the app is re-opened or a new note is added
         globalNoteContainer.setVisibility(View.VISIBLE);
         
-        // Build the Premium White Curved Card
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setPadding(50, 40, 50, 40);
         card.setGravity(Gravity.CENTER_VERTICAL);
 
-        // Cancel previous snake animation if active to prevent glitches on refresh
         if (noteCardAnimator != null) {
             noteCardAnimator.cancel();
         }
 
-        // Apply Premium Snake Border Animation (Deep Navy-Black Stroke, White Background)
-        float noteRadius = 16 * getResources().getDisplayMetrics().density; // Ensures perfect curve scaling on all screens
+        float noteRadius = 16 * getResources().getDisplayMetrics().density; 
         final SnakeBorderDrawable snakeBg = new SnakeBorderDrawable(Color.parseColor("#0F172A"), Color.WHITE, noteRadius);
         card.setBackground(snakeBg);
 
-        card.setElevation(12f); // Adds the soft drop shadow
+        card.setElevation(12f); 
         card.setOutlineProvider(new android.view.ViewOutlineProvider() {
             @Override
             public void getOutline(View view, android.graphics.Outline outline) {
-                // Tells Android to strictly follow the custom rounded corners when casting the shadow
                 outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), noteRadius);
             }
         });
         card.setClipToOutline(true);
 
         noteCardAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
-        noteCardAnimator.setDuration(1600); // Speed of the snake
+        noteCardAnimator.setDuration(1600); 
         noteCardAnimator.setRepeatCount(android.animation.ValueAnimator.INFINITE);
         noteCardAnimator.setInterpolator(new android.view.animation.LinearInterpolator());
         noteCardAnimator.addUpdateListener(animation -> {
@@ -2267,9 +2402,6 @@ public class MainActivity extends AppCompatActivity {
 
         globalNoteContainer.addView(card);
 
-        // =======================================================
-        // SWIPE TO DISMISS: Swiping temporarily hides the container (Restores on App Re-Open)
-        // =======================================================
         card.setOnTouchListener(new View.OnTouchListener() {
             private float startX;
             private float startTouchX;
@@ -2284,7 +2416,7 @@ public class MainActivity extends AppCompatActivity {
                         return true;
                     case android.view.MotionEvent.ACTION_MOVE:
                         float dX = event.getRawX() - startTouchX;
-                        if (dX > 0) { // Swipe Right
+                        if (dX > 0) { 
                             view.setTranslationX(startX + dX);
                             view.setAlpha(1f - (dX / view.getWidth()));
                         }
@@ -2295,10 +2427,7 @@ public class MainActivity extends AppCompatActivity {
                         if (view.getTranslationX() > view.getWidth() / 3) {
                             view.animate().translationX(view.getWidth()).alpha(0).setDuration(250)
                                     .withEndAction(() -> {
-                                        // ONLY hides the view. Does NOT delete it from memory.
                                         globalNoteContainer.setVisibility(View.GONE);
-                                        
-                                        // Reset translation/alpha for when it reappears next session
                                         view.setTranslationX(0);
                                         view.setAlpha(1);
                                     }).start();
@@ -2311,27 +2440,18 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // =======================================================
-        // AUTO-FADE CAROUSEL ANIMATION ENGINE
-        // =======================================================
         currentGlobalNoteIndex = 0;
         tvNote.setText(currentGlobalNotesList.get(currentGlobalNoteIndex));
         
-        // Only trigger the looping carousel animation if there is more than 1 note
         if (currentGlobalNotesList.size() > 1) {
             notesAnimationRunnable = new Runnable() {
                 @Override
                 public void run() {
-                    // Fade out current note
                     tvNote.animate().alpha(0f).setDuration(600).withEndAction(() -> {
-                        // Switch text to the next note while invisible
                         currentGlobalNoteIndex = (currentGlobalNoteIndex + 1) % currentGlobalNotesList.size();
                         tvNote.setText(currentGlobalNotesList.get(currentGlobalNoteIndex));
-                        // Fade in new note
                         tvNote.animate().alpha(1f).setDuration(600).start();
                     }).start();
-                    
-                    // Re-trigger this cycle every 4.5 seconds
                     notesAnimationHandler.postDelayed(this, 4500);
                 }
             };
