@@ -286,7 +286,7 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG (UPGRADED TO RECYCLERVIEW) -->
+        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG (UPGRADED TO HORIZONTAL RECYCLERVIEW) -->
         <LinearLayout
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
@@ -356,14 +356,30 @@
                         android:textSize="13sp"
                         android:layout_marginBottom="18dp"/>
 
-                    <!-- THE NEW RECYCLER VIEW ENGINE (Dynamically fills remaining height) -->
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/rvHistoryTable"
+                    <!-- RESTORED: HORIZONTAL SCROLL VIEW WRAPPING RECYCLER VIEW -->
+                    <HorizontalScrollView
                         android:layout_width="match_parent"
                         android:layout_height="0dp"
                         android:layout_weight="1"
-                        android:clipToPadding="false"
-                        android:paddingBottom="20dp" />
+                        android:fillViewport="true">
+                        
+                        <LinearLayout
+                            android:id="@+id/llLedgerTableWrapper"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical">
+                            
+                            <!-- Header automatically injected here by Java -->
+
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/rvHistoryTable"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:clipToPadding="false"
+                                android:paddingBottom="20dp" />
+
+                        </LinearLayout>
+                    </HorizontalScrollView>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
