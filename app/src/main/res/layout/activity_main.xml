@@ -286,9 +286,9 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG (UPGRADED FAST RENDER FULL SCROLL) -->
-        <!-- FIX 1: Ledger Tab wraps everything in a ScrollView to allow full page scrolling -->
-        <ScrollView
+        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG -->
+        <!-- THE FIX: Upgraded to NestedScrollView to correctly expand the RecyclerView height -->
+        <androidx.core.widget.NestedScrollView
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -297,7 +297,6 @@
             android:paddingBottom="32dp"
             android:visibility="gone">
 
-            <!-- FIX 2: Card view shrinks down exactly to match the number of transactions inside it -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -315,7 +314,6 @@
                     android:paddingStart="20dp"
                     android:paddingEnd="20dp">
 
-                    <!-- Title, Filter, and Summary -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -361,7 +359,8 @@
 
                     <HorizontalScrollView
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
+                        android:layout_height="wrap_content"
+                        android:fillViewport="true">
                         
                         <LinearLayout
                             android:id="@+id/llLedgerTableWrapper"
@@ -371,12 +370,13 @@
                             
                             <!-- Header automatically injected here by Java -->
 
-                            <!-- FIX 3: NestedScrolling disabled so it smoothly works inside the main ScrollView -->
+                            <!-- THE FIX: wrap_content and overScrollMode="never" ensures it fills the NestedScrollView completely -->
                             <androidx.recyclerview.widget.RecyclerView
                                 android:id="@+id/rvHistoryTable"
-                                android:layout_width="match_parent"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:nestedScrollingEnabled="false"
+                                android:overScrollMode="never"
                                 android:clipToPadding="false"
                                 android:paddingBottom="20dp" />
 
@@ -385,7 +385,7 @@
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-        </ScrollView>
+        </androidx.core.widget.NestedScrollView>
 
         <!-- TAB POSITION 3 CONTENT: RECORDED MEMBER ADVANCES -->
         <ScrollView
