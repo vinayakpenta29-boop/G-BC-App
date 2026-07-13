@@ -286,19 +286,19 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG (UPGRADED TO HORIZONTAL RECYCLERVIEW) -->
-        <LinearLayout
+        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG (UPGRADED TO FULL SCROLL RECYCLERVIEW) -->
+        <ScrollView
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
+            android:fillViewport="true"
             android:clipToPadding="false"
             android:paddingBottom="32dp"
             android:visibility="gone">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_margin="16dp"
                 app:cardCornerRadius="24dp"
                 app:cardElevation="4dp"
@@ -307,7 +307,7 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:paddingTop="20dp"
                     android:paddingStart="20dp"
@@ -356,17 +356,15 @@
                         android:textSize="13sp"
                         android:layout_marginBottom="18dp"/>
 
-                    <!-- RESTORED: HORIZONTAL SCROLL VIEW WRAPPING RECYCLER VIEW -->
+                    <!-- RESTORED FULL WRAP CONTENT FOR SMOOTH VERTICAL & HORIZONTAL SCROLL -->
                     <HorizontalScrollView
                         android:layout_width="match_parent"
-                        android:layout_height="0dp"
-                        android:layout_weight="1"
-                        android:fillViewport="true">
+                        android:layout_height="wrap_content">
                         
                         <LinearLayout
                             android:id="@+id/llLedgerTableWrapper"
                             android:layout_width="wrap_content"
-                            android:layout_height="match_parent"
+                            android:layout_height="wrap_content"
                             android:orientation="vertical">
                             
                             <!-- Header automatically injected here by Java -->
@@ -374,7 +372,8 @@
                             <androidx.recyclerview.widget.RecyclerView
                                 android:id="@+id/rvHistoryTable"
                                 android:layout_width="match_parent"
-                                android:layout_height="match_parent"
+                                android:layout_height="wrap_content"
+                                android:nestedScrollingEnabled="false"
                                 android:clipToPadding="false"
                                 android:paddingBottom="20dp" />
 
@@ -383,7 +382,7 @@
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
+        </ScrollView>
 
         <!-- TAB POSITION 3 CONTENT: RECORDED MEMBER ADVANCES -->
         <ScrollView
