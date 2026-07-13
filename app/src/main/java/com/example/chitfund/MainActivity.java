@@ -23,6 +23,7 @@ import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AutoCompleteTextView;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -49,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseFirestore firestore;
     private String chitId = null; 
     private String historyFilterChitId = "ALL"; 
-    private String currentMemberSearch = ""; // NEW: Tracks live search filtering
+    private String currentMemberSearch = ""; 
 
     private AutoCompleteTextView spChitSelector;
     private AutoCompleteTextView spMembers;
@@ -71,9 +72,12 @@ public class MainActivity extends AppCompatActivity {
     
     private TextView tvFundTitle;
     private View llFormContainer;
-    
     private TextView tvHistorySummary;
-    private TableLayout tlHistoryTable;
+
+    // NEW: RECYCLER VIEW ARCHITECTURE REPLACES SLOW TABLE LAYOUT
+    private androidx.recyclerview.widget.RecyclerView rvHistoryTable;
+    private LedgerAdapter ledgerAdapter;
+    private ArrayList<LedgerTransaction> currentLedgerData = new ArrayList<>();
 
     private View tabContainerMatrix;
     private View tabContainerCollect;
@@ -86,13 +90,12 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMatrixVertical = false;
 
-    // UPGRADED: Now tracks exact Double amounts instead of just existence for Partial Payments
     private HashMap<String, Double> globalPaymentsCache = new HashMap<>(); 
-    
     private HashMap<String, ArrayList<String>> globalChitMembersCache = new HashMap<>(); 
     private HashMap<String, Integer> globalAdvanceStartCache = new HashMap<>(); 
     private HashMap<String, Double> globalAdvanceRateCache = new HashMap<>(); 
     private HashMap<String, String> globalAdvanceDateCache = new HashMap<>(); 
+    
     private HashMap<String, Double> globalChitTotalAdvancesCache = new HashMap<>();
     private HashMap<String, ArrayList<Double>> globalChitAmountsCache = new HashMap<>();
     private HashMap<String, String> globalChitStartDatesCache = new HashMap<>();
@@ -113,6 +116,77 @@ public class MainActivity extends AppCompatActivity {
     
     private ArrayList<CloudChitItem> globalChitsList = new ArrayList<>();
     private ArrayList<String> globalMembersList = new ArrayList<>();
+
+    // NEW: POJO Class for RecyclerView Data Management
+    public static class LedgerTransaction {
+        String date;
+        String chitName;
+        String memberName;
+        String notes;
+        long instNum;
+        double amountPaid;
+        public LedgerTransaction(String d, String c, String m, String n, long i, double a) {
+            date = d; chitName = c; memberName = m; notes = n; instNum = i; amountPaid = a;
+        }
+    }
+
+    // NEW: Ultra-fast RecyclerView Adapter Engine
+    public class LedgerAdapter extends androidx.recyclerview.widget.RecyclerView.Adapter<LedgerAdapter.LedgerViewHolder> {
+        private ArrayList<LedgerTransaction> transactions = new ArrayList<>();
+
+        public void updateData(ArrayList<LedgerTransaction> newTx) {
+            this.transactions = newTx;
+            notifyDataSetChanged();
+        }
+
+        @NonNull
+        @Override
+        public LedgerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_ledger_row, parent, false);
+            return new LedgerViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull LedgerViewHolder holder, int position) {
+            LedgerTransaction tx = transactions.get(position);
+            holder.tvDate.setText(tx.date);
+            holder.tvChit.setText(tx.chitName);
+            holder.tvMem.setText(tx.memberName);
+            
+            if (tx.notes != null && !tx.notes.trim().isEmpty()) {
+                holder.tvNote.setVisibility(View.VISIBLE);
+                holder.tvNote.setText("📝 " + tx.notes);
+            } else {
+                holder.tvNote.setVisibility(View.GONE);
+            }
+            
+            holder.tvInst.setText("Inst. " + tx.instNum);
+            holder.tvAmt.setText("₹" + String.format(Locale.getDefault(), "%,.1f", tx.amountPaid));
+            
+            // Alternating Row Colors
+            if (position % 2 == 0) {
+                holder.itemView.setBackgroundColor(Color.parseColor("#FFFFFF"));
+            } else {
+                holder.itemView.setBackgroundColor(Color.parseColor("#F8FAFC"));
+            }
+        }
+
+        @Override
+        public int getItemCount() { return transactions.size(); }
+
+        class LedgerViewHolder extends androidx.recyclerview.widget.RecyclerView.ViewHolder {
+            TextView tvDate, tvChit, tvMem, tvNote, tvInst, tvAmt;
+            public LedgerViewHolder(@NonNull View itemView) {
+                super(itemView);
+                tvDate = itemView.findViewById(R.id.rowDate);
+                tvChit = itemView.findViewById(R.id.rowChit);
+                tvMem = itemView.findViewById(R.id.rowMem);
+                tvNote = itemView.findViewById(R.id.rowNote);
+                tvInst = itemView.findViewById(R.id.rowInst);
+                tvAmt = itemView.findViewById(R.id.rowAmt);
+            }
+        }
+    }
 
     private static class SnakeBorderDrawable extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint borderPaint;
@@ -181,7 +255,6 @@ public class MainActivity extends AppCompatActivity {
         spMembers = findViewById(R.id.spMembers);
         spHistoryFilter = findViewById(R.id.spHistoryFilter);
         
-        // BUG FIX: Prevents typing in the dropdowns which causes filter desync
         spChitSelector.setInputType(android.text.InputType.TYPE_NULL);
         spHistoryFilter.setInputType(android.text.InputType.TYPE_NULL);
 
@@ -196,7 +269,12 @@ public class MainActivity extends AppCompatActivity {
         llFormContainer = findViewById(R.id.llFormContainer);
         
         tvHistorySummary = findViewById(R.id.tvHistorySummary);
-        tlHistoryTable = findViewById(R.id.tlHistoryTable);
+
+        // INITIALIZE RECYCLER VIEW ENGINE
+        rvHistoryTable = findViewById(R.id.rvHistoryTable);
+        rvHistoryTable.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(this));
+        ledgerAdapter = new LedgerAdapter();
+        rvHistoryTable.setAdapter(ledgerAdapter);
 
         tabContainerMatrix = findViewById(R.id.tabContainerMatrix);
         tabContainerCollect = findViewById(R.id.tabContainerCollect);
@@ -327,7 +405,6 @@ public class MainActivity extends AppCompatActivity {
             wrapperLayout.setOrientation(LinearLayout.VERTICAL);
             wrapperLayout.setPadding(60, 40, 60, 0);
 
-            // Calculate exact total remaining due for selected installments
             double totalDue = 0.0;
             for (int instNum : selectedInstallmentsList) {
                 double expectedAmt = getSpecificCachedMemberInstallmentAmount(chitId, TylerMember, instNum);
@@ -342,7 +419,6 @@ public class MainActivity extends AppCompatActivity {
             tvMsg.setPadding(0, 0, 0, 40);
             wrapperLayout.addView(tvMsg);
             
-            // UPGRADE: Input box for Partial or Full Payments
             TextInputLayout tlPay = new TextInputLayout(MainActivity.this);
             tlPay.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
             tlPay.setBoxCornerRadii(16f, 16f, 16f, 16f);
@@ -354,7 +430,7 @@ public class MainActivity extends AppCompatActivity {
             
             TextInputEditText etPay = new TextInputEditText(tlPay.getContext());
             etPay.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-            etPay.setText(String.format(Locale.getDefault(), "%.0f", totalDue)); // Default to paying full balance
+            etPay.setText(String.format(Locale.getDefault(), "%.0f", totalDue)); 
             tlPay.addView(etPay);
             wrapperLayout.addView(tlPay);
 
@@ -381,7 +457,6 @@ public class MainActivity extends AppCompatActivity {
                 
                 double amountToDistribute = Double.parseDouble(payStr);
 
-                // Distribute payment across selected milestones
                 for (int instNum : selectedInstallmentsList) {
                     if (amountToDistribute <= 0) break;
                     
@@ -488,7 +563,6 @@ public class MainActivity extends AppCompatActivity {
                             String compositeKey = pDoc.getString("chitId") + "_" + pDoc.getString("member_name") + "_" + pDoc.getLong("installment_num").intValue();
                             double amt = pDoc.getDouble("amount") != null ? pDoc.getDouble("amount") : 0.0;
                             
-                            // UPGRADE: Accurately sums partial payments for the exact same installment
                             double currentSum = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
                             globalPaymentsCache.put(compositeKey, currentSum + amt);
                         }
@@ -639,7 +713,6 @@ public class MainActivity extends AppCompatActivity {
                         String payKey = id + "_" + mName + "_" + step;
                         double paidAmt = globalPaymentsCache.containsKey(payKey) ? globalPaymentsCache.get(payKey) : 0.0;
                         
-                        // UPGRADE: Evaluates mathematical balance instead of just pure existence
                         if (paidAmt < stepAmt) {
                             double pendingForThisStep = stepAmt - paidAmt;
                             if (isCurrent || isPast) stepIsPending = true;
@@ -1286,7 +1359,6 @@ public class MainActivity extends AppCompatActivity {
                     if (targetedDeleteId.equals(chitId)) {
                         chitId = null;
                         globalMembersList.clear();
-                        tlFundTable.removeAllViews();
                         tvFundTitle.setText("No active Chit Fund found. Create one using the menu!");
                         llFormContainer.setVisibility(View.GONE);
                     }
@@ -1325,7 +1397,6 @@ public class MainActivity extends AppCompatActivity {
 
         for (int i = 1; i <= totalInstallmentsCount; i++) {
             
-            // UPGRADE: Evaluates exact remaining balance instead of just whether any payment exists
             double expectedAmt = getSpecificCachedMemberInstallmentAmount(chitId, member, i);
             String compositeKey = chitId + "_" + member + "_" + i;
             double paidAmt = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
@@ -1409,6 +1480,142 @@ public class MainActivity extends AppCompatActivity {
     private void resetInstallmentSelection() {
         selectedInstallmentsList.clear();
         btnSelectInstallments.setText("Tap to Select Installments");
+    }
+
+    // =========================================================================================
+    // NEW FEATURE: Lightning Fast RecyclerView Implementation for Transaction History
+    // =========================================================================================
+    private void refreshTransactionHistory() {
+        ViewGroup parentGroup = (ViewGroup) rvHistoryTable.getParent();
+        
+        // Pinned Header Logic - Injects dynamic header outside the RecyclerView so it won't scroll away
+        if (parentGroup != null && parentGroup.findViewById(9999) == null) {
+            
+            // Search and Export Controls
+            LinearLayout controlsLayout = new LinearLayout(this);
+            controlsLayout.setOrientation(LinearLayout.HORIZONTAL);
+            controlsLayout.setPadding(0, 20, 0, 30);
+            controlsLayout.setGravity(Gravity.CENTER_VERTICAL);
+            
+            TextInputLayout tlSearch = new TextInputLayout(this);
+            tlSearch.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+            tlSearch.setBoxCornerRadii(16f, 16f, 16f, 16f);
+            tlSearch.setHint("Search Member Name...");
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp.setMargins(0, 0, 20, 0);
+            tlSearch.setLayoutParams(lp);
+            
+            TextInputEditText etSearch = new TextInputEditText(tlSearch.getContext());
+            etSearch.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override public void afterTextChanged(Editable s) {
+                    currentMemberSearch = s.toString().toLowerCase(Locale.getDefault());
+                    refreshTransactionHistory();
+                }
+            });
+            tlSearch.addView(etSearch);
+            
+            Button btnExport = new Button(this);
+            btnExport.setText("Export CSV");
+            btnExport.setTextColor(Color.WHITE);
+            btnExport.setAllCaps(false);
+            android.graphics.drawable.GradientDrawable btnBg = new android.graphics.drawable.GradientDrawable();
+            btnBg.setColor(Color.parseColor("#15803D")); 
+            btnBg.setCornerRadius(20f);
+            btnExport.setBackground(btnBg);
+            btnExport.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            btnExport.setOnClickListener(v -> exportLedgerToCSV());
+            
+            controlsLayout.addView(tlSearch);
+            controlsLayout.addView(btnExport);
+            parentGroup.addView(controlsLayout, parentGroup.indexOfChild(rvHistoryTable));
+
+            // Pinned Column Header
+            LinearLayout headRow = new LinearLayout(this);
+            headRow.setId(9999);
+            headRow.setBackgroundResource(R.drawable.table_header_bg);
+            headRow.setPadding(6, 12, 6, 12);
+            headRow.setOrientation(LinearLayout.HORIZONTAL);
+
+            String[] headers = {"Date", "Chit Group", "Member Name", "Inst.", "Amount Paid"};
+            float[] weights = {1f, 1f, 1f, 0.8f, 1.2f};
+
+            for (int i=0; i<headers.length; i++) {
+                TextView tv = new TextView(this); 
+                tv.setText(headers[i]); 
+                tv.setPadding(10, 16, 10, 16); 
+                tv.setTextColor(Color.WHITE); 
+                tv.setTypeface(null, Typeface.BOLD); 
+                tv.setGravity(Gravity.CENTER);
+                LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weights[i]);
+                tv.setLayoutParams(hLp);
+                headRow.addView(tv);
+            }
+            parentGroup.addView(headRow, parentGroup.indexOfChild(rvHistoryTable));
+        }
+
+        firestore.collection("payments").orderBy("timestamp", Query.Direction.DESCENDING).addSnapshotListener((value, error) -> {
+            if (value == null) return;
+
+            double runningCashTotal = 0;
+            int transactionEntriesCount = 0;
+            ArrayList<LedgerTransaction> newData = new ArrayList<>();
+
+            for (QueryDocumentSnapshot doc : value) {
+                String cId = doc.getString("chitId");
+                if (!"ALL".equals(historyFilterChitId) && !historyFilterChitId.equals(cId)) continue;
+                
+                String rawMemName = doc.getString("member_name");
+                if (!currentMemberSearch.isEmpty() && rawMemName != null && !rawMemName.toLowerCase(Locale.getDefault()).contains(currentMemberSearch)) {
+                    continue; 
+                }
+
+                double amountPaid = doc.getDouble("amount") != null ? doc.getDouble("amount") : 0.0;
+                runningCashTotal += amountPaid;
+                transactionEntriesCount++;
+
+                String date = doc.getString("date");
+                String cName = "Unknown Group";
+                for (CloudChitItem item : globalChitsList) { if (item.id.equals(cId)) cName = item.name; }
+                String notes = doc.getString("notes");
+                long instNum = doc.getLong("installment_num") != null ? doc.getLong("installment_num") : 0;
+
+                newData.add(new LedgerTransaction(date, cName, rawMemName, notes, instNum, amountPaid));
+            }
+
+            currentLedgerData = newData;
+            ledgerAdapter.updateData(currentLedgerData);
+            tvHistorySummary.setText("Total Funds Collected: ₹" + String.format(Locale.getDefault(), "%,.1f", runningCashTotal) + "  |  Total Transactions: " + transactionEntriesCount);
+        });
+    }
+
+    private void exportLedgerToCSV() {
+        if (currentLedgerData == null || currentLedgerData.isEmpty()) {
+            Toast.makeText(this, "No data available to export.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        StringBuilder csv = new StringBuilder("Date,Chit Group,Member Name,Installment,Amount Paid\n");
+        for (LedgerTransaction tx : currentLedgerData) {
+            String amount = String.format(Locale.getDefault(), "%.1f", tx.amountPaid);
+            csv.append("\"").append(tx.date).append("\",\"")
+               .append(tx.chitName).append("\",\"")
+               .append(tx.memberName).append("\",\"")
+               .append("Inst. ").append(tx.instNum).append("\",\"")
+               .append(amount).append("\"\n");
+        }
+        
+        try {
+            java.io.File file = new java.io.File(getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS), "Chit_Fund_Ledger_" + System.currentTimeMillis() + ".csv");
+            java.io.FileWriter writer = new java.io.FileWriter(file);
+            writer.append(csv.toString());
+            writer.flush();
+            writer.close();
+            Toast.makeText(this, "Exported successfully to Downloads folder!", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void refreshFundMatrixTable() {
@@ -1509,7 +1716,6 @@ public class MainActivity extends AppCompatActivity {
                     LinearLayout cellContainer = new LinearLayout(this); cellContainer.setPadding(12, 8, 12, 8); cellContainer.setGravity(Gravity.CENTER);
                     TextView tvStatusCell = new TextView(this); tvStatusCell.setTextSize(13); tvStatusCell.setPadding(16, 6, 16, 6); tvStatusCell.setTypeface(null, Typeface.BOLD);
                     
-                    // UPGRADE: Matrix displays Paid, Partial, or Pending based on amounts
                     double expectedAmt = getSpecificCachedMemberInstallmentAmount(chitId, name, i);
                     String compositeKey = chitId + "_" + name + "_" + i;
                     double paidAmt = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
@@ -1706,186 +1912,6 @@ public class MainActivity extends AppCompatActivity {
                 tlAdvancesTable.addView(tr);
             }
         });
-    }
-
-    private void refreshTransactionHistory() {
-        // =========================================================================================
-        // NEW FEATURE: Dynamic Search Bar and CSV Export Engine injected above the Ledger table
-        // =========================================================================================
-        ViewGroup parentGroup = (ViewGroup) tlHistoryTable.getParent();
-        if (parentGroup != null && parentGroup.findViewById(8888) == null) {
-            LinearLayout controlsLayout = new LinearLayout(this);
-            controlsLayout.setId(8888);
-            controlsLayout.setOrientation(LinearLayout.HORIZONTAL);
-            controlsLayout.setPadding(0, 20, 0, 30);
-            controlsLayout.setGravity(Gravity.CENTER_VERTICAL);
-            
-            TextInputLayout tlSearch = new TextInputLayout(this);
-            tlSearch.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
-            tlSearch.setBoxCornerRadii(16f, 16f, 16f, 16f);
-            tlSearch.setHint("Search Member Name...");
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            lp.setMargins(0, 0, 20, 0);
-            tlSearch.setLayoutParams(lp);
-            
-            TextInputEditText etSearch = new TextInputEditText(tlSearch.getContext());
-            etSearch.addTextChangedListener(new TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                @Override public void afterTextChanged(Editable s) {
-                    currentMemberSearch = s.toString().toLowerCase(Locale.getDefault());
-                    refreshTransactionHistory();
-                }
-            });
-            tlSearch.addView(etSearch);
-            
-            Button btnExport = new Button(this);
-            btnExport.setText("Export CSV");
-            btnExport.setTextColor(Color.WHITE);
-            btnExport.setAllCaps(false);
-            android.graphics.drawable.GradientDrawable btnBg = new android.graphics.drawable.GradientDrawable();
-            btnBg.setColor(Color.parseColor("#15803D")); // Emerald Green matching your branding
-            btnBg.setCornerRadius(20f);
-            btnExport.setBackground(btnBg);
-            btnExport.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            btnExport.setOnClickListener(v -> exportLedgerToCSV());
-            
-            controlsLayout.addView(tlSearch);
-            controlsLayout.addView(btnExport);
-            
-            parentGroup.addView(controlsLayout, parentGroup.indexOfChild(tlHistoryTable));
-        }
-
-        tlHistoryTable.removeAllViews();
-        TableRow headRow = new TableRow(this);
-        headRow.setBackgroundResource(R.drawable.table_header_bg);
-        headRow.setPadding(6, 12, 6, 12);
-
-        android.graphics.drawable.GradientDrawable ledgerDivider = new android.graphics.drawable.GradientDrawable();
-        ledgerDivider.setColor(Color.parseColor("#CBD5E1")); ledgerDivider.setSize(2, 2);
-        tlHistoryTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
-        tlHistoryTable.setDividerDrawable(ledgerDivider);
-
-        String[] headers = {"Date", "Chit Group", "Member Name", "Inst.", "Amount Paid"};
-        for (String h : headers) {
-            TextView tv = new TextView(this); tv.setText(h); tv.setPadding(20, 16, 20, 16); tv.setTextColor(Color.WHITE); tv.setTypeface(null, Typeface.BOLD); 
-            if (h.equals("Member Name") || h.equals("Amount Paid")) tv.setGravity(Gravity.CENTER);
-            headRow.addView(tv);
-        }
-        tlHistoryTable.addView(headRow);
-
-        firestore.collection("payments").orderBy("timestamp", Query.Direction.DESCENDING).addSnapshotListener((value, error) -> {
-            if (value == null) return;
-            tlHistoryTable.removeAllViews();
-            tlHistoryTable.addView(headRow);
-
-            double runningCashTotal = 0;
-            int transactionEntriesCount = 0;
-
-            for (QueryDocumentSnapshot doc : value) {
-                String cId = doc.getString("chitId");
-                if (!"ALL".equals(historyFilterChitId) && !historyFilterChitId.equals(cId)) continue;
-                
-                String rawMemName = doc.getString("member_name");
-                if (!currentMemberSearch.isEmpty() && rawMemName != null && !rawMemName.toLowerCase(Locale.getDefault()).contains(currentMemberSearch)) {
-                    continue; // NEW: Skips row if it doesn't match your live search
-                }
-
-                double amountPaid = doc.getDouble("amount");
-                runningCashTotal += amountPaid;
-                transactionEntriesCount++;
-
-                TableRow tr = new TableRow(this);
-                tr.setPadding(6, 8, 6, 8);
-
-                TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tr.addView(tvDate);
-                String cName = "Unknown Group";
-                for (CloudChitItem item : globalChitsList) { if (item.id.equals(cId)) cName = item.name; }
-
-                TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
-                
-                LinearLayout memLayout = new LinearLayout(this);
-                memLayout.setOrientation(LinearLayout.VERTICAL);
-                memLayout.setGravity(Gravity.CENTER);
-                
-                TextView tvMem = new TextView(this); 
-                tvMem.setText(rawMemName); 
-                tvMem.setPadding(20, 16, 20, 16); 
-                tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
-                tvMem.setTextColor(Color.parseColor("#1E293B")); 
-                tvMem.setGravity(Gravity.CENTER); 
-                memLayout.addView(tvMem);
-                
-                String note = doc.getString("notes");
-                if (note != null && !note.trim().isEmpty()) {
-                    tvMem.setPadding(20, 16, 20, 0); 
-                    TextView tvNote = new TextView(this);
-                    tvNote.setText("📝 " + note);
-                    tvNote.setTextSize(11);
-                    tvNote.setTextColor(Color.parseColor("#64748B"));
-                    tvNote.setPadding(20, 0, 20, 16);
-                    tvNote.setGravity(Gravity.CENTER);
-                    memLayout.addView(tvNote);
-                }
-                tr.addView(memLayout);
-                
-                LinearLayout badgeWrapper = new LinearLayout(this); badgeWrapper.setPadding(10, 6, 10, 6); badgeWrapper.setGravity(Gravity.CENTER);
-                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(14, 4, 14, 4); tvInst.setTextColor(Color.parseColor("#475569")); tvInst.setBackgroundResource(R.drawable.badge_unpaid_bg);
-                badgeWrapper.addView(tvInst); tr.addView(badgeWrapper);
-                
-                TextView tvAmt = new TextView(this); 
-                tvAmt.setText("₹" + String.format(Locale.getDefault(), "%,.1f", amountPaid)); 
-                tvAmt.setPadding(20, 16, 20, 16); 
-                tvAmt.setTypeface(null, Typeface.BOLD); 
-                tvAmt.setTextColor(Color.parseColor("#047857")); 
-                tvAmt.setGravity(Gravity.CENTER); 
-                tr.addView(tvAmt);
-
-                tlHistoryTable.addView(tr);
-            }
-            tvHistorySummary.setText("Total Funds Collected: ₹" + String.format(Locale.getDefault(), "%,.1f", runningCashTotal) + "  |  Total Transactions: " + transactionEntriesCount);
-        });
-    }
-
-    // =========================================================================================
-    // NEW FEATURE: Fast CSV Generation Engine
-    // =========================================================================================
-    private void exportLedgerToCSV() {
-        if (tlHistoryTable.getChildCount() <= 1) {
-            Toast.makeText(this, "No data available to export.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        StringBuilder csv = new StringBuilder("Date,Chit Group,Member Name,Installment,Amount Paid\n");
-        for (int i = 1; i < tlHistoryTable.getChildCount(); i++) {
-            try {
-                TableRow row = (TableRow) tlHistoryTable.getChildAt(i);
-                String date = ((TextView) row.getChildAt(0)).getText().toString();
-                String group = ((TextView) row.getChildAt(1)).getText().toString();
-                
-                LinearLayout memLayout = (LinearLayout) row.getChildAt(2);
-                String member = ((TextView) memLayout.getChildAt(0)).getText().toString();
-                
-                LinearLayout badgeWrapper = (LinearLayout) row.getChildAt(3);
-                String inst = ((TextView) badgeWrapper.getChildAt(0)).getText().toString();
-                
-                String amount = ((TextView) row.getChildAt(4)).getText().toString().replace("₹", "").replace(",", "");
-                
-                // Fields are wrapped in quotes to prevent internal commas from breaking the CSV
-                csv.append("\"").append(date).append("\",\"").append(group).append("\",\"").append(member).append("\",\"").append(inst).append("\",\"").append(amount).append("\"\n");
-            } catch (Exception ignored) {}
-        }
-        
-        try {
-            java.io.File file = new java.io.File(getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS), "Chit_Fund_Ledger_" + System.currentTimeMillis() + ".csv");
-            java.io.FileWriter writer = new java.io.FileWriter(file);
-            writer.append(csv.toString());
-            writer.flush();
-            writer.close();
-            Toast.makeText(this, "Exported successfully to Downloads folder!", Toast.LENGTH_LONG).show();
-        } catch (Exception e) {
-            Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
     }
 
     private void showLogAdvanceDialog() {
