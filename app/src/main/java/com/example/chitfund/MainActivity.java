@@ -1487,10 +1487,9 @@ public class MainActivity extends AppCompatActivity {
     private void refreshTransactionHistory() {
         ViewGroup parentGroup = findViewById(R.id.llLedgerTableWrapper);
         
-        // Pinned Header Logic - Injects dynamic header with FIXED WIDTHS to match rows
+        // Pinned Header Logic - Injects dynamic header AT THE TOP OF THE SCROLL VIEW
         if (parentGroup != null && parentGroup.findViewById(9999) == null) {
             
-            // Pinned Column Header
             LinearLayout headRow = new LinearLayout(this);
             headRow.setId(9999);
             headRow.setBackgroundResource(R.drawable.table_header_bg);
@@ -1499,7 +1498,6 @@ public class MainActivity extends AppCompatActivity {
 
             String[] headers = {"Date", "Chit Group", "Member Name", "Inst.", "Amount Paid"};
             
-            // Converting exact DP widths to pixels so they perfectly align with the new XML row layout
             float density = getResources().getDisplayMetrics().density;
             int[] widthsDp = {100, 140, 140, 80, 120}; 
 
@@ -1516,8 +1514,8 @@ public class MainActivity extends AppCompatActivity {
                 tv.setLayoutParams(hLp);
                 headRow.addView(tv);
             }
-            // Add header right above the RecyclerView
-            parentGroup.addView(headRow, parentGroup.indexOfChild(rvHistoryTable));
+            // Adds the header inside the scroll view wrapper so it scrolls vertically
+            parentGroup.addView(headRow, 0);
         }
 
         firestore.collection("payments").orderBy("timestamp", Query.Direction.DESCENDING).addSnapshotListener((value, error) -> {
