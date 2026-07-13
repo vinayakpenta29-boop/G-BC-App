@@ -286,20 +286,23 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG (UPGRADED TO FULL SCROLL RECYCLERVIEW) -->
-        <ScrollView
+        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG (UPGRADED FULL SCREEN HEIGHT) -->
+        <!-- FIX: Changed from ScrollView to LinearLayout to allow RecyclerView to manage the screen space -->
+        <LinearLayout
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fillViewport="true"
+            android:orientation="vertical"
             android:clipToPadding="false"
-            android:paddingBottom="32dp"
+            android:paddingBottom="16dp"
             android:visibility="gone">
 
+            <!-- FIX: Card now stretches to match_parent so the table fills the screen -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="16dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
                 app:cardCornerRadius="24dp"
                 app:cardElevation="4dp"
                 app:cardPreventCornerOverlap="true"
@@ -307,15 +310,14 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:orientation="vertical"
-                    android:paddingTop="20dp"
-                    android:paddingStart="20dp"
-                    android:paddingEnd="20dp">
+                    android:paddingTop="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
                         android:text="Transaction History Ledger"
                         android:textSize="18sp"
                         android:textStyle="bold"
@@ -326,6 +328,8 @@
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginEnd="20dp"
                         android:layout_marginBottom="16dp"
                         android:hint="Filter Ledger by Group"
                         app:boxCornerRadiusTopStart="12dp"
@@ -349,31 +353,36 @@
                         android:id="@+id/tvHistorySummary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginEnd="20dp"
                         android:background="#F8FAFC"
                         android:padding="14dp"
                         android:textColor="#334155"
                         android:textStyle="bold"
                         android:textSize="13sp"
-                        android:layout_marginBottom="18dp"/>
+                        android:layout_marginBottom="10dp"/>
 
-                    <!-- RESTORED FULL WRAP CONTENT FOR SMOOTH VERTICAL & HORIZONTAL SCROLL -->
+                    <!-- THE FIX: Horizontal scroll gets layout_weight="1" to fill ALL remaining card space -->
                     <HorizontalScrollView
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:fillViewport="true">
                         
                         <LinearLayout
                             android:id="@+id/llLedgerTableWrapper"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:orientation="vertical">
                             
                             <!-- Header automatically injected here by Java -->
 
+                            <!-- THE FIX: RecyclerView gets layout_weight="1" so it computes height perfectly and scrolls infinite rows -->
                             <androidx.recyclerview.widget.RecyclerView
                                 android:id="@+id/rvHistoryTable"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:nestedScrollingEnabled="false"
+                                android:layout_height="0dp"
+                                android:layout_weight="1"
                                 android:clipToPadding="false"
                                 android:paddingBottom="20dp" />
 
@@ -382,7 +391,7 @@
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-        </ScrollView>
+        </LinearLayout>
 
         <!-- TAB POSITION 3 CONTENT: RECORDED MEMBER ADVANCES -->
         <ScrollView
