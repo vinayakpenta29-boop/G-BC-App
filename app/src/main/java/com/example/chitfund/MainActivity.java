@@ -50,7 +50,6 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseFirestore firestore;
     private String chitId = null; 
     private String historyFilterChitId = "ALL"; 
-    private String currentMemberSearch = ""; 
 
     private AutoCompleteTextView spChitSelector;
     private AutoCompleteTextView spMembers;
@@ -1359,6 +1358,7 @@ public class MainActivity extends AppCompatActivity {
                     if (targetedDeleteId.equals(chitId)) {
                         chitId = null;
                         globalMembersList.clear();
+                        tlFundTable.removeAllViews();
                         tvFundTitle.setText("No active Chit Fund found. Create one using the menu!");
                         llFormContainer.setVisibility(View.GONE);
                     }
@@ -1483,54 +1483,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // =========================================================================================
-    // NEW FEATURE: Lightning Fast RecyclerView Implementation for Transaction History
+    // RESTORED: Horizontal Scroll enabled RecyclerView Implementation
     // =========================================================================================
     private void refreshTransactionHistory() {
-        ViewGroup parentGroup = (ViewGroup) rvHistoryTable.getParent();
+        ViewGroup parentGroup = findViewById(R.id.llLedgerTableWrapper);
         
-        // Pinned Header Logic - Injects dynamic header outside the RecyclerView so it won't scroll away
+        // Pinned Header Logic - Injects dynamic header with FIXED WIDTHS to match rows
         if (parentGroup != null && parentGroup.findViewById(9999) == null) {
             
-            // Search and Export Controls
-            LinearLayout controlsLayout = new LinearLayout(this);
-            controlsLayout.setOrientation(LinearLayout.HORIZONTAL);
-            controlsLayout.setPadding(0, 20, 0, 30);
-            controlsLayout.setGravity(Gravity.CENTER_VERTICAL);
-            
-            TextInputLayout tlSearch = new TextInputLayout(this);
-            tlSearch.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
-            tlSearch.setBoxCornerRadii(16f, 16f, 16f, 16f);
-            tlSearch.setHint("Search Member Name...");
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            lp.setMargins(0, 0, 20, 0);
-            tlSearch.setLayoutParams(lp);
-            
-            TextInputEditText etSearch = new TextInputEditText(tlSearch.getContext());
-            etSearch.addTextChangedListener(new TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                @Override public void afterTextChanged(Editable s) {
-                    currentMemberSearch = s.toString().toLowerCase(Locale.getDefault());
-                    refreshTransactionHistory();
-                }
-            });
-            tlSearch.addView(etSearch);
-            
-            Button btnExport = new Button(this);
-            btnExport.setText("Export CSV");
-            btnExport.setTextColor(Color.WHITE);
-            btnExport.setAllCaps(false);
-            android.graphics.drawable.GradientDrawable btnBg = new android.graphics.drawable.GradientDrawable();
-            btnBg.setColor(Color.parseColor("#15803D")); 
-            btnBg.setCornerRadius(20f);
-            btnExport.setBackground(btnBg);
-            btnExport.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            btnExport.setOnClickListener(v -> exportLedgerToCSV());
-            
-            controlsLayout.addView(tlSearch);
-            controlsLayout.addView(btnExport);
-            parentGroup.addView(controlsLayout, parentGroup.indexOfChild(rvHistoryTable));
-
             // Pinned Column Header
             LinearLayout headRow = new LinearLayout(this);
             headRow.setId(9999);
@@ -1539,7 +1499,10 @@ public class MainActivity extends AppCompatActivity {
             headRow.setOrientation(LinearLayout.HORIZONTAL);
 
             String[] headers = {"Date", "Chit Group", "Member Name", "Inst.", "Amount Paid"};
-            float[] weights = {1f, 1f, 1f, 0.8f, 1.2f};
+            
+            // Converting exact DP widths to pixels so they perfectly align with the new XML row layout
+            float density = getResources().getDisplayMetrics().density;
+            int[] widthsDp = {100, 140, 140, 80, 120}; 
 
             for (int i=0; i<headers.length; i++) {
                 TextView tv = new TextView(this); 
@@ -1548,10 +1511,13 @@ public class MainActivity extends AppCompatActivity {
                 tv.setTextColor(Color.WHITE); 
                 tv.setTypeface(null, Typeface.BOLD); 
                 tv.setGravity(Gravity.CENTER);
-                LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weights[i]);
+                
+                int widthPx = (int) (widthsDp[i] * density);
+                LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(widthPx, ViewGroup.LayoutParams.WRAP_CONTENT);
                 tv.setLayoutParams(hLp);
                 headRow.addView(tv);
             }
+            // Add header right above the RecyclerView
             parentGroup.addView(headRow, parentGroup.indexOfChild(rvHistoryTable));
         }
 
@@ -1567,10 +1533,6 @@ public class MainActivity extends AppCompatActivity {
                 if (!"ALL".equals(historyFilterChitId) && !historyFilterChitId.equals(cId)) continue;
                 
                 String rawMemName = doc.getString("member_name");
-                if (!currentMemberSearch.isEmpty() && rawMemName != null && !rawMemName.toLowerCase(Locale.getDefault()).contains(currentMemberSearch)) {
-                    continue; 
-                }
-
                 double amountPaid = doc.getDouble("amount") != null ? doc.getDouble("amount") : 0.0;
                 runningCashTotal += amountPaid;
                 transactionEntriesCount++;
@@ -1587,330 +1549,6 @@ public class MainActivity extends AppCompatActivity {
             currentLedgerData = newData;
             ledgerAdapter.updateData(currentLedgerData);
             tvHistorySummary.setText("Total Funds Collected: ₹" + String.format(Locale.getDefault(), "%,.1f", runningCashTotal) + "  |  Total Transactions: " + transactionEntriesCount);
-        });
-    }
-
-    private void exportLedgerToCSV() {
-        if (currentLedgerData == null || currentLedgerData.isEmpty()) {
-            Toast.makeText(this, "No data available to export.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        StringBuilder csv = new StringBuilder("Date,Chit Group,Member Name,Installment,Amount Paid\n");
-        for (LedgerTransaction tx : currentLedgerData) {
-            String amount = String.format(Locale.getDefault(), "%.1f", tx.amountPaid);
-            csv.append("\"").append(tx.date).append("\",\"")
-               .append(tx.chitName).append("\",\"")
-               .append(tx.memberName).append("\",\"")
-               .append("Inst. ").append(tx.instNum).append("\",\"")
-               .append(amount).append("\"\n");
-        }
-        
-        try {
-            java.io.File file = new java.io.File(getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS), "Chit_Fund_Ledger_" + System.currentTimeMillis() + ".csv");
-            java.io.FileWriter writer = new java.io.FileWriter(file);
-            writer.append(csv.toString());
-            writer.flush();
-            writer.close();
-            Toast.makeText(this, "Exported successfully to Downloads folder!", Toast.LENGTH_LONG).show();
-        } catch (Exception e) {
-            Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void refreshFundMatrixTable() {
-        for (android.animation.ValueAnimator existingAnim : activeSnakeAnimators) existingAnim.cancel();
-        activeSnakeAnimators.clear();
-        tlFundTable.removeAllViews();
-        if (chitId == null) return;
-
-        android.graphics.drawable.GradientDrawable gridLine = new android.graphics.drawable.GradientDrawable();
-        gridLine.setColor(Color.parseColor("#CBD5E1")); gridLine.setSize(2, 2); 
-        tlFundTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
-        tlFundTable.setDividerDrawable(gridLine);
-
-        ArrayList<String> calculatedDatesHeaders = new ArrayList<>();
-        SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        SimpleDateFormat sdfOutput = new SimpleDateFormat("d MMM yyyy", Locale.getDefault());
-        
-        ArrayList<Integer> currentActiveIndices = new ArrayList<>();
-        int elapsedIndex = -1;
-        Calendar todayCal = Calendar.getInstance();
-
-        try {
-            Date startDate = sdfInput.parse(firstInstallmentDateStr);
-            Calendar cal = Calendar.getInstance();
-            
-            for (int i = 0; i < totalInstallmentsCount; i++) {
-                cal.setTime(startDate);
-                if ("Monthly".equals(frequencyType)) {
-                    cal.add(Calendar.MONTH, i);
-                } else if ("Half Yearly".equals(frequencyType)) {
-                    cal.add(Calendar.MONTH, i * 6);
-                } else {
-                    cal.add(Calendar.DATE, i * 7);
-                }
-                calculatedDatesHeaders.add(sdfOutput.format(cal.getTime()));
-                
-                boolean isCurrent = false;
-                int cY = cal.get(Calendar.YEAR);
-                int tY = todayCal.get(Calendar.YEAR);
-                int cM = cal.get(Calendar.MONTH);
-                int tM = todayCal.get(Calendar.MONTH);
-
-                if ("Weekly".equals(frequencyType)) {
-                    int cW = cal.get(Calendar.WEEK_OF_YEAR);
-                    int tW = todayCal.get(Calendar.WEEK_OF_YEAR);
-                    if (cW == tW && cY == tY) { isCurrent = true; }
-                    if (cal.getTimeInMillis() <= todayCal.getTimeInMillis() || isCurrent) { elapsedIndex = i; }
-                } else {
-                    if (cY == tY && cM == tM) { isCurrent = true; }
-                    if (cY < tY || (cY == tY && cM <= tM)) { elapsedIndex = i; }
-                }
-                
-                if (isCurrent) currentActiveIndices.add(i);
-            }
-        } catch (Exception ignored) {}
-
-        ArrayList<Integer> snakeIndices = new ArrayList<>(currentActiveIndices);
-        if (snakeIndices.isEmpty() && elapsedIndex != -1) {
-            snakeIndices.add(elapsedIndex);
-        } else if (snakeIndices.isEmpty()) {
-            snakeIndices.add(0);
-        }
-
-        if (!isMatrixVertical) {
-            TableRow headerRow = new TableRow(this);
-            headerRow.setBackgroundResource(R.drawable.table_header_bg);
-            headerRow.setPadding(6, 12, 6, 12);
-
-            TextView hNo = new TextView(this); hNo.setText("No."); hNo.setPadding(20, 16, 20, 16); hNo.setTextColor(Color.WHITE); hNo.setTypeface(null, Typeface.BOLD); headerRow.addView(hNo);
-            TextView hName = new TextView(this); hName.setText("Member Name"); hName.setPadding(20, 16, 20, 16); hName.setTextColor(Color.WHITE); hName.setTypeface(null, Typeface.BOLD); hName.setGravity(Gravity.CENTER); headerRow.addView(hName);
-
-            int dateIdx = 0;
-            for (String dateStr : calculatedDatesHeaders) {
-                TextView hDate = new TextView(this); 
-                hDate.setText(dateStr); 
-                hDate.setPadding(24, 16, 24, 16); 
-                
-                if (currentActiveIndices.contains(dateIdx)) {
-                    hDate.setTextColor(Color.parseColor("#34D399"));
-                } else {
-                    hDate.setTextColor(Color.WHITE);
-                }
-                hDate.setTypeface(null, Typeface.BOLD); 
-                headerRow.addView(hDate);
-                dateIdx++;
-            }
-            tlFundTable.addView(headerRow);
-
-            int serialCounter = 1;
-            for (String name : globalMembersList) {
-                TableRow memberRow = new TableRow(this);
-                memberRow.setPadding(6, 8, 6, 8);
-
-                TextView tvSerial = new TextView(this); tvSerial.setText(String.valueOf(serialCounter++)); tvSerial.setPadding(20, 16, 20, 16); tvSerial.setTextColor(Color.parseColor("#64748B")); memberRow.addView(tvSerial);
-                TextView tvName = new TextView(this); tvName.setText(name); tvName.setPadding(20, 16, 20, 16); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvName.setTextColor(Color.parseColor("#1E293B")); tvName.setGravity(Gravity.CENTER); memberRow.addView(tvName);
-
-                for (int i = 1; i <= totalInstallmentsCount; i++) {
-                    LinearLayout cellContainer = new LinearLayout(this); cellContainer.setPadding(12, 8, 12, 8); cellContainer.setGravity(Gravity.CENTER);
-                    TextView tvStatusCell = new TextView(this); tvStatusCell.setTextSize(13); tvStatusCell.setPadding(16, 6, 16, 6); tvStatusCell.setTypeface(null, Typeface.BOLD);
-                    
-                    double expectedAmt = getSpecificCachedMemberInstallmentAmount(chitId, name, i);
-                    String compositeKey = chitId + "_" + name + "_" + i;
-                    double paidAmt = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
-                    
-                    boolean isFullyPaid = (paidAmt >= expectedAmt && expectedAmt > 0);
-
-                    if (isFullyPaid) {
-                        tvStatusCell.setText(" Paid ✅ "); tvStatusCell.setTextColor(Color.parseColor("#047857")); tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
-                    } else if (paidAmt > 0) {
-                        tvStatusCell.setText(" Part ⏳ "); tvStatusCell.setTextColor(Color.parseColor("#B45309")); 
-                        android.graphics.drawable.GradientDrawable partBg = new android.graphics.drawable.GradientDrawable();
-                        partBg.setColor(Color.parseColor("#FEF3C7")); partBg.setCornerRadius(16f);
-                        tvStatusCell.setBackground(partBg);
-                    } else {
-                        tvStatusCell.setText(" Pending "); tvStatusCell.setTextColor(Color.parseColor("#475569")); tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
-                    }
-
-                    if (snakeIndices.contains(i - 1)) {
-                        final SnakeBorderDrawable snakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), isFullyPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9"), 32f);
-                        cellContainer.setBackground(snakeDrawable);
-                        android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofFloat(0f, 1f); anim.setDuration(1600); anim.setRepeatCount(android.animation.ValueAnimator.INFINITE); anim.setInterpolator(new android.view.animation.LinearInterpolator());
-                        anim.addUpdateListener(animation -> snakeDrawable.setAnimationProgress(-(float) animation.getAnimatedValue()));
-                        anim.start(); activeSnakeAnimators.add(anim);
-                    }
-                    cellContainer.addView(tvStatusCell); memberRow.addView(cellContainer);
-                }
-                tlFundTable.addView(memberRow);
-            }
-        } else {
-            TableRow headerRow = new TableRow(this);
-            headerRow.setBackgroundResource(R.drawable.table_header_bg);
-            headerRow.setPadding(6, 12, 6, 12);
-
-            TextView hInst = new TextView(this); hInst.setText("Inst."); hInst.setPadding(20, 16, 20, 16); hInst.setTextSize(14); hInst.setTypeface(null, Typeface.BOLD); hInst.setTextColor(Color.WHITE); hInst.setGravity(Gravity.CENTER); headerRow.addView(hInst);
-            TextView hDate = new TextView(this); hDate.setText("Due Date"); hDate.setPadding(20, 16, 20, 16); hDate.setTextSize(14); hDate.setTypeface(null, Typeface.BOLD); hDate.setTextColor(Color.WHITE); hDate.setGravity(Gravity.CENTER); headerRow.addView(hDate);
-
-            for (String name : globalMembersList) {
-                TextView hMemCol = new TextView(this); hMemCol.setText(name); hMemCol.setPadding(20, 16, 20, 16); hMemCol.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); hMemCol.setTextColor(Color.WHITE); hMemCol.setGravity(Gravity.CENTER); headerRow.addView(hMemCol);
-            }
-            tlFundTable.addView(headerRow);
-
-            for (int i = 1; i <= totalInstallmentsCount; i++) {
-                int colIdx = i - 1;
-                TableRow instRow = new TableRow(this);
-                instRow.setPadding(6, 8, 6, 8);
-
-                TextView tvInstNum = new TextView(this); 
-                tvInstNum.setText("#" + i); 
-                tvInstNum.setPadding(20, 16, 20, 16); 
-                tvInstNum.setGravity(Gravity.CENTER);
-                
-                TextView tvInstDate = new TextView(this); 
-                tvInstDate.setText(calculatedDatesHeaders.get(colIdx)); 
-                tvInstDate.setPadding(20, 16, 20, 16); 
-                tvInstDate.setGravity(Gravity.CENTER); 
-                
-                if (currentActiveIndices.contains(colIdx)) {
-                    tvInstNum.setTextColor(Color.parseColor("#15803D"));
-                    tvInstNum.setTypeface(null, Typeface.BOLD);
-                    
-                    tvInstDate.setTextColor(Color.parseColor("#15803D"));
-                    tvInstDate.setTypeface(null, Typeface.BOLD);
-                } else {
-                    tvInstNum.setTextColor(Color.parseColor("#0F172A"));
-                    tvInstNum.setTypeface(null, Typeface.BOLD);
-                    
-                    tvInstDate.setTextColor(Color.parseColor("#475569"));
-                    tvInstDate.setTypeface(null, Typeface.NORMAL);
-                }
-                
-                instRow.addView(tvInstNum);
-                instRow.addView(tvInstDate);
-
-                for (String name : globalMembersList) {
-                    LinearLayout cellContainer = new LinearLayout(this); cellContainer.setPadding(12, 8, 12, 8); cellContainer.setGravity(Gravity.CENTER);
-                    TextView tvStatusCell = new TextView(this); tvStatusCell.setTextSize(13); tvStatusCell.setPadding(16, 6, 16, 6); tvStatusCell.setTypeface(null, Typeface.BOLD);
-                    
-                    double expectedAmt = getSpecificCachedMemberInstallmentAmount(chitId, name, i);
-                    String compositeKey = chitId + "_" + name + "_" + i;
-                    double paidAmt = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
-                    
-                    boolean isFullyPaid = (paidAmt >= expectedAmt && expectedAmt > 0);
-
-                    if (isFullyPaid) {
-                        tvStatusCell.setText(" Paid ✅ "); tvStatusCell.setTextColor(Color.parseColor("#047857")); tvStatusCell.setBackgroundResource(R.drawable.badge_paid_bg);
-                    } else if (paidAmt > 0) {
-                        tvStatusCell.setText(" Part ⏳ "); tvStatusCell.setTextColor(Color.parseColor("#B45309")); 
-                        android.graphics.drawable.GradientDrawable partBg = new android.graphics.drawable.GradientDrawable();
-                        partBg.setColor(Color.parseColor("#FEF3C7")); partBg.setCornerRadius(16f);
-                        tvStatusCell.setBackground(partBg);
-                    } else {
-                        tvStatusCell.setText(" Pending "); tvStatusCell.setTextColor(Color.parseColor("#475569")); tvStatusCell.setBackgroundResource(R.drawable.badge_unpaid_bg);
-                    }
-
-                    if (snakeIndices.contains(colIdx)) {
-                        final SnakeBorderDrawable snakeDrawable = new SnakeBorderDrawable(Color.parseColor("#10B981"), isFullyPaid ? Color.parseColor("#E6F4EA") : Color.parseColor("#F1F5F9"), 32f);
-                        cellContainer.setBackground(snakeDrawable);
-                        android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofFloat(0f, 1f); anim.setDuration(1600); anim.setRepeatCount(android.animation.ValueAnimator.INFINITE); anim.setInterpolator(new android.view.animation.LinearInterpolator());
-                        anim.addUpdateListener(animation -> snakeDrawable.setAnimationProgress(-(float) animation.getAnimatedValue()));
-                        anim.start(); activeSnakeAnimators.add(anim);
-                    }
-                    cellContainer.addView(tvStatusCell); instRow.addView(cellContainer);
-                }
-                tlFundTable.addView(instRow);
-            }
-        }
-    }
-
-    private void refreshAdvancesTable() {
-        tlAdvancesTable.removeAllViews();
-        TableRow headRow = new TableRow(this);
-        headRow.setBackgroundResource(R.drawable.table_header_bg);
-        headRow.setPadding(6, 12, 6, 12);
-
-        android.graphics.drawable.GradientDrawable advancesDivider = new android.graphics.drawable.GradientDrawable();
-        advancesDivider.setColor(Color.parseColor("#CBD5E1")); advancesDivider.setSize(2, 2);
-        tlAdvancesTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
-        tlAdvancesTable.setDividerDrawable(advancesDivider);
-
-        String[] headers = {"Date Locked", "Chit Group", "Member Name", "Inst. #", "Advance Paid Out", "New Rate"};
-        for (String h : headers) {
-            TextView tv = new TextView(this); tv.setText(h); tv.setPadding(20, 16, 20, 16); tv.setTextColor(Color.WHITE); tv.setTypeface(null, Typeface.BOLD); 
-            if (h.equals("Member Name") || h.equals("Advance Paid Out")) tv.setGravity(Gravity.CENTER);
-            headRow.addView(tv);
-        }
-        tlAdvancesTable.addView(headRow);
-
-        firestore.collection("advances").orderBy("date", Query.Direction.DESCENDING).addSnapshotListener((value, error) -> {
-            if (value == null) return;
-            tlAdvancesTable.removeAllViews();
-            tlAdvancesTable.addView(headRow);
-
-            for (QueryDocumentSnapshot doc : value) {
-                TableRow tr = new TableRow(this);
-                tr.setPadding(6, 8, 6, 8);
-
-                String cId = doc.getString("chitId");
-                String cName = "Unknown Group";
-                for (CloudChitItem item : globalChitsList) { if (item.id.equals(cId)) cName = item.name; }
-
-                TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tr.addView(tvDate);
-                TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
-                
-                LinearLayout memLayout = new LinearLayout(this);
-                memLayout.setOrientation(LinearLayout.VERTICAL);
-                memLayout.setGravity(Gravity.CENTER);
-                
-                TextView tvMem = new TextView(this); 
-                tvMem.setText(doc.getString("member_name")); 
-                tvMem.setPadding(20, 16, 20, 16); 
-                tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
-                tvMem.setTextColor(Color.parseColor("#1E293B")); 
-                tvMem.setGravity(Gravity.CENTER); 
-                memLayout.addView(tvMem);
-                
-                String note = doc.getString("notes");
-                if (note != null && !note.trim().isEmpty()) {
-                    tvMem.setPadding(20, 16, 20, 0); 
-                    TextView tvNote = new TextView(this);
-                    tvNote.setText("📝 " + note);
-                    tvNote.setTextSize(11);
-                    tvNote.setTextColor(Color.parseColor("#64748B"));
-                    tvNote.setPadding(20, 0, 20, 16);
-                    tvNote.setGravity(Gravity.CENTER);
-                    memLayout.addView(tvNote);
-                }
-                tr.addView(memLayout);
-                
-                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
-                
-                TextView tvAdv = new TextView(this); 
-                tvAdv.setText("₹" + String.format(Locale.getDefault(), "%,.1f", doc.getDouble("advance_amount"))); 
-                tvAdv.setPadding(20, 16, 20, 16); 
-                tvAdv.setTypeface(null, Typeface.BOLD); 
-                tvAdv.setTextColor(Color.parseColor("#E11D48")); 
-                tvAdv.setGravity(Gravity.CENTER); 
-                tr.addView(tvAdv);
-                
-                TextView tvRate = new TextView(this); tvRate.setText("₹" + String.format(Locale.getDefault(), "%,.1f", doc.getDouble("new_amount"))); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tvRate.setGravity(Gravity.CENTER); tr.addView(tvRate);
-
-                final QueryDocumentSnapshot finalDoc = doc; // Secure reference for the click listener
-                tr.setOnLongClickListener(v -> {
-                    new MaterialAlertDialogBuilder(MainActivity.this)
-                            .setTitle("Advance Options")
-                            .setItems(new String[]{"Edit Advance Record"}, (dialogInterface, which) -> {
-                                if (which == 0) {
-                                    showEditAdvanceDialog(finalDoc);
-                                }
-                            })
-                            .show();
-                    return true;
-                });
-
-                tlAdvancesTable.addView(tr);
-            }
         });
     }
 
