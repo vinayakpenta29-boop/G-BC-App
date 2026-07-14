@@ -1,7 +1,5 @@
 package com.example.chitfund;
 
-import android.content.Context;
-import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -17,11 +15,8 @@ import android.widget.ScrollView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.AutoCompleteTextView;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AlertDialog;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -63,9 +58,8 @@ public class MainActivity extends AppCompatActivity {
     public View llFormContainer;
     private TextView tvHistorySummary;
 
-    private androidx.recyclerview.widget.RecyclerView rvHistoryTable;
-    private LedgerComponents.LedgerAdapter ledgerAdapter;
-    private ArrayList<LedgerComponents.LedgerTransaction> currentLedgerData = new ArrayList<>();
+    // RESTORED: Stable TableLayout instead of jumping RecyclerView
+    public TableLayout tlHistoryTable;
 
     private View tabContainerMatrix;
     public View tabContainerCollect;
@@ -90,7 +84,6 @@ public class MainActivity extends AppCompatActivity {
     public HashMap<String, String> globalChitFrequenciesCache = new HashMap<>();
     public HashMap<String, Integer> globalChitInstallmentsCountCache = new HashMap<>();
     
-    // RESTORED: Missing Variable
     public ArrayList<Double> baseChitInstallmentAmounts = new ArrayList<>(); 
     
     private ArrayList<android.animation.ValueAnimator> activeSnakeAnimators = new ArrayList<>();
@@ -129,10 +122,8 @@ public class MainActivity extends AppCompatActivity {
         
         tvHistorySummary = findViewById(R.id.tvHistorySummary);
 
-        rvHistoryTable = findViewById(R.id.rvHistoryTable);
-        rvHistoryTable.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(this));
-        ledgerAdapter = new LedgerComponents.LedgerAdapter();
-        rvHistoryTable.setAdapter(ledgerAdapter);
+        // RESTORED: TableLayout instantiation
+        tlHistoryTable = findViewById(R.id.tlHistoryTable);
 
         tabContainerMatrix = findViewById(R.id.tabContainerMatrix);
         tabContainerCollect = findViewById(R.id.tabContainerCollect);
@@ -257,7 +248,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.menu_new_chit) { dialogEngine.showNewChitDialog(); return true; }
         if (item.getItemId() == R.id.menu_log_advance) { dialogEngine.showLogAdvanceDialog(); return true; }
-        if (item.getItemId() == R.id.menu_delete_chit) { showDeleteChitSelectionDialog(); return true; }
+        if (item.getItemId() == R.id.menu_delete_chit) { dialogEngine.showDeleteChitSelectionDialog(); return true; }
         if (item.getItemId() == 1001) { dialogEngine.showAddNotesDialog(); return true; }
         return super.onOptionsItemSelected(item);
     }
@@ -741,64 +732,93 @@ public class MainActivity extends AppCompatActivity {
         btnSelectInstallments.setText("Tap to Select Installments");
     }
 
+    // RESTORED: Stable TableLayout Transaction History Logic
     public void refreshTransactionHistory() {
-        ViewGroup parentGroup = findViewById(R.id.llLedgerTableWrapper);
-        
-        if (parentGroup != null && parentGroup.findViewById(9999) == null) {
-            LinearLayout headRow = new LinearLayout(this);
-            headRow.setId(9999);
-            headRow.setBackgroundResource(R.drawable.table_header_bg);
-            headRow.setPadding(6, 12, 6, 12);
-            headRow.setOrientation(LinearLayout.HORIZONTAL);
+        tlHistoryTable.removeAllViews();
+        TableRow headRow = new TableRow(this);
+        headRow.setBackgroundResource(R.drawable.table_header_bg);
+        headRow.setPadding(6, 12, 6, 12);
 
-            String[] headers = {"Date", "Chit Group", "Member Name", "Inst.", "Amount Paid"};
-            
-            float density = getResources().getDisplayMetrics().density;
-            int[] widthsDp = {100, 140, 140, 80, 120}; 
+        android.graphics.drawable.GradientDrawable ledgerDivider = new android.graphics.drawable.GradientDrawable();
+        ledgerDivider.setColor(Color.parseColor("#CBD5E1")); ledgerDivider.setSize(2, 2);
+        tlHistoryTable.setShowDividers(TableLayout.SHOW_DIVIDER_MIDDLE);
+        tlHistoryTable.setDividerDrawable(ledgerDivider);
 
-            for (int i=0; i<headers.length; i++) {
-                TextView tv = new TextView(this); 
-                tv.setText(headers[i]); 
-                tv.setPadding(10, 16, 10, 16); 
-                tv.setTextColor(Color.WHITE); 
-                tv.setTypeface(null, Typeface.BOLD); 
-                tv.setGravity(Gravity.CENTER);
-                
-                int widthPx = (int) (widthsDp[i] * density);
-                LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(widthPx, ViewGroup.LayoutParams.WRAP_CONTENT);
-                tv.setLayoutParams(hLp);
-                headRow.addView(tv);
-            }
-            parentGroup.addView(headRow, 0);
+        String[] headers = {"Date", "Chit Group", "Member Name", "Inst.", "Amount Paid"};
+        for (String h : headers) {
+            TextView tv = new TextView(this); tv.setText(h); tv.setPadding(20, 16, 20, 16); tv.setTextColor(Color.WHITE); tv.setTypeface(null, Typeface.BOLD); 
+            if (h.equals("Member Name") || h.equals("Amount Paid")) tv.setGravity(Gravity.CENTER);
+            headRow.addView(tv);
         }
+        tlHistoryTable.addView(headRow);
 
         firestore.collection("payments").orderBy("timestamp", Query.Direction.DESCENDING).addSnapshotListener((value, error) -> {
             if (value == null) return;
+            tlHistoryTable.removeAllViews();
+            tlHistoryTable.addView(headRow);
 
             double runningCashTotal = 0;
             int transactionEntriesCount = 0;
-            ArrayList<LedgerComponents.LedgerTransaction> newData = new ArrayList<>();
 
             for (QueryDocumentSnapshot doc : value) {
                 String cId = doc.getString("chitId");
                 if (!"ALL".equals(historyFilterChitId) && !historyFilterChitId.equals(cId)) continue;
                 
                 String rawMemName = doc.getString("member_name");
+
                 double amountPaid = doc.getDouble("amount") != null ? doc.getDouble("amount") : 0.0;
                 runningCashTotal += amountPaid;
                 transactionEntriesCount++;
 
-                String date = doc.getString("date");
+                TableRow tr = new TableRow(this);
+                tr.setPadding(6, 8, 6, 8);
+
+                TextView tvDate = new TextView(this); tvDate.setText(doc.getString("date")); tvDate.setPadding(20, 16, 20, 16); tvDate.setTextColor(Color.parseColor("#475569")); tr.addView(tvDate);
+                
                 String cName = "Unknown Group";
                 for (LedgerComponents.CloudChitItem item : globalChitsList) { if (item.id.equals(cId)) cName = item.name; }
-                String notes = doc.getString("notes");
-                long instNum = doc.getLong("installment_num") != null ? doc.getLong("installment_num") : 0;
 
-                newData.add(new LedgerComponents.LedgerTransaction(date, cName, rawMemName, notes, instNum, amountPaid));
+                TextView tvChit = new TextView(this); tvChit.setText(cName); tvChit.setPadding(20, 16, 20, 16); tvChit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); tvChit.setTextColor(Color.parseColor("#1E293B")); tr.addView(tvChit);
+                
+                LinearLayout memLayout = new LinearLayout(this);
+                memLayout.setOrientation(LinearLayout.VERTICAL);
+                memLayout.setGravity(Gravity.CENTER);
+                
+                TextView tvMem = new TextView(this); 
+                tvMem.setText(rawMemName); 
+                tvMem.setPadding(20, 16, 20, 16); 
+                tvMem.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); 
+                tvMem.setTextColor(Color.parseColor("#1E293B")); 
+                tvMem.setGravity(Gravity.CENTER); 
+                memLayout.addView(tvMem);
+                
+                String note = doc.getString("notes");
+                if (note != null && !note.trim().isEmpty()) {
+                    tvMem.setPadding(20, 16, 20, 0); 
+                    TextView tvNote = new TextView(this);
+                    tvNote.setText("📝 " + note);
+                    tvNote.setTextSize(11);
+                    tvNote.setTextColor(Color.parseColor("#64748B"));
+                    tvNote.setPadding(20, 0, 20, 16);
+                    tvNote.setGravity(Gravity.CENTER);
+                    memLayout.addView(tvNote);
+                }
+                tr.addView(memLayout);
+                
+                LinearLayout badgeWrapper = new LinearLayout(this); badgeWrapper.setPadding(10, 6, 10, 6); badgeWrapper.setGravity(Gravity.CENTER);
+                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(14, 4, 14, 4); tvInst.setTextColor(Color.parseColor("#475569")); tvInst.setBackgroundResource(R.drawable.badge_unpaid_bg);
+                badgeWrapper.addView(tvInst); tr.addView(badgeWrapper);
+                
+                TextView tvAmt = new TextView(this); 
+                tvAmt.setText("₹" + String.format(Locale.getDefault(), "%,.1f", amountPaid)); 
+                tvAmt.setPadding(20, 16, 20, 16); 
+                tvAmt.setTypeface(null, Typeface.BOLD); 
+                tvAmt.setTextColor(Color.parseColor("#047857")); 
+                tvAmt.setGravity(Gravity.CENTER); 
+                tr.addView(tvAmt);
+
+                tlHistoryTable.addView(tr);
             }
-
-            currentLedgerData = newData;
-            ledgerAdapter.updateData(currentLedgerData);
             tvHistorySummary.setText("Total Funds Collected: ₹" + String.format(Locale.getDefault(), "%,.1f", runningCashTotal) + "  |  Total Transactions: " + transactionEntriesCount);
         });
     }
@@ -1235,76 +1255,5 @@ public class MainActivity extends AppCompatActivity {
             };
             notesAnimationHandler.postDelayed(notesAnimationRunnable, 4500);
         }
-    }
-
-    public void showDeleteChitSelectionDialog() {
-        if (globalChitsList == null || globalChitsList.isEmpty()) {
-            Toast.makeText(this, "No Chit Fund groups available to delete.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        String[] chitNames = new String[globalChitsList.size()];
-        for (int i = 0; i < globalChitsList.size(); i++) {
-            chitNames[i] = globalChitsList.get(i).name;
-        }
-
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Select Chit Group to Delete")
-                .setItems(chitNames, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        LedgerComponents.CloudChitItem chosenChit = globalChitsList.get(which);
-                        showFinalDeleteConfirmationDialog(chosenChit.id, chosenChit.name);
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void showFinalDeleteConfirmationDialog(final String targetedDeleteId, String chitName) {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Delete \"" + chitName + "\"?")
-                .setMessage("Are you sure you want to permanently delete this group? All ledger logs, member lists, payments, and advances will be completely wiped from the cloud.")
-                .setPositiveButton("Delete Permanently", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        executeCloudChitDeletion(targetedDeleteId);
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void executeCloudChitDeletion(final String targetedDeleteId) {
-        firestore.collection("chits").document(targetedDeleteId).delete()
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(MainActivity.this, "Chit Group deleted successfully!", Toast.LENGTH_SHORT).show();
-                    
-                    if (targetedDeleteId.equals(chitId)) {
-                        chitId = null;
-                        globalMembersList.clear();
-                        tlFundTable.removeAllViews();
-                        tvFundTitle.setText("No active Chit Fund found. Create one using the menu!");
-                        llFormContainer.setVisibility(View.GONE);
-                    }
-
-                    firestore.collection("members").whereEqualTo("chitId", targetedDeleteId).get()
-                            .addOnSuccessListener(snapshots -> {
-                                for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
-                            });
-
-                    firestore.collection("payments").whereEqualTo("chitId", targetedDeleteId).get()
-                            .addOnSuccessListener(snapshots -> {
-                                for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
-                            });
-
-                    firestore.collection("advances").whereEqualTo("chitId", targetedDeleteId).get()
-                            .addOnSuccessListener(snapshots -> {
-                                for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
-                            });
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
     }
 }
