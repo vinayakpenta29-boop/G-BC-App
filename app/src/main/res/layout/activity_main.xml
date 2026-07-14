@@ -286,8 +286,8 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG -->
-        <androidx.core.widget.NestedScrollView
+        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG (RESTORED TO ORIGINAL FULL CARD SCROLL) -->
+        <ScrollView
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -305,16 +305,11 @@
                 app:cardPreventCornerOverlap="true"
                 app:strokeWidth="0dp">
 
-                <!-- FIX: Added focusable="true" to this layout. This creates a "Focus Trap" so the RecyclerView cannot steal focus and cause the screen to jump -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingTop="20dp"
-                    android:paddingStart="20dp"
-                    android:paddingEnd="20dp"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -359,38 +354,18 @@
                         android:textSize="13sp"
                         android:layout_marginBottom="18dp"/>
 
-                    <!-- FIX: blocksDescendants physically prevents the table from asking the screen to auto-scroll to it -->
                     <HorizontalScrollView
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fillViewport="true"
-                        android:focusable="false"
-                        android:descendantFocusability="blocksDescendants">
-                        
-                        <LinearLayout
-                            android:id="@+id/llLedgerTableWrapper"
+                        android:layout_height="wrap_content">
+                        <TableLayout
+                            android:id="@+id/tlHistoryTable"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical">
-                            
-                            <!-- Header automatically injected here by Java -->
-
-                            <androidx.recyclerview.widget.RecyclerView
-                                android:id="@+id/rvHistoryTable"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:nestedScrollingEnabled="false"
-                                android:overScrollMode="never"
-                                android:clipToPadding="false"
-                                android:focusable="false"
-                                android:paddingBottom="20dp" />
-
-                        </LinearLayout>
+                            android:stretchColumns="*" />
                     </HorizontalScrollView>
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-        </androidx.core.widget.NestedScrollView>
+        </ScrollView>
 
         <!-- TAB POSITION 3 CONTENT: RECORDED MEMBER ADVANCES -->
         <ScrollView
