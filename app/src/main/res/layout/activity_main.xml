@@ -287,7 +287,6 @@
         </ScrollView>
 
         <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG -->
-        <!-- THE FIX: Upgraded to NestedScrollView to correctly expand the RecyclerView height -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
@@ -306,13 +305,16 @@
                 app:cardPreventCornerOverlap="true"
                 app:strokeWidth="0dp">
 
+                <!-- FIX: Added focusable="true" to this layout. This creates a "Focus Trap" so the RecyclerView cannot steal focus and cause the screen to jump -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:paddingTop="20dp"
                     android:paddingStart="20dp"
-                    android:paddingEnd="20dp">
+                    android:paddingEnd="20dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -357,10 +359,13 @@
                         android:textSize="13sp"
                         android:layout_marginBottom="18dp"/>
 
+                    <!-- FIX: blocksDescendants physically prevents the table from asking the screen to auto-scroll to it -->
                     <HorizontalScrollView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:fillViewport="true">
+                        android:fillViewport="true"
+                        android:focusable="false"
+                        android:descendantFocusability="blocksDescendants">
                         
                         <LinearLayout
                             android:id="@+id/llLedgerTableWrapper"
@@ -370,7 +375,6 @@
                             
                             <!-- Header automatically injected here by Java -->
 
-                            <!-- THE FIX: wrap_content and overScrollMode="never" ensures it fills the NestedScrollView completely -->
                             <androidx.recyclerview.widget.RecyclerView
                                 android:id="@+id/rvHistoryTable"
                                 android:layout_width="wrap_content"
@@ -378,6 +382,7 @@
                                 android:nestedScrollingEnabled="false"
                                 android:overScrollMode="never"
                                 android:clipToPadding="false"
+                                android:focusable="false"
                                 android:paddingBottom="20dp" />
 
                         </LinearLayout>
