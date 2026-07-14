@@ -1,5 +1,7 @@
 package com.example.chitfund;
 
+import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -15,8 +17,11 @@ import android.widget.ScrollView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.AutoCompleteTextView;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -84,6 +89,9 @@ public class MainActivity extends AppCompatActivity {
     public HashMap<String, String> globalChitStartDatesCache = new HashMap<>();
     public HashMap<String, String> globalChitFrequenciesCache = new HashMap<>();
     public HashMap<String, Integer> globalChitInstallmentsCountCache = new HashMap<>();
+    
+    // RESTORED: Missing Variable
+    public ArrayList<Double> baseChitInstallmentAmounts = new ArrayList<>(); 
     
     private ArrayList<android.animation.ValueAnimator> activeSnakeAnimators = new ArrayList<>();
     private android.animation.ValueAnimator globalSummaryAnimator = null; 
@@ -249,7 +257,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.menu_new_chit) { dialogEngine.showNewChitDialog(); return true; }
         if (item.getItemId() == R.id.menu_log_advance) { dialogEngine.showLogAdvanceDialog(); return true; }
-        if (item.getItemId() == R.id.menu_delete_chit) { dialogEngine.showDeleteChitSelectionDialog(); return true; }
+        if (item.getItemId() == R.id.menu_delete_chit) { showDeleteChitSelectionDialog(); return true; }
         if (item.getItemId() == 1001) { dialogEngine.showAddNotesDialog(); return true; }
         return super.onOptionsItemSelected(item);
     }
@@ -1227,5 +1235,76 @@ public class MainActivity extends AppCompatActivity {
             };
             notesAnimationHandler.postDelayed(notesAnimationRunnable, 4500);
         }
+    }
+
+    public void showDeleteChitSelectionDialog() {
+        if (globalChitsList == null || globalChitsList.isEmpty()) {
+            Toast.makeText(this, "No Chit Fund groups available to delete.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] chitNames = new String[globalChitsList.size()];
+        for (int i = 0; i < globalChitsList.size(); i++) {
+            chitNames[i] = globalChitsList.get(i).name;
+        }
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Select Chit Group to Delete")
+                .setItems(chitNames, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        LedgerComponents.CloudChitItem chosenChit = globalChitsList.get(which);
+                        showFinalDeleteConfirmationDialog(chosenChit.id, chosenChit.name);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showFinalDeleteConfirmationDialog(final String targetedDeleteId, String chitName) {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Delete \"" + chitName + "\"?")
+                .setMessage("Are you sure you want to permanently delete this group? All ledger logs, member lists, payments, and advances will be completely wiped from the cloud.")
+                .setPositiveButton("Delete Permanently", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        executeCloudChitDeletion(targetedDeleteId);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void executeCloudChitDeletion(final String targetedDeleteId) {
+        firestore.collection("chits").document(targetedDeleteId).delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(MainActivity.this, "Chit Group deleted successfully!", Toast.LENGTH_SHORT).show();
+                    
+                    if (targetedDeleteId.equals(chitId)) {
+                        chitId = null;
+                        globalMembersList.clear();
+                        tlFundTable.removeAllViews();
+                        tvFundTitle.setText("No active Chit Fund found. Create one using the menu!");
+                        llFormContainer.setVisibility(View.GONE);
+                    }
+
+                    firestore.collection("members").whereEqualTo("chitId", targetedDeleteId).get()
+                            .addOnSuccessListener(snapshots -> {
+                                for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
+                            });
+
+                    firestore.collection("payments").whereEqualTo("chitId", targetedDeleteId).get()
+                            .addOnSuccessListener(snapshots -> {
+                                for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
+                            });
+
+                    firestore.collection("advances").whereEqualTo("chitId", targetedDeleteId).get()
+                            .addOnSuccessListener(snapshots -> {
+                                for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 }
