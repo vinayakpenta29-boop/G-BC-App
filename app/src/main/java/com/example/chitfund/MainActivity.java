@@ -753,7 +753,6 @@ public class MainActivity extends AppCompatActivity {
             row.setBackgroundColor(Color.parseColor("#FFF7ED"));
 
             TextView tvName = new TextView(this); 
-            // FIX: Removed the "ℹ️ Details" text string completely to save vertical space
             tvName.setText(item.name); 
             tvName.setPadding(20, 12, 20, 12); 
             tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
@@ -768,7 +767,6 @@ public class MainActivity extends AppCompatActivity {
 
             final String targetName = item.name;
 
-            // The click listener is maintained so tapping the name still opens the details
             tvName.setOnClickListener(v -> generateAndShowSummary(id));
 
             row.addView(tvName);
@@ -816,7 +814,7 @@ public class MainActivity extends AppCompatActivity {
         return 0.0;
     }
 
-public void syncCurrentChitContextFromCloud() {
+    public void syncCurrentChitContextFromCloud() {
         if (chitId == null) return;
 
         firestore.collection("chits").document(chitId).get().addOnSuccessListener(doc -> {
@@ -826,32 +824,45 @@ public void syncCurrentChitContextFromCloud() {
             totalInstallmentsCount = doc.getLong("installments").intValue();
             firstInstallmentDateStr = doc.getString("startDate");
             
-            // 1. Set just the main title text (without the new line)
             tvFundTitle.setText("Chit Fund Matrix: " + doc.getString("name"));
             tvFundTitle.setOnClickListener(v -> generateAndShowSummary(chitId));
             
-            // 2. DYNAMICALLY CREATE THE BADGE BUTTON
+            // DYNAMICALLY WRAP THE TITLE TO PUT THE BADGE NEXT TO IT
             ViewGroup parent = (ViewGroup) tvFundTitle.getParent();
-            TextView summaryBadge = parent.findViewWithTag("summaryBadge");
-            if (summaryBadge == null) {
-                summaryBadge = new TextView(MainActivity.this);
+            if (parent != null && !"headerWrapper".equals(parent.getTag())) {
+                int index = parent.indexOfChild(tvFundTitle);
+                parent.removeView(tvFundTitle);
+
+                LinearLayout horizontalWrapper = new LinearLayout(MainActivity.this);
+                horizontalWrapper.setTag("headerWrapper");
+                horizontalWrapper.setOrientation(LinearLayout.HORIZONTAL);
+                horizontalWrapper.setGravity(Gravity.CENTER_VERTICAL);
+                
+                LinearLayout.LayoutParams wrapperLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                wrapperLp.setMargins(0, 0, 0, (int)(12 * getResources().getDisplayMetrics().density));
+                horizontalWrapper.setLayoutParams(wrapperLp);
+
+                LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                tvFundTitle.setLayoutParams(titleLp);
+                horizontalWrapper.addView(tvFundTitle);
+
+                TextView summaryBadge = new TextView(MainActivity.this);
                 summaryBadge.setTag("summaryBadge");
-                summaryBadge.setText("Tap here for Full Summary");
-                summaryBadge.setTextSize(11); // Decreased text size
+                summaryBadge.setText("Full Summary");
+                summaryBadge.setTextSize(11);
                 summaryBadge.setTextColor(Color.parseColor("#475569")); 
-                summaryBadge.setBackgroundResource(R.drawable.badge_unpaid_bg); // Same curved background as "Pending"
-                summaryBadge.setPadding(24, 12, 24, 12);
+                summaryBadge.setBackgroundResource(R.drawable.badge_unpaid_bg);
+                summaryBadge.setPadding(24, 10, 24, 10);
                 
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                lp.setMargins(0, 0, 0, 12); 
-                summaryBadge.setLayoutParams(lp);
+                LinearLayout.LayoutParams badgeLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                badgeLp.setMargins((int)(12 * getResources().getDisplayMetrics().density), 0, 0, 0); 
+                summaryBadge.setLayoutParams(badgeLp);
                 
-                // Inject it directly below the tvFundTitle
-                int insertIndex = parent.indexOfChild(tvFundTitle) + 1;
-                parent.addView(summaryBadge, insertIndex);
+                summaryBadge.setOnClickListener(v -> generateAndShowSummary(chitId));
+                
+                horizontalWrapper.addView(summaryBadge);
+                parent.addView(horizontalWrapper, index);
             }
-            // Bind the click listener to the new custom badge
-            summaryBadge.setOnClickListener(v -> generateAndShowSummary(chitId));
             
             baseChitInstallmentAmounts = (ArrayList<Double>) doc.get("amounts");
             globalMembersList = globalChitMembersCache.get(chitId);
