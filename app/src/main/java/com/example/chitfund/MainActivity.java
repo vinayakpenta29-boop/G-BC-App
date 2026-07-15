@@ -242,7 +242,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.home_menu, menu);
-        // NEW FEATURE: Added View Full Summary to Top Menu
         menu.add(Menu.NONE, 1002, Menu.NONE, "View Full Summary").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
         menu.add(Menu.NONE, 1001, Menu.NONE, "Add Notes").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
         return true;
@@ -262,9 +261,6 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // =========================================================================================
-    // NEW ON-DEMAND SUMMARY ENGINE: Generates the pop-up for any Chit (Active or Completed)
-    // =========================================================================================
     public void generateAndShowSummary(String targetChitId) {
         if (targetChitId == null) return;
         
@@ -377,7 +373,6 @@ public class MainActivity extends AppCompatActivity {
                 if(i < weeklyStepsThisMonth.size() - 1) instSpannable.append(", ");
             }
         } else {
-            // NEW FEATURE: Accurately tags completed Chit Funds
             if (highestPassedOrCurrentStep == maxInst && previousArrearsChitPending == 0 && currentMonthChitPending == 0) {
                  instSpannable.append("COMPLETED 🎉");
                  instSpannable.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), 0, instSpannable.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -758,8 +753,7 @@ public class MainActivity extends AppCompatActivity {
             row.setBackgroundColor(Color.parseColor("#FFF7ED"));
 
             TextView tvName = new TextView(this); 
-            // NEW FEATURE: Added hint to tap matrix row to view details
-            tvName.setText(item.name + "\nℹ️ Details"); 
+            tvName.setText(item.name); 
             tvName.setPadding(20, 12, 20, 12); 
             tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
             
@@ -773,7 +767,6 @@ public class MainActivity extends AppCompatActivity {
 
             final String targetName = item.name;
 
-            // Clicking row runs the dynamic generation engine
             tvName.setOnClickListener(v -> generateAndShowSummary(id));
 
             row.addView(tvName);
@@ -831,7 +824,6 @@ public class MainActivity extends AppCompatActivity {
             totalInstallmentsCount = doc.getLong("installments").intValue();
             firstInstallmentDateStr = doc.getString("startDate");
             
-            // NEW FEATURE: Added hint so users know Matrix title is clickable
             tvFundTitle.setText("Chit Fund Matrix: " + doc.getString("name") + "\n(Tap here for Full Summary)");
             tvFundTitle.setOnClickListener(v -> generateAndShowSummary(chitId));
             
@@ -857,7 +849,6 @@ public class MainActivity extends AppCompatActivity {
         btnSelectInstallments.setText("Tap to Select Installments");
     }
 
-    // RESTORED: Stable TableLayout Transaction History Logic
     public void refreshTransactionHistory() {
         tlHistoryTable.removeAllViews();
         TableRow headRow = new TableRow(this);
@@ -1242,144 +1233,6 @@ public class MainActivity extends AppCompatActivity {
                 tlAdvancesTable.addView(tr);
             }
         });
-    }
-
-    public void refreshGlobalNoteCard() {
-        android.content.SharedPreferences prefs = getSharedPreferences("ChitPrefs", Context.MODE_PRIVATE);
-        java.util.Set<String> notesSet = prefs.getStringSet("global_notes_set", new java.util.HashSet<>());
-        
-        currentGlobalNotesList.clear();
-        currentGlobalNotesList.addAll(notesSet);
-
-        if (notesAnimationRunnable != null) {
-            notesAnimationHandler.removeCallbacks(notesAnimationRunnable);
-        }
-
-        if (globalNoteContainer == null) {
-            globalNoteContainer = new LinearLayout(this);
-            globalNoteContainer.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.setMargins(50, 40, 50, 30); 
-            globalNoteContainer.setLayoutParams(lp);
-
-            ViewGroup targetGroup = (ViewGroup) tabContainerCollect;
-            if (targetGroup instanceof ScrollView) {
-                targetGroup = (ViewGroup) ((ScrollView) targetGroup).getChildAt(0);
-            }
-            targetGroup.addView(globalNoteContainer, 0);
-        }
-
-        globalNoteContainer.removeAllViews();
-
-        if (currentGlobalNotesList.isEmpty()) {
-            globalNoteContainer.setVisibility(View.GONE);
-            return;
-        }
-
-        globalNoteContainer.setVisibility(View.VISIBLE);
-        
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.HORIZONTAL);
-        card.setPadding(50, 40, 50, 40);
-        card.setGravity(Gravity.CENTER_VERTICAL);
-
-        if (noteCardAnimator != null) {
-            noteCardAnimator.cancel();
-        }
-
-        float noteRadius = 16 * getResources().getDisplayMetrics().density; 
-        final PremiumUI.SnakeBorderDrawable snakeBg = new PremiumUI.SnakeBorderDrawable(Color.parseColor("#0F172A"), Color.WHITE, noteRadius);
-        card.setBackground(snakeBg);
-
-        card.setElevation(12f); 
-        card.setOutlineProvider(new android.view.ViewOutlineProvider() {
-            @Override
-            public void getOutline(View view, android.graphics.Outline outline) {
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), noteRadius);
-            }
-        });
-        card.setClipToOutline(true);
-
-        noteCardAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
-        noteCardAnimator.setDuration(1600); 
-        noteCardAnimator.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-        noteCardAnimator.setInterpolator(new android.view.animation.LinearInterpolator());
-        noteCardAnimator.addUpdateListener(animation -> {
-            snakeBg.setAnimationProgress(-(float) animation.getAnimatedValue());
-            card.postInvalidateOnAnimation();
-        });
-        noteCardAnimator.start();
-
-        TextView icon = new TextView(this);
-        icon.setText("📌");
-        icon.setTextSize(20);
-        icon.setPadding(0, 0, 30, 0);
-        card.addView(icon);
-
-        TextView tvNote = new TextView(this);
-        tvNote.setTextColor(Color.parseColor("#1E293B"));
-        tvNote.setTextSize(14f);
-        tvNote.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        tvNote.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        card.addView(tvNote);
-
-        globalNoteContainer.addView(card);
-
-        card.setOnTouchListener(new View.OnTouchListener() {
-            private float startX;
-            private float startTouchX;
-
-            @Override
-            public boolean onTouch(View view, android.view.MotionEvent event) {
-                switch (event.getAction()) {
-                    case android.view.MotionEvent.ACTION_DOWN:
-                        startX = view.getTranslationX();
-                        startTouchX = event.getRawX();
-                        view.getParent().requestDisallowInterceptTouchEvent(true);
-                        return true;
-                    case android.view.MotionEvent.ACTION_MOVE:
-                        float dX = event.getRawX() - startTouchX;
-                        if (dX > 0) { 
-                            view.setTranslationX(startX + dX);
-                            view.setAlpha(1f - (dX / view.getWidth()));
-                        }
-                        return true;
-                    case android.view.MotionEvent.ACTION_UP:
-                    case android.view.MotionEvent.ACTION_CANCEL:
-                        view.getParent().requestDisallowInterceptTouchEvent(false);
-                        if (view.getTranslationX() > view.getWidth() / 3) {
-                            view.animate().translationX(view.getWidth()).alpha(0).setDuration(250)
-                                    .withEndAction(() -> {
-                                        globalNoteContainer.setVisibility(View.GONE);
-                                        view.setTranslationX(0);
-                                        view.setAlpha(1);
-                                    }).start();
-                        } else { 
-                            view.animate().translationX(0).alpha(1).setDuration(250).start();
-                        }
-                        return true;
-                }
-                return false;
-            }
-        });
-
-        currentGlobalNoteIndex = 0;
-        tvNote.setText(currentGlobalNotesList.get(currentGlobalNoteIndex));
-        
-        if (currentGlobalNotesList.size() > 1) {
-            notesAnimationRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    tvNote.animate().alpha(0f).setDuration(600).withEndAction(() -> {
-                        currentGlobalNoteIndex = (currentGlobalNoteIndex + 1) % currentGlobalNotesList.size();
-                        tvNote.setText(currentGlobalNotesList.get(currentGlobalNoteIndex));
-                        tvNote.animate().alpha(1f).setDuration(600).start();
-                    }).start();
-                    notesAnimationHandler.postDelayed(this, 4500);
-                }
-            };
-            notesAnimationHandler.postDelayed(notesAnimationRunnable, 4500);
-        }
     }
 
     public void showDeleteChitSelectionDialog() {
