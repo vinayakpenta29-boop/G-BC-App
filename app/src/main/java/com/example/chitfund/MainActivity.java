@@ -242,6 +242,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.home_menu, menu);
+        // NEW FEATURE: Added View Full Summary to Top Menu
+        menu.add(Menu.NONE, 1002, Menu.NONE, "View Full Summary").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
         menu.add(Menu.NONE, 1001, Menu.NONE, "Add Notes").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
         return true;
     }
@@ -252,7 +254,159 @@ public class MainActivity extends AppCompatActivity {
         if (item.getItemId() == R.id.menu_log_advance) { dialogEngine.showLogAdvanceDialog(); return true; }
         if (item.getItemId() == R.id.menu_delete_chit) { showDeleteChitSelectionDialog(); return true; }
         if (item.getItemId() == 1001) { dialogEngine.showAddNotesDialog(); return true; }
+        if (item.getItemId() == 1002) { 
+            if (chitId != null) generateAndShowSummary(chitId); 
+            else Toast.makeText(this, "Please select a Chit Fund first.", Toast.LENGTH_SHORT).show();
+            return true; 
+        }
         return super.onOptionsItemSelected(item);
+    }
+
+    // =========================================================================================
+    // NEW ON-DEMAND SUMMARY ENGINE: Generates the pop-up for any Chit (Active or Completed)
+    // =========================================================================================
+    public void generateAndShowSummary(String targetChitId) {
+        if (targetChitId == null) return;
+        
+        String name = "";
+        for (LedgerComponents.CloudChitItem item : globalChitsList) {
+            if (item.id.equals(targetChitId)) { name = item.name; break; }
+        }
+        
+        if (!globalChitStartDatesCache.containsKey(targetChitId)) return;
+
+        String startStr = globalChitStartDatesCache.get(targetChitId);
+        String freq = globalChitFrequenciesCache.get(targetChitId);
+        int maxInst = globalChitInstallmentsCountCache.get(targetChitId);
+        ArrayList<String> members = globalChitMembersCache.get(targetChitId);
+        if (members == null) members = new ArrayList<>();
+
+        double currentMonthChitPending = 0.0;
+        double previousArrearsChitPending = 0.0;
+        boolean hasMilestoneThisMonth = false;
+        int highestPassedOrCurrentStep = 0;
+
+        boolean isUpcomingHalfYearly = false;
+        int upcomingStepNumber = 0;
+
+        double calcTotalPlanAmount = 0.0;
+        double calcTotalPaidAmount = 0.0;
+        int calcPaidInstCount = 0; 
+        ArrayList<Double> dynamicPlanBreakdown = new ArrayList<>();
+        ArrayList<Integer> pendingStepsList = new ArrayList<>();
+        
+        ArrayList<Integer> weeklyStepsThisMonth = new ArrayList<>();
+        ArrayList<Integer> activeStepsList = new ArrayList<>(); 
+
+        Calendar todayCal = Calendar.getInstance();
+
+        try {
+            Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
+            Calendar cal = Calendar.getInstance();
+            
+            for (int step = 1; step <= maxInst; step++) {
+                int idx = step - 1;
+                cal.setTime(d);
+                if ("Monthly".equals(freq)) {
+                    cal.add(Calendar.MONTH, idx);
+                } else if ("Half Yearly".equals(freq)) {
+                    cal.add(Calendar.MONTH, idx * 6);
+                } else {
+                    cal.add(Calendar.DATE, idx * 7);
+                }
+
+                boolean isPast = false;
+                boolean isCurrent = false;
+
+                int cY = cal.get(Calendar.YEAR);
+                int tY = todayCal.get(Calendar.YEAR);
+                int cM = cal.get(Calendar.MONTH);
+                int tM = todayCal.get(Calendar.MONTH);
+
+                int nextMonthY = tM == Calendar.DECEMBER ? tY + 1 : tY;
+                int nextMonthM = tM == Calendar.DECEMBER ? Calendar.JANUARY : tM + 1;
+
+                if (cY == tY && cM == tM) {
+                    isCurrent = true;
+                    hasMilestoneThisMonth = true;
+                    if ("Weekly".equals(freq)) weeklyStepsThisMonth.add(step);
+                } else if (cY < tY || (cY == tY && cM < tM)) {
+                    isPast = true;
+                } else if ("Half Yearly".equals(freq) && cY == nextMonthY && cM == nextMonthM) {
+                    isUpcomingHalfYearly = true;
+                    upcomingStepNumber = step;
+                }
+
+                if (isCurrent || isPast) highestPassedOrCurrentStep = step;
+                if (isCurrent) activeStepsList.add(step);
+
+                double stepExpectedTotal = 0.0;
+                boolean stepIsPending = false;
+
+                for (String mName : members) {
+                    double stepAmt = getSpecificCachedMemberInstallmentAmount(targetChitId, mName, step);
+                    stepExpectedTotal += stepAmt;
+
+                    String payKey = targetChitId + "_" + mName + "_" + step;
+                    double paidAmt = globalPaymentsCache.containsKey(payKey) ? globalPaymentsCache.get(payKey) : 0.0;
+                    
+                    if (paidAmt < stepAmt) {
+                        double pendingForThisStep = stepAmt - paidAmt;
+                        if (isCurrent || isPast) stepIsPending = true;
+                        if (isCurrent) currentMonthChitPending += pendingForThisStep;
+                        else if (isPast) previousArrearsChitPending += pendingForThisStep;
+                    } 
+                    
+                    calcTotalPaidAmount += paidAmt;
+                    if (paidAmt >= stepAmt && stepAmt > 0) calcPaidInstCount++; 
+                }
+                
+                dynamicPlanBreakdown.add(stepExpectedTotal);
+                calcTotalPlanAmount += stepExpectedTotal;
+                if (stepIsPending) pendingStepsList.add(step);
+            }
+        } catch (Exception ignored) {}
+
+        double totalChitOutstanding = currentMonthChitPending + previousArrearsChitPending;
+        android.text.SpannableStringBuilder instSpannable = new android.text.SpannableStringBuilder();
+
+        if ("Weekly".equals(freq) && !weeklyStepsThisMonth.isEmpty()) {
+            for(int i=0; i < weeklyStepsThisMonth.size(); i++) {
+                int currentStep = weeklyStepsThisMonth.get(i);
+                instSpannable.append("#").append(String.valueOf(currentStep));
+                if(i < weeklyStepsThisMonth.size() - 1) instSpannable.append(", ");
+            }
+        } else {
+            // NEW FEATURE: Accurately tags completed Chit Funds
+            if (highestPassedOrCurrentStep == maxInst && previousArrearsChitPending == 0 && currentMonthChitPending == 0) {
+                 instSpannable.append("COMPLETED 🎉");
+                 instSpannable.setSpan(new android.text.style.ForegroundColorSpan(Color.parseColor("#15803D")), 0, instSpannable.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            } else {
+                int displayInstNumber = hasMilestoneThisMonth ? highestPassedOrCurrentStep : Math.min(highestPassedOrCurrentStep + 1, maxInst);
+                instSpannable.append("#").append(String.valueOf(displayInstNumber));
+            }
+        }
+
+        final double totalAdvancesTaken = globalChitTotalAdvancesCache.containsKey(targetChitId) ? globalChitTotalAdvancesCache.get(targetChitId) : 0.0;
+        
+        ArrayList<String> advanceLogsList = new ArrayList<>();
+        for (String mName : members) {
+            String advKey = targetChitId + "_" + mName;
+            if (globalAdvanceStartCache.containsKey(advKey)) {
+                int aStep = globalAdvanceStartCache.get(advKey);
+                String aDate = globalAdvanceDateCache.containsKey(advKey) ? globalAdvanceDateCache.get(advKey) : "Unknown Date";
+                advanceLogsList.add(mName + " took Advance at Step #" + aStep + " on " + aDate);
+            }
+        }
+
+        final int targetRemainingInstCount = (maxInst * members.size()) - calcPaidInstCount; 
+        
+        PremiumUI.showPremiumChitSummaryDialog(this, 
+            name, startStr, freq, maxInst, instSpannable.toString(), 
+            members, currentMonthChitPending, previousArrearsChitPending, totalChitOutstanding, totalAdvancesTaken, 
+            dynamicPlanBreakdown, pendingStepsList, calcTotalPlanAmount, calcTotalPaidAmount, 
+            (calcTotalPlanAmount - calcTotalPaidAmount), advanceLogsList, calcPaidInstCount, targetRemainingInstCount, activeStepsList
+        );
     }
 
     private void initGlobalDatabaseSynchronizers() {
@@ -603,7 +757,11 @@ public class MainActivity extends AppCompatActivity {
             row.setPadding(4, 10, 4, 10);
             row.setBackgroundColor(Color.parseColor("#FFF7ED"));
 
-            TextView tvName = new TextView(this); tvName.setText(item.name); tvName.setPadding(20, 12, 20, 12); tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            TextView tvName = new TextView(this); 
+            // NEW FEATURE: Added hint to tap matrix row to view details
+            tvName.setText(item.name + "\nℹ️ Details"); 
+            tvName.setPadding(20, 12, 20, 12); 
+            tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
             
             if (previousArrearsChitPending > 0) {
                 tvName.setTextColor(Color.parseColor("#DC2626")); 
@@ -613,48 +771,10 @@ public class MainActivity extends AppCompatActivity {
                 tvName.setTextColor(Color.parseColor("#15803D")); 
             } 
 
-            final double totalAdvancesTaken = globalChitTotalAdvancesCache.containsKey(id) ? globalChitTotalAdvancesCache.get(id) : 0.0;
             final String targetName = item.name;
-            final String targetStartDate = startStr;
-            final String targetFreq = freq;
-            final int targetMaxInst = maxInst;
-            final ArrayList<String> targetMembers = members;
-            final double curMonthDues = currentMonthChitPending;
-            final double pastMonthDues = previousArrearsChitPending;
-            final double grossDues = totalChitOutstanding;
-            final double calcBalanceToPay = calcTotalPlanAmount - calcTotalPaidAmount;
 
-            ArrayList<String> advanceLogsList = new ArrayList<>();
-            for (String mName : members) {
-                String advKey = id + "_" + mName;
-                if (globalAdvanceStartCache.containsKey(advKey)) {
-                    int aStep = globalAdvanceStartCache.get(advKey);
-                    String aDate = globalAdvanceDateCache.containsKey(advKey) ? globalAdvanceDateCache.get(advKey) : "Unknown Date";
-                    advanceLogsList.add(mName + " took Advance at Step #" + aStep + " on " + aDate);
-                }
-            }
-
-            final double targetPlanAmount = calcTotalPlanAmount;
-            final double targetPaidAmount = calcTotalPaidAmount;
-            final double targetBalance = calcBalanceToPay;
-            final int targetPaidInstCount = calcPaidInstCount;
-            final int targetRemainingInstCount = (targetMaxInst * targetMembers.size()) - calcPaidInstCount; 
-            
-            final ArrayList<Double> targetPlanBreakdownList = dynamicPlanBreakdown;
-            final ArrayList<Integer> targetPendingSteps = pendingStepsList;
-            final ArrayList<String> targetAdvanceLogs = advanceLogsList;
-            final ArrayList<Integer> targetActiveSteps = activeStepsList; 
-            
-            final String targetActiveInstStr = instSpannable.toString();
-
-            tvName.setOnClickListener(v -> {
-                PremiumUI.showPremiumChitSummaryDialog(MainActivity.this, 
-                    targetName, targetStartDate, targetFreq, targetMaxInst, targetActiveInstStr, 
-                    targetMembers, curMonthDues, pastMonthDues, grossDues, totalAdvancesTaken, 
-                    targetPlanBreakdownList, targetPendingSteps, targetPlanAmount, targetPaidAmount, 
-                    targetBalance, targetAdvanceLogs, targetPaidInstCount, targetRemainingInstCount, targetActiveSteps
-                );
-            });
+            // Clicking row runs the dynamic generation engine
+            tvName.setOnClickListener(v -> generateAndShowSummary(id));
 
             row.addView(tvName);
             
@@ -710,7 +830,10 @@ public class MainActivity extends AppCompatActivity {
             frequencyType = doc.getString("frequency");
             totalInstallmentsCount = doc.getLong("installments").intValue();
             firstInstallmentDateStr = doc.getString("startDate");
-            tvFundTitle.setText("Chit Fund Matrix: " + doc.getString("name"));
+            
+            // NEW FEATURE: Added hint so users know Matrix title is clickable
+            tvFundTitle.setText("Chit Fund Matrix: " + doc.getString("name") + "\n(Tap here for Full Summary)");
+            tvFundTitle.setOnClickListener(v -> generateAndShowSummary(chitId));
             
             baseChitInstallmentAmounts = (ArrayList<Double>) doc.get("amounts");
             globalMembersList = globalChitMembersCache.get(chitId);
