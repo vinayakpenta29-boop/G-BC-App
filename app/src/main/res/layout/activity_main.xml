@@ -328,7 +328,7 @@
         </ScrollView>
 
         <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG -->
-        <androidx.core.widget.NestedScrollView
+        <ScrollView
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -412,22 +412,20 @@
                             android:layout_height="wrap_content"
                             android:orientation="vertical">
                             
-                            <androidx.recyclerview.widget.RecyclerView
-                                android:id="@+id/rvHistoryTable"
+                            <!-- THIS IS THE FIX: The missing ID reference has been restored! -->
+                            <TableLayout
+                                android:id="@+id/tlHistoryTable"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:nestedScrollingEnabled="false"
-                                android:overScrollMode="never"
-                                android:clipToPadding="false"
-                                android:focusable="false"
-                                android:paddingBottom="20dp" />
+                                android:paddingBottom="20dp"
+                                android:stretchColumns="*" />
 
                         </LinearLayout>
                     </HorizontalScrollView>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-        </androidx.core.widget.NestedScrollView>
+        </ScrollView>
 
         <!-- TAB POSITION 3 CONTENT: RECORDED MEMBER ADVANCES -->
         <ScrollView
