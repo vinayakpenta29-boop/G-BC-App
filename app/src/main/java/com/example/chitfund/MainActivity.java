@@ -253,11 +253,26 @@ public class MainActivity extends AppCompatActivity {
         if (item.getItemId() == R.id.menu_log_advance) { dialogEngine.showLogAdvanceDialog(); return true; }
         if (item.getItemId() == R.id.menu_delete_chit) { showDeleteChitSelectionDialog(); return true; }
         if (item.getItemId() == 1001) { dialogEngine.showAddNotesDialog(); return true; }
-        if (item.getItemId() == 1002) { 
-            if (chitId != null) generateAndShowSummary(chitId); 
-            else Toast.makeText(this, "Please select a Chit Fund first.", Toast.LENGTH_SHORT).show();
+                if (item.getItemId() == 1002) { 
+            if (globalChitsList == null || globalChitsList.isEmpty()) {
+                Toast.makeText(this, "No Chit Fund groups available.", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            String[] chitNames = new String[globalChitsList.size()];
+            for (int i = 0; i < globalChitsList.size(); i++) {
+                chitNames[i] = globalChitsList.get(i).name;
+            }
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("Select Chit Group for Summary")
+                    .setItems(chitNames, (dialog, which) -> {
+                        LedgerComponents.CloudChitItem chosenChit = globalChitsList.get(which);
+                        generateAndShowSummary(chosenChit.id);
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
             return true; 
         }
+
         return super.onOptionsItemSelected(item);
     }
 
