@@ -565,7 +565,7 @@ public class MainActivity extends AppCompatActivity {
         double aggregateCurrentPending = 0.0;
         double aggregatePreviousPending = 0.0;
         
-        // NEW FEATURE: The engine now calculates specifically against the calendar month requested by the user, rather than forcing the real-world current month.
+        // NEW FEATURE: The engine now calculates specifically against the calendar month requested by the user.
         Calendar todayCal = (Calendar) dashboardDisplayCalendar.clone();
 
         for (LedgerComponents.CloudChitItem item : globalChitsList) {
@@ -869,7 +869,6 @@ public class MainActivity extends AppCompatActivity {
             totalInstallmentsCount = doc.getLong("installments").intValue();
             firstInstallmentDateStr = doc.getString("startDate");
             
-            // Reverting layout wrapping logic for Matrix text
             ViewGroup parent = (ViewGroup) tvFundTitle.getParent();
             if (parent != null && "headerWrapper".equals(parent.getTag())) {
                 ViewGroup grandParent = (ViewGroup) parent.getParent();
