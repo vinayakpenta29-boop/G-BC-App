@@ -119,7 +119,48 @@
                         android:textColor="#0F172A"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        android:layout_marginBottom="16dp" />
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- NEW FEATURE: MONTH SWITCHER CONTROLS -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/badge_unpaid_bg"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:layout_marginBottom="16dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnPrevMonth"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="◀ Prev"
+                            android:textStyle="bold"
+                            android:textColor="#475569" />
+
+                        <TextView
+                            android:id="@+id/tvDashboardMonth"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Loading..."
+                            android:gravity="center"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="#0F172A" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnNextMonth"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Next ▶"
+                            android:textStyle="bold"
+                            android:textColor="#475569" />
+                    </LinearLayout>
 
                     <HorizontalScrollView
                         android:layout_width="match_parent"
@@ -286,8 +327,8 @@
             </com.google.android.material.card.MaterialCardView>
         </ScrollView>
 
-        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG (RESTORED TO ORIGINAL FULL CARD SCROLL) -->
-        <ScrollView
+        <!-- TAB POSITION 2 CONTENT: TRANSACTION LEDGER LOG -->
+        <androidx.core.widget.NestedScrollView
             android:id="@+id/tabContainerLedger"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -309,7 +350,11 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:paddingTop="20dp"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -356,16 +401,33 @@
 
                     <HorizontalScrollView
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
-                        <TableLayout
-                            android:id="@+id/tlHistoryTable"
+                        android:layout_height="wrap_content"
+                        android:fillViewport="true"
+                        android:focusable="false"
+                        android:descendantFocusability="blocksDescendants">
+                        
+                        <LinearLayout
+                            android:id="@+id/llLedgerTableWrapper"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:stretchColumns="*" />
+                            android:orientation="vertical">
+                            
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/rvHistoryTable"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:nestedScrollingEnabled="false"
+                                android:overScrollMode="never"
+                                android:clipToPadding="false"
+                                android:focusable="false"
+                                android:paddingBottom="20dp" />
+
+                        </LinearLayout>
                     </HorizontalScrollView>
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-        </ScrollView>
+        </androidx.core.widget.NestedScrollView>
 
         <!-- TAB POSITION 3 CONTENT: RECORDED MEMBER ADVANCES -->
         <ScrollView
