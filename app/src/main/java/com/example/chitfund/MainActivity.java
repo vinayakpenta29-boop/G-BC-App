@@ -51,6 +51,10 @@ public class MainActivity extends AppCompatActivity {
     private TableLayout tlGlobalSummaryTable; 
     private LinearLayout llGlobalSummaryContainer; 
     
+    // NEW FEATURE: State variable to track the currently viewed dashboard month
+    public Calendar dashboardDisplayCalendar = Calendar.getInstance();
+    public TextView tvDashboardMonth;
+    
     private LinearLayout llRemindersContainer; 
     public LinearLayout globalNoteContainer;
     public android.os.Handler notesAnimationHandler = new android.os.Handler();
@@ -123,6 +127,24 @@ public class MainActivity extends AppCompatActivity {
         llGlobalSummaryContainer = findViewById(R.id.llGlobalSummaryContainer);
         tvFundTitle = findViewById(R.id.tvFundTitle);
         llFormContainer = findViewById(R.id.llFormContainer);
+        
+        // NEW FEATURE: Find and wire the month switcher controls
+        tvDashboardMonth = findViewById(R.id.tvDashboardMonth);
+        Button btnPrevMonth = findViewById(R.id.btnPrevMonth);
+        Button btnNextMonth = findViewById(R.id.btnNextMonth);
+        updateDashboardMonthLabel();
+
+        btnPrevMonth.setOnClickListener(v -> {
+            dashboardDisplayCalendar.add(Calendar.MONTH, -1);
+            updateDashboardMonthLabel();
+            calculateGlobalMonthlyDuesEngine();
+        });
+
+        btnNextMonth.setOnClickListener(v -> {
+            dashboardDisplayCalendar.add(Calendar.MONTH, 1);
+            updateDashboardMonthLabel();
+            calculateGlobalMonthlyDuesEngine();
+        });
         
         tvHistorySummary = findViewById(R.id.tvHistorySummary);
         tlHistoryTable = findViewById(R.id.tlHistoryTable);
@@ -239,6 +261,13 @@ public class MainActivity extends AppCompatActivity {
         refreshTransactionHistory();
     }
 
+    // Updates the visual text showing what month is currently displayed
+    public void updateDashboardMonthLabel() {
+        if (tvDashboardMonth != null) {
+            tvDashboardMonth.setText(new SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(dashboardDisplayCalendar.getTime()));
+        }
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.home_menu, menu);
@@ -253,7 +282,7 @@ public class MainActivity extends AppCompatActivity {
         if (item.getItemId() == R.id.menu_log_advance) { dialogEngine.showLogAdvanceDialog(); return true; }
         if (item.getItemId() == R.id.menu_delete_chit) { showDeleteChitSelectionDialog(); return true; }
         if (item.getItemId() == 1001) { dialogEngine.showAddNotesDialog(); return true; }
-                if (item.getItemId() == 1002) { 
+        if (item.getItemId() == 1002) { 
             if (globalChitsList == null || globalChitsList.isEmpty()) {
                 Toast.makeText(this, "No Chit Fund groups available.", Toast.LENGTH_SHORT).show();
                 return true;
@@ -272,7 +301,6 @@ public class MainActivity extends AppCompatActivity {
                     .show();
             return true; 
         }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -536,7 +564,9 @@ public class MainActivity extends AppCompatActivity {
 
         double aggregateCurrentPending = 0.0;
         double aggregatePreviousPending = 0.0;
-        Calendar todayCal = Calendar.getInstance();
+        
+        // NEW FEATURE: The engine now calculates specifically against the calendar month requested by the user, rather than forcing the real-world current month.
+        Calendar todayCal = (Calendar) dashboardDisplayCalendar.clone();
 
         for (LedgerComponents.CloudChitItem item : globalChitsList) {
             String id = item.id;
@@ -768,7 +798,6 @@ public class MainActivity extends AppCompatActivity {
             row.setBackgroundColor(Color.parseColor("#FFF7ED"));
 
             TextView tvName = new TextView(this); 
-            // FIX: Removed the "ℹ️ Details" text string completely to save vertical space
             tvName.setText(item.name); 
             tvName.setPadding(20, 12, 20, 12); 
             tvName.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
@@ -783,7 +812,6 @@ public class MainActivity extends AppCompatActivity {
 
             final String targetName = item.name;
 
-            // The click listener is maintained so tapping the name still opens the details
             tvName.setOnClickListener(v -> generateAndShowSummary(id));
 
             row.addView(tvName);
@@ -831,7 +859,7 @@ public class MainActivity extends AppCompatActivity {
         return 0.0;
     }
 
-public void syncCurrentChitContextFromCloud() {
+    public void syncCurrentChitContextFromCloud() {
         if (chitId == null) return;
 
         firestore.collection("chits").document(chitId).get().addOnSuccessListener(doc -> {
@@ -841,32 +869,22 @@ public void syncCurrentChitContextFromCloud() {
             totalInstallmentsCount = doc.getLong("installments").intValue();
             firstInstallmentDateStr = doc.getString("startDate");
             
-            // 1. Set just the main title text (without the new line)
-            tvFundTitle.setText("Chit Fund Matrix: " + doc.getString("name"));
-            tvFundTitle.setOnClickListener(v -> generateAndShowSummary(chitId));
-            
-            // 2. DYNAMICALLY CREATE THE BADGE BUTTON
+            // Reverting layout wrapping logic for Matrix text
             ViewGroup parent = (ViewGroup) tvFundTitle.getParent();
-            TextView summaryBadge = parent.findViewWithTag("summaryBadge");
-            if (summaryBadge == null) {
-                summaryBadge = new TextView(MainActivity.this);
-                summaryBadge.setTag("summaryBadge");
-                summaryBadge.setText("Tap here for Full Summary");
-                summaryBadge.setTextSize(11); // Decreased text size
-                summaryBadge.setTextColor(Color.parseColor("#475569")); 
-                summaryBadge.setBackgroundResource(R.drawable.badge_unpaid_bg); // Same curved background as "Pending"
-                summaryBadge.setPadding(24, 12, 24, 12);
+            if (parent != null && "headerWrapper".equals(parent.getTag())) {
+                ViewGroup grandParent = (ViewGroup) parent.getParent();
+                int index = grandParent.indexOfChild(parent);
+                parent.removeView(tvFundTitle);
+                grandParent.removeView(parent);
                 
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                lp.setMargins(0, 0, 0, 12); 
-                summaryBadge.setLayoutParams(lp);
-                
-                // Inject it directly below the tvFundTitle
-                int insertIndex = parent.indexOfChild(tvFundTitle) + 1;
-                parent.addView(summaryBadge, insertIndex);
+                LinearLayout.LayoutParams origLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                origLp.setMargins(0, 0, 0, (int)(12 * getResources().getDisplayMetrics().density));
+                tvFundTitle.setLayoutParams(origLp);
+                grandParent.addView(tvFundTitle, index);
             }
-            // Bind the click listener to the new custom badge
-            summaryBadge.setOnClickListener(v -> generateAndShowSummary(chitId));
+            
+            tvFundTitle.setText("Chit Fund Matrix: " + doc.getString("name") + "\n(Tap here for Full Summary)");
+            tvFundTitle.setOnClickListener(v -> generateAndShowSummary(chitId));
             
             baseChitInstallmentAmounts = (ArrayList<Double>) doc.get("amounts");
             globalMembersList = globalChitMembersCache.get(chitId);
