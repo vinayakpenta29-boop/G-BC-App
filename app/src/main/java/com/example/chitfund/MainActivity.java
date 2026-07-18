@@ -310,10 +310,11 @@ public class MainActivity extends AppCompatActivity {
                 String freq = globalChitFrequenciesCache.get(chosenChit.id);
                 int maxInst = globalChitInstallmentsCountCache.containsKey(chosenChit.id) ? globalChitInstallmentsCountCache.get(chosenChit.id) : 0;
                 
-                String displayTitle = chosenChit.name;
+                CharSequence displayTitle = chosenChit.name;
                 if (startStr != null && freq != null && maxInst > 0) {
                     displayTitle = getChitNameWithYear(chosenChit.name, startStr, freq, maxInst);
                 }
+
                 
                 TextView itemView = new TextView(this);
                 itemView.setText(displayTitle);
@@ -352,8 +353,8 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // NEW FEATURE: Calculates the start and end year dynamically for the titles
-    private String getChitNameWithYear(String baseName, String startStr, String freq, int maxInst) {
+    // NEW FEATURE: Calculates the start and end year dynamically WITH MULTI-COLOR SUPPORT
+    private CharSequence getChitNameWithYear(String baseName, String startStr, String freq, int maxInst) {
         try {
             Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
             Calendar startCal = Calendar.getInstance();
@@ -372,11 +373,23 @@ public class MainActivity extends AppCompatActivity {
             }
             int endYear = endCal.get(Calendar.YEAR);
 
+            String yearText;
             if (startYear == endYear) {
-                return baseName + " (" + startYear + ")";
+                yearText = "  (" + startYear + ")";
             } else {
-                return baseName + " (" + startYear + " - " + endYear + ")";
+                yearText = "  (" + startYear + " - " + endYear + ")";
             }
+
+            android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder(baseName);
+            int startIdx = ssb.length();
+            ssb.append(yearText);
+
+            // Paints the year text Gray/Blue (#64748B) and makes it slightly smaller (13sp)
+            ssb.setSpan(new android.text.style.ForegroundColorSpan(android.graphics.Color.parseColor("#64748B")), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            ssb.setSpan(new android.text.style.AbsoluteSizeSpan(13, true), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            
+            return ssb;
+
         } catch (Exception e) {
             return baseName; 
         }
@@ -518,7 +531,7 @@ public class MainActivity extends AppCompatActivity {
         final int targetRemainingInstCount = (maxInst * members.size()) - calcPaidInstCount; 
         
         // Calculate the title with the year span before sending to PremiumUI
-        String finalDisplayName = getChitNameWithYear(name, startStr, freq, maxInst);
+        CharSequence finalDisplayName = getChitNameWithYear(name, startStr, freq, maxInst);
         
         PremiumUI.showPremiumChitSummaryDialog(this, 
             finalDisplayName, startStr, freq, maxInst, instSpannable.toString(), 
