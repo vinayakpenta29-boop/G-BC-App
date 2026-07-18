@@ -71,7 +71,7 @@ public class PremiumUI {
         @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
     }
 
-    public static void showPremiumChitSummaryDialog(Context context, String name, String startDate, String freq, int maxInst, String activeInstStr, ArrayList<String> members, double curDues, double pastDues, double grossDues, double totalAdvances, ArrayList<Double> planBreakdown, ArrayList<Integer> pendingSteps, double totalPlanAmount, double totalPaid, double balanceAmount, ArrayList<String> advanceLogs, int paidInstCount, int remainingInstCount, ArrayList<Integer> activeSteps) {
+    public static void showPremiumChitSummaryDialog(Context context, CharSequence name, String startDate, String freq, int maxInst, String activeInstStr, ArrayList<String> members, double curDues, double pastDues, double grossDues, double totalAdvances, ArrayList<Double> planBreakdown, ArrayList<Integer> pendingSteps, double totalPlanAmount, double totalPaid, double balanceAmount, ArrayList<String> advanceLogs, int paidInstCount, int remainingInstCount, ArrayList<Integer> activeSteps) {
         ScrollView scrollView = new ScrollView(context);
         scrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         
