@@ -305,8 +305,18 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 0; i < globalChitsList.size(); i++) {
                 LedgerComponents.CloudChitItem chosenChit = globalChitsList.get(i);
                 
+                // Fetch details and calculate the dynamic year title
+                String startStr = globalChitStartDatesCache.get(chosenChit.id);
+                String freq = globalChitFrequenciesCache.get(chosenChit.id);
+                int maxInst = globalChitInstallmentsCountCache.containsKey(chosenChit.id) ? globalChitInstallmentsCountCache.get(chosenChit.id) : 0;
+                
+                String displayTitle = chosenChit.name;
+                if (startStr != null && freq != null && maxInst > 0) {
+                    displayTitle = getChitNameWithYear(chosenChit.name, startStr, freq, maxInst);
+                }
+                
                 TextView itemView = new TextView(this);
-                itemView.setText(chosenChit.name);
+                itemView.setText(displayTitle);
                 itemView.setPadding(40, 35, 40, 35);
                 itemView.setTextSize(15f);
                 itemView.setTextColor(Color.parseColor("#0F172A"));
@@ -340,6 +350,36 @@ public class MainActivity extends AppCompatActivity {
             return true; 
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    // NEW FEATURE: Calculates the start and end year dynamically for the titles
+    private String getChitNameWithYear(String baseName, String startStr, String freq, int maxInst) {
+        try {
+            Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
+            Calendar startCal = Calendar.getInstance();
+            startCal.setTime(d);
+            int startYear = startCal.get(Calendar.YEAR);
+
+            Calendar endCal = Calendar.getInstance();
+            endCal.setTime(d);
+            int idx = maxInst - 1;
+            if ("Monthly".equals(freq)) {
+                endCal.add(Calendar.MONTH, idx);
+            } else if ("Half Yearly".equals(freq)) {
+                endCal.add(Calendar.MONTH, idx * 6);
+            } else {
+                endCal.add(Calendar.DATE, idx * 7);
+            }
+            int endYear = endCal.get(Calendar.YEAR);
+
+            if (startYear == endYear) {
+                return baseName + " (" + startYear + ")";
+            } else {
+                return baseName + " (" + startYear + " - " + endYear + ")";
+            }
+        } catch (Exception e) {
+            return baseName; 
+        }
     }
 
     public void generateAndShowSummary(String targetChitId) {
@@ -477,9 +517,13 @@ public class MainActivity extends AppCompatActivity {
 
         final int targetRemainingInstCount = (maxInst * members.size()) - calcPaidInstCount; 
         
+        // Calculate the title with the year span before sending to PremiumUI
+        String finalDisplayName = getChitNameWithYear(name, startStr, freq, maxInst);
+        
         PremiumUI.showPremiumChitSummaryDialog(this, 
-            name, startStr, freq, maxInst, instSpannable.toString(), 
+            finalDisplayName, startStr, freq, maxInst, instSpannable.toString(), 
             members, currentMonthChitPending, previousArrearsChitPending, totalChitOutstanding, totalAdvancesTaken, 
+
             dynamicPlanBreakdown, pendingStepsList, calcTotalPlanAmount, calcTotalPaidAmount, 
             (calcTotalPlanAmount - calcTotalPaidAmount), advanceLogsList, calcPaidInstCount, targetRemainingInstCount, activeStepsList
         );
