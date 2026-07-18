@@ -287,18 +287,56 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "No Chit Fund groups available.", Toast.LENGTH_SHORT).show();
                 return true;
             }
-            String[] chitNames = new String[globalChitsList.size()];
+            
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+            builder.setTitle("Select Chit Group for Summary");
+            
+            ScrollView scrollView = new ScrollView(this);
+            LinearLayout listLayout = new LinearLayout(this);
+            listLayout.setOrientation(LinearLayout.VERTICAL);
+            listLayout.setPadding(50, 30, 50, 10);
+            scrollView.addView(listLayout);
+            
+            builder.setView(scrollView);
+            builder.setNegativeButton("Cancel", null);
+            
+            AlertDialog dialog = builder.create();
+            
             for (int i = 0; i < globalChitsList.size(); i++) {
-                chitNames[i] = globalChitsList.get(i).name;
+                LedgerComponents.CloudChitItem chosenChit = globalChitsList.get(i);
+                
+                TextView itemView = new TextView(this);
+                itemView.setText(chosenChit.name);
+                itemView.setPadding(40, 35, 40, 35);
+                itemView.setTextSize(15f);
+                itemView.setTextColor(Color.parseColor("#0F172A"));
+                itemView.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+                
+                // Creates a curved card-like background for each item
+                android.graphics.drawable.GradientDrawable itemBg = new android.graphics.drawable.GradientDrawable();
+                itemBg.setColor(Color.parseColor("#F8FAFC"));
+                itemBg.setStroke(2, Color.parseColor("#CBD5E1"));
+                itemBg.setCornerRadius(24f);
+                itemView.setBackground(itemBg);
+                
+                // Add margins between the cards
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                lp.setMargins(0, 0, 0, 24);
+                itemView.setLayoutParams(lp);
+                
+                itemView.setOnClickListener(v -> {
+                    generateAndShowSummary(chosenChit.id);
+                    dialog.dismiss();
+                });
+                
+                listLayout.addView(itemView);
             }
-            new MaterialAlertDialogBuilder(this)
-                    .setTitle("Select Chit Group for Summary")
-                    .setItems(chitNames, (dialog, which) -> {
-                        LedgerComponents.CloudChitItem chosenChit = globalChitsList.get(which);
-                        generateAndShowSummary(chosenChit.id);
-                    })
-                    .setNegativeButton("Cancel", null)
-                    .show();
+            
+            dialog.show();
+            // This applies the fully rounded corners to the popup dialog window itself
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
+            }
             return true; 
         }
         return super.onOptionsItemSelected(item);
