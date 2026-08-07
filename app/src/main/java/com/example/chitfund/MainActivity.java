@@ -51,7 +51,6 @@ public class MainActivity extends AppCompatActivity {
     private TableLayout tlGlobalSummaryTable; 
     private LinearLayout llGlobalSummaryContainer; 
     
-    // NEW FEATURE: State variable to track the currently viewed dashboard month
     public Calendar dashboardDisplayCalendar = Calendar.getInstance();
     public TextView tvDashboardMonth;
     
@@ -128,7 +127,6 @@ public class MainActivity extends AppCompatActivity {
         tvFundTitle = findViewById(R.id.tvFundTitle);
         llFormContainer = findViewById(R.id.llFormContainer);
         
-        // NEW FEATURE: Find and wire the month switcher controls
         tvDashboardMonth = findViewById(R.id.tvDashboardMonth);
         Button btnPrevMonth = findViewById(R.id.btnPrevMonth);
         Button btnNextMonth = findViewById(R.id.btnNextMonth);
@@ -262,7 +260,6 @@ public class MainActivity extends AppCompatActivity {
         refreshTransactionHistory();
     }
 
-    // Updates the visual text showing what month is currently displayed
     public void updateDashboardMonthLabel() {
         if (tvDashboardMonth != null) {
             tvDashboardMonth.setText(new SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(dashboardDisplayCalendar.getTime()));
@@ -306,7 +303,6 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 0; i < globalChitsList.size(); i++) {
                 LedgerComponents.CloudChitItem chosenChit = globalChitsList.get(i);
                 
-                // Fetch details and calculate the dynamic year title
                 String startStr = globalChitStartDatesCache.get(chosenChit.id);
                 String freq = globalChitFrequenciesCache.get(chosenChit.id);
                 int maxInst = globalChitInstallmentsCountCache.containsKey(chosenChit.id) ? globalChitInstallmentsCountCache.get(chosenChit.id) : 0;
@@ -315,7 +311,6 @@ public class MainActivity extends AppCompatActivity {
                 if (startStr != null && freq != null && maxInst > 0) {
                     displayTitle = getChitNameWithYear(chosenChit.name, startStr, freq, maxInst);
                 }
-
                 
                 TextView itemView = new TextView(this);
                 itemView.setText(displayTitle);
@@ -324,14 +319,12 @@ public class MainActivity extends AppCompatActivity {
                 itemView.setTextColor(Color.parseColor("#0F172A"));
                 itemView.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
                 
-                // Creates a curved card-like background for each item
                 android.graphics.drawable.GradientDrawable itemBg = new android.graphics.drawable.GradientDrawable();
                 itemBg.setColor(Color.parseColor("#F8FAFC"));
                 itemBg.setStroke(2, Color.parseColor("#CBD5E1"));
                 itemBg.setCornerRadius(24f);
                 itemView.setBackground(itemBg);
                 
-                // Add margins between the cards
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 lp.setMargins(0, 0, 0, 24);
                 itemView.setLayoutParams(lp);
@@ -345,7 +338,6 @@ public class MainActivity extends AppCompatActivity {
             }
             
             dialog.show();
-            // This applies the fully rounded corners to the popup dialog window itself
             if (dialog.getWindow() != null) {
                 dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_window_bg);
             }
@@ -354,7 +346,6 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // NEW FEATURE: Calculates the start and end year dynamically WITH MULTI-COLOR SUPPORT
     private CharSequence getChitNameWithYear(String baseName, String startStr, String freq, int maxInst) {
         try {
             Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(startStr);
@@ -384,8 +375,6 @@ public class MainActivity extends AppCompatActivity {
             android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder(baseName);
             int startIdx = ssb.length();
             ssb.append(yearText);
-
-            // Paints the year text Gray/Blue (#64748B) and makes it slightly smaller (13sp)
             ssb.setSpan(new android.text.style.ForegroundColorSpan(android.graphics.Color.parseColor("#64748B")), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             ssb.setSpan(new android.text.style.AbsoluteSizeSpan(13, true), startIdx, ssb.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             
@@ -531,18 +520,17 @@ public class MainActivity extends AppCompatActivity {
 
         final int targetRemainingInstCount = (maxInst * members.size()) - calcPaidInstCount; 
         
-        // Calculate the title with the year span before sending to PremiumUI
         CharSequence finalDisplayName = getChitNameWithYear(name, startStr, freq, maxInst);
         
         PremiumUI.showPremiumChitSummaryDialog(this, 
             finalDisplayName, startStr, freq, maxInst, instSpannable.toString(), 
             members, currentMonthChitPending, previousArrearsChitPending, totalChitOutstanding, totalAdvancesTaken, 
-
             dynamicPlanBreakdown, pendingStepsList, calcTotalPlanAmount, calcTotalPaidAmount, 
             (calcTotalPlanAmount - calcTotalPaidAmount), advanceLogsList, calcPaidInstCount, targetRemainingInstCount, activeStepsList
         );
     }
 
+    // FIX: Un-nested asynchronous listeners to eliminate memory leaks and race conditions
     private void initGlobalDatabaseSynchronizers() {
         firestore.collection("chits").addSnapshotListener((value, error) -> {
             if (value != null) {
@@ -670,7 +658,6 @@ public class MainActivity extends AppCompatActivity {
         double aggregateCurrentPending = 0.0;
         double aggregatePreviousPending = 0.0;
         
-        // NEW FEATURE: The engine now calculates specifically against the calendar month requested by the user.
         Calendar todayCal = (Calendar) dashboardDisplayCalendar.clone();
 
         for (LedgerComponents.CloudChitItem item : globalChitsList) {
@@ -964,6 +951,7 @@ public class MainActivity extends AppCompatActivity {
         return 0.0;
     }
 
+    // FIX: Using Synchronous Cache Access completely stops async rendering bugs!
     public void syncCurrentChitContextFromCloud() {
         if (chitId == null) return;
         if (!globalChitStartDatesCache.containsKey(chitId)) return;
