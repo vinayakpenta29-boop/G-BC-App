@@ -222,7 +222,8 @@ public class MainActivity extends AppCompatActivity {
 
         spChitSelector.setOnItemClickListener((parent, view, position, id) -> {
             LedgerComponents.CloudChitItem selected = (LedgerComponents.CloudChitItem) parent.getItemAtPosition(position);
-            if (selected != null && !selected.id.equals(chitId)) {
+            // Removed strict validation to force matrix refresh on click
+            if (selected != null) {
                 chitId = selected.id;
                 syncCurrentChitContextFromCloud();
             }
@@ -544,25 +545,29 @@ public class MainActivity extends AppCompatActivity {
 
     private void initGlobalDatabaseSynchronizers() {
         firestore.collection("chits").addSnapshotListener((value, error) -> {
-            if (value == null) return;
-            globalChitsList.clear();
-            globalChitStartDatesCache.clear();
-            globalChitFrequenciesCache.clear();
-            globalChitInstallmentsCountCache.clear();
-            globalChitAmountsCache.clear();
+            if (value != null) {
+                globalChitsList.clear();
+                globalChitStartDatesCache.clear();
+                globalChitFrequenciesCache.clear();
+                globalChitInstallmentsCountCache.clear();
+                globalChitAmountsCache.clear();
 
-            for (QueryDocumentSnapshot doc : value) {
-                String id = doc.getId();
-                globalChitsList.add(new LedgerComponents.CloudChitItem(id, doc.getString("name")));
-                globalChitStartDatesCache.put(id, doc.getString("startDate"));
-                globalChitFrequenciesCache.put(id, doc.getString("frequency"));
-                globalChitInstallmentsCountCache.put(id, doc.getLong("installments").intValue());
-                globalChitAmountsCache.put(id, (ArrayList<Double>) doc.get("amounts"));
+                for (QueryDocumentSnapshot doc : value) {
+                    String id = doc.getId();
+                    globalChitsList.add(new LedgerComponents.CloudChitItem(id, doc.getString("name")));
+                    globalChitStartDatesCache.put(id, doc.getString("startDate"));
+                    globalChitFrequenciesCache.put(id, doc.getString("frequency"));
+                    globalChitInstallmentsCountCache.put(id, doc.getLong("installments").intValue());
+                    globalChitAmountsCache.put(id, (ArrayList<Double>) doc.get("amounts"));
+                }
+                rebuildGlobalDropdownsUI();
+                calculateGlobalMonthlyDuesEngine();
+                syncCurrentChitContextFromCloud();
             }
-            rebuildGlobalDropdownsUI();
-            
-            firestore.collection("members").addSnapshotListener((mVal, mErr) -> {
-                if (mVal == null) return;
+        });
+
+        firestore.collection("members").addSnapshotListener((mVal, mErr) -> {
+            if (mVal != null) {
                 globalChitMembersCache.clear();
                 for (QueryDocumentSnapshot mDoc : mVal) {
                     String cId = mDoc.getString("chitId");
@@ -570,41 +575,46 @@ public class MainActivity extends AppCompatActivity {
                     if (!globalChitMembersCache.containsKey(cId)) globalChitMembersCache.put(cId, new ArrayList<>());
                     globalChitMembersCache.get(cId).add(name);
                 }
+                calculateGlobalMonthlyDuesEngine();
+                syncCurrentChitContextFromCloud();
+            }
+        });
 
-                firestore.collection("advances").addSnapshotListener((aVal, aErr) -> {
-                    if (aVal == null) return;
-                    globalAdvanceStartCache.clear();
-                    globalAdvanceRateCache.clear();
-                    globalAdvanceDateCache.clear();
-                    globalChitTotalAdvancesCache.clear();
+        firestore.collection("advances").addSnapshotListener((aVal, aErr) -> {
+            if (aVal != null) {
+                globalAdvanceStartCache.clear();
+                globalAdvanceRateCache.clear();
+                globalAdvanceDateCache.clear();
+                globalChitTotalAdvancesCache.clear();
+                
+                for (QueryDocumentSnapshot aDoc : aVal) {
+                    String cId = aDoc.getString("chitId");
+                    String compositeKey = cId + "_" + aDoc.getString("member_name");
+                    globalAdvanceStartCache.put(compositeKey, aDoc.getLong("installment_num").intValue());
+                    globalAdvanceRateCache.put(compositeKey, aDoc.getDouble("new_amount"));
+                    globalAdvanceDateCache.put(compositeKey, aDoc.getString("date")); 
                     
-                    for (QueryDocumentSnapshot aDoc : aVal) {
-                        String cId = aDoc.getString("chitId");
-                        String compositeKey = cId + "_" + aDoc.getString("member_name");
-                        globalAdvanceStartCache.put(compositeKey, aDoc.getLong("installment_num").intValue());
-                        globalAdvanceRateCache.put(compositeKey, aDoc.getDouble("new_amount"));
-                        globalAdvanceDateCache.put(compositeKey, aDoc.getString("date")); 
-                        
-                        double advAmount = aDoc.getDouble("advance_amount") != null ? aDoc.getDouble("advance_amount") : 0.0;
-                        globalChitTotalAdvancesCache.put(cId, globalChitTotalAdvancesCache.getOrDefault(cId, 0.0) + advAmount);
-                    }
+                    double advAmount = aDoc.getDouble("advance_amount") != null ? aDoc.getDouble("advance_amount") : 0.0;
+                    globalChitTotalAdvancesCache.put(cId, globalChitTotalAdvancesCache.getOrDefault(cId, 0.0) + advAmount);
+                }
+                calculateGlobalMonthlyDuesEngine();
+                syncCurrentChitContextFromCloud();
+            }
+        });
 
-                    firestore.collection("payments").addSnapshotListener((pVal, pErr) -> {
-                        if (pVal == null) return;
-                        globalPaymentsCache.clear();
-                        for (QueryDocumentSnapshot pDoc : pVal) {
-                            String compositeKey = pDoc.getString("chitId") + "_" + pDoc.getString("member_name") + "_" + pDoc.getLong("installment_num").intValue();
-                            double amt = pDoc.getDouble("amount") != null ? pDoc.getDouble("amount") : 0.0;
-                            
-                            double currentSum = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
-                            globalPaymentsCache.put(compositeKey, currentSum + amt);
-                        }
-                        
-                        calculateGlobalMonthlyDuesEngine();
-                        syncCurrentChitContextFromCloud();
-                    });
-                });
-            });
+        firestore.collection("payments").addSnapshotListener((pVal, pErr) -> {
+            if (pVal != null) {
+                globalPaymentsCache.clear();
+                for (QueryDocumentSnapshot pDoc : pVal) {
+                    String compositeKey = pDoc.getString("chitId") + "_" + pDoc.getString("member_name") + "_" + pDoc.getLong("installment_num").intValue();
+                    double amt = pDoc.getDouble("amount") != null ? pDoc.getDouble("amount") : 0.0;
+                    
+                    double currentSum = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
+                    globalPaymentsCache.put(compositeKey, currentSum + amt);
+                }
+                calculateGlobalMonthlyDuesEngine();
+                syncCurrentChitContextFromCloud();
+            }
         });
     }
 
@@ -956,56 +966,56 @@ public class MainActivity extends AppCompatActivity {
 
     public void syncCurrentChitContextFromCloud() {
         if (chitId == null) return;
+        if (!globalChitStartDatesCache.containsKey(chitId)) return;
 
-        firestore.collection("chits").document(chitId).get().addOnSuccessListener(doc -> {
-            if (!doc.exists()) return;
-            
-            frequencyType = doc.getString("frequency");
-            totalInstallmentsCount = doc.getLong("installments").intValue();
-            firstInstallmentDateStr = doc.getString("startDate");
-            
-            // 1. Set just the main title text (without the new line)
-            tvFundTitle.setText("Chit Fund Matrix: " + doc.getString("name"));
-            tvFundTitle.setOnClickListener(v -> generateAndShowSummary(chitId));
-            
-            // 2. DYNAMICALLY CREATE THE BADGE BUTTON
-            ViewGroup parent = (ViewGroup) tvFundTitle.getParent();
-            TextView summaryBadge = parent.findViewWithTag("summaryBadge");
-            if (summaryBadge == null) {
-                summaryBadge = new TextView(MainActivity.this);
-                summaryBadge.setTag("summaryBadge");
-                summaryBadge.setText("Tap here for Full Summary");
-                summaryBadge.setTextSize(11); // Decreased text size
-                summaryBadge.setTextColor(Color.parseColor("#475569")); 
-                summaryBadge.setBackgroundResource(R.drawable.badge_unpaid_bg); // Same curved background as "Pending"
-                summaryBadge.setPadding(24, 12, 24, 12);
-                
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                lp.setMargins(0, 0, 0, 12); 
-                summaryBadge.setLayoutParams(lp);
-                
-                // Inject it directly below the tvFundTitle
-                int insertIndex = parent.indexOfChild(tvFundTitle) + 1;
-                parent.addView(summaryBadge, insertIndex);
-            }
-            // Bind the click listener to the new custom badge
-            summaryBadge.setOnClickListener(v -> generateAndShowSummary(chitId));
-            
-            baseChitInstallmentAmounts = (ArrayList<Double>) doc.get("amounts");
-            globalMembersList = globalChitMembersCache.get(chitId);
-            if (globalMembersList == null) globalMembersList = new ArrayList<>();
+        frequencyType = globalChitFrequenciesCache.get(chitId);
+        totalInstallmentsCount = globalChitInstallmentsCountCache.containsKey(chitId) ? globalChitInstallmentsCountCache.get(chitId) : 0;
+        firstInstallmentDateStr = globalChitStartDatesCache.get(chitId);
+        baseChitInstallmentAmounts = globalChitAmountsCache.get(chitId);
+        
+        String chitName = "";
+        for (LedgerComponents.CloudChitItem item : globalChitsList) {
+            if (item.id.equals(chitId)) { chitName = item.name; break; }
+        }
 
-            ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList);
-            spMembers.setAdapter(membersAdapter);
-            if (!globalMembersList.isEmpty()) {
-                spMembers.setText(globalMembersList.get(0), false);
-            } else {
-                spMembers.setText("", false);
-            }
+        CharSequence displayTitle = getChitNameWithYear(chitName, firstInstallmentDateStr, frequencyType, totalInstallmentsCount);
 
-            resetInstallmentSelection();
-            refreshFundMatrixTable();
-        });
+        tvFundTitle.setText(displayTitle);
+        tvFundTitle.setOnClickListener(v -> generateAndShowSummary(chitId));
+
+        ViewGroup parent = (ViewGroup) tvFundTitle.getParent();
+        TextView summaryBadge = parent.findViewWithTag("summaryBadge");
+        if (summaryBadge == null) {
+            summaryBadge = new TextView(MainActivity.this);
+            summaryBadge.setTag("summaryBadge");
+            summaryBadge.setText("Full Summary");
+            summaryBadge.setTextSize(11);
+            summaryBadge.setTextColor(Color.parseColor("#475569")); 
+            summaryBadge.setBackgroundResource(R.drawable.badge_unpaid_bg); 
+            summaryBadge.setPadding(24, 12, 24, 12);
+            
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, 0, 12); 
+            summaryBadge.setLayoutParams(lp);
+            
+            int insertIndex = parent.indexOfChild(tvFundTitle) + 1;
+            parent.addView(summaryBadge, insertIndex);
+        }
+        summaryBadge.setOnClickListener(v -> generateAndShowSummary(chitId));
+
+        globalMembersList = globalChitMembersCache.get(chitId);
+        if (globalMembersList == null) globalMembersList = new ArrayList<>();
+
+        ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList);
+        spMembers.setAdapter(membersAdapter);
+        if (!globalMembersList.isEmpty()) {
+            spMembers.setText(globalMembersList.get(0), false);
+        } else {
+            spMembers.setText("", false);
+        }
+
+        resetInstallmentSelection();
+        refreshFundMatrixTable();
     }
 
     public void resetInstallmentSelection() {
