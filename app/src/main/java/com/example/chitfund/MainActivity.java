@@ -545,12 +545,14 @@ public class MainActivity extends AppCompatActivity {
                     globalChitsList.add(new LedgerComponents.CloudChitItem(id, doc.getString("name")));
                     globalChitStartDatesCache.put(id, doc.getString("startDate"));
                     globalChitFrequenciesCache.put(id, doc.getString("frequency"));
-                    globalChitInstallmentsCountCache.put(id, doc.getLong("installments").intValue());
+                    
+                    // Safe parsing prevents NullPointerExceptions
+                    Long instCount = doc.getLong("installments");
+                    globalChitInstallmentsCountCache.put(id, instCount != null ? instCount.intValue() : 0);
                     globalChitAmountsCache.put(id, (ArrayList<Double>) doc.get("amounts"));
                 }
                 rebuildGlobalDropdownsUI();
-                calculateGlobalMonthlyDuesEngine();
-                syncCurrentChitContextFromCloud();
+                triggerSafeUIRefresh();
             }
         });
 
@@ -563,8 +565,7 @@ public class MainActivity extends AppCompatActivity {
                     if (!globalChitMembersCache.containsKey(cId)) globalChitMembersCache.put(cId, new ArrayList<>());
                     globalChitMembersCache.get(cId).add(name);
                 }
-                calculateGlobalMonthlyDuesEngine();
-                syncCurrentChitContextFromCloud();
+                triggerSafeUIRefresh();
             }
         });
 
@@ -577,16 +578,24 @@ public class MainActivity extends AppCompatActivity {
                 
                 for (QueryDocumentSnapshot aDoc : aVal) {
                     String cId = aDoc.getString("chitId");
-                    String compositeKey = cId + "_" + aDoc.getString("member_name");
-                    globalAdvanceStartCache.put(compositeKey, aDoc.getLong("installment_num").intValue());
-                    globalAdvanceRateCache.put(compositeKey, aDoc.getDouble("new_amount"));
-                    globalAdvanceDateCache.put(compositeKey, aDoc.getString("date")); 
+                    String mName = aDoc.getString("member_name");
+                    Long instObj = aDoc.getLong("installment_num");
+                    
+                    if (cId != null && mName != null && instObj != null) {
+                        String compositeKey = cId + "_" + mName;
+                        globalAdvanceStartCache.put(compositeKey, instObj.intValue());
+                        
+                        Double newAmt = aDoc.getDouble("new_amount");
+                        if (newAmt != null) {
+                            globalAdvanceRateCache.put(compositeKey, newAmt);
+                        }
+                        globalAdvanceDateCache.put(compositeKey, aDoc.getString("date")); 
+                    }
                     
                     double advAmount = aDoc.getDouble("advance_amount") != null ? aDoc.getDouble("advance_amount") : 0.0;
                     globalChitTotalAdvancesCache.put(cId, globalChitTotalAdvancesCache.getOrDefault(cId, 0.0) + advAmount);
                 }
-                calculateGlobalMonthlyDuesEngine();
-                syncCurrentChitContextFromCloud();
+                triggerSafeUIRefresh();
             }
         });
 
@@ -594,18 +603,31 @@ public class MainActivity extends AppCompatActivity {
             if (pVal != null) {
                 globalPaymentsCache.clear();
                 for (QueryDocumentSnapshot pDoc : pVal) {
-                    String compositeKey = pDoc.getString("chitId") + "_" + pDoc.getString("member_name") + "_" + pDoc.getLong("installment_num").intValue();
-                    double amt = pDoc.getDouble("amount") != null ? pDoc.getDouble("amount") : 0.0;
+                    String cId = pDoc.getString("chitId");
+                    String mName = pDoc.getString("member_name");
+                    Long instObj = pDoc.getLong("installment_num");
                     
-                    double currentSum = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
-                    globalPaymentsCache.put(compositeKey, currentSum + amt);
+                    // Safe parsing prevents silent listener crashes!
+                    if (cId != null && mName != null && instObj != null) {
+                        String compositeKey = cId + "_" + mName + "_" + instObj.intValue();
+                        double amt = pDoc.getDouble("amount") != null ? pDoc.getDouble("amount") : 0.0;
+                        
+                        double currentSum = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
+                        globalPaymentsCache.put(compositeKey, currentSum + amt);
+                    }
                 }
-                calculateGlobalMonthlyDuesEngine();
-                syncCurrentChitContextFromCloud();
+                triggerSafeUIRefresh();
             }
         });
     }
 
+    // NEW HELPER: Guarantees the dashboard and grid only update when base data exists
+    private void triggerSafeUIRefresh() {
+        if (globalChitsList.isEmpty()) return; 
+        calculateGlobalMonthlyDuesEngine();
+        syncCurrentChitContextFromCloud();
+    }
+    
     private void rebuildGlobalDropdownsUI() {
         ArrayList<String> filterOptions = new ArrayList<>();
         filterOptions.add("All Chits");
