@@ -25,6 +25,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -67,6 +68,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvHistorySummary;
 
     public TableLayout tlHistoryTable;
+    
+    // NEW FEATURE: Kills ghost listeners to prevent app freezing!
+    private ListenerRegistration historyListenerRegistration;
 
     private View tabContainerMatrix;
     public View tabContainerCollect;
@@ -220,8 +224,7 @@ public class MainActivity extends AppCompatActivity {
 
         spChitSelector.setOnItemClickListener((parent, view, position, id) -> {
             LedgerComponents.CloudChitItem selected = (LedgerComponents.CloudChitItem) parent.getItemAtPosition(position);
-            // Removed strict validation to force matrix refresh on click
-            if (selected != null) {
+            if (selected != null && !selected.id.equals(chitId)) {
                 chitId = selected.id;
                 syncCurrentChitContextFromCloud();
             }
@@ -530,7 +533,14 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
-    // FIX: Un-nested asynchronous listeners to eliminate memory leaks and race conditions
+    // NEW HELPER: Safely triggers UI refresh only if data is loaded
+    public void triggerSafeUIRefresh() {
+        if (globalChitsList.isEmpty()) return; 
+        calculateGlobalMonthlyDuesEngine();
+        syncCurrentChitContextFromCloud();
+    }
+
+    // FIX: Un-nested asynchronous listeners to safely prevent Ghost Memory Leaks
     private void initGlobalDatabaseSynchronizers() {
         firestore.collection("chits").addSnapshotListener((value, error) -> {
             if (value != null) {
@@ -546,9 +556,8 @@ public class MainActivity extends AppCompatActivity {
                     globalChitStartDatesCache.put(id, doc.getString("startDate"));
                     globalChitFrequenciesCache.put(id, doc.getString("frequency"));
                     
-                    // Safe parsing prevents NullPointerExceptions
-                    Long instCount = doc.getLong("installments");
-                    globalChitInstallmentsCountCache.put(id, instCount != null ? instCount.intValue() : 0);
+                    Object instObj = doc.get("installments");
+                    globalChitInstallmentsCountCache.put(id, (instObj instanceof Number) ? ((Number) instObj).intValue() : 0);
                     globalChitAmountsCache.put(id, (ArrayList<Double>) doc.get("amounts"));
                 }
                 rebuildGlobalDropdownsUI();
@@ -579,20 +588,21 @@ public class MainActivity extends AppCompatActivity {
                 for (QueryDocumentSnapshot aDoc : aVal) {
                     String cId = aDoc.getString("chitId");
                     String mName = aDoc.getString("member_name");
-                    Long instObj = aDoc.getLong("installment_num");
+                    Object instObj = aDoc.get("installment_num");
                     
-                    if (cId != null && mName != null && instObj != null) {
+                    if (cId != null && mName != null && instObj instanceof Number) {
                         String compositeKey = cId + "_" + mName;
-                        globalAdvanceStartCache.put(compositeKey, instObj.intValue());
+                        globalAdvanceStartCache.put(compositeKey, ((Number) instObj).intValue());
                         
-                        Double newAmt = aDoc.getDouble("new_amount");
-                        if (newAmt != null) {
-                            globalAdvanceRateCache.put(compositeKey, newAmt);
+                        Object newAmtObj = aDoc.get("new_amount");
+                        if (newAmtObj instanceof Number) {
+                            globalAdvanceRateCache.put(compositeKey, ((Number) newAmtObj).doubleValue());
                         }
                         globalAdvanceDateCache.put(compositeKey, aDoc.getString("date")); 
                     }
                     
-                    double advAmount = aDoc.getDouble("advance_amount") != null ? aDoc.getDouble("advance_amount") : 0.0;
+                    Object advAmtObj = aDoc.get("advance_amount");
+                    double advAmount = (advAmtObj instanceof Number) ? ((Number) advAmtObj).doubleValue() : 0.0;
                     globalChitTotalAdvancesCache.put(cId, globalChitTotalAdvancesCache.getOrDefault(cId, 0.0) + advAmount);
                 }
                 triggerSafeUIRefresh();
@@ -605,12 +615,13 @@ public class MainActivity extends AppCompatActivity {
                 for (QueryDocumentSnapshot pDoc : pVal) {
                     String cId = pDoc.getString("chitId");
                     String mName = pDoc.getString("member_name");
-                    Long instObj = pDoc.getLong("installment_num");
+                    Object instObj = pDoc.get("installment_num");
                     
-                    // Safe parsing prevents silent listener crashes!
-                    if (cId != null && mName != null && instObj != null) {
-                        String compositeKey = cId + "_" + mName + "_" + instObj.intValue();
-                        double amt = pDoc.getDouble("amount") != null ? pDoc.getDouble("amount") : 0.0;
+                    // FIX: Safe Number parsing strictly prevents silent Firebase crash errors!
+                    if (cId != null && mName != null && instObj instanceof Number) {
+                        String compositeKey = cId + "_" + mName + "_" + ((Number) instObj).intValue();
+                        Object amtObj = pDoc.get("amount");
+                        double amt = (amtObj instanceof Number) ? ((Number) amtObj).doubleValue() : 0.0;
                         
                         double currentSum = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
                         globalPaymentsCache.put(compositeKey, currentSum + amt);
@@ -621,13 +632,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // NEW HELPER: Guarantees the dashboard and grid only update when base data exists
-    private void triggerSafeUIRefresh() {
-        if (globalChitsList.isEmpty()) return; 
-        calculateGlobalMonthlyDuesEngine();
-        syncCurrentChitContextFromCloud();
-    }
-    
     private void rebuildGlobalDropdownsUI() {
         ArrayList<String> filterOptions = new ArrayList<>();
         filterOptions.add("All Chits");
@@ -640,6 +644,7 @@ public class MainActivity extends AppCompatActivity {
         if (!globalChitsList.isEmpty() && chitId == null) {
             spChitSelector.setText(globalChitsList.get(0).name, false);
             chitId = globalChitsList.get(0).id;
+            // Removed redundant refresh call; triggerSafeUIRefresh will handle it automatically
         }
     }
 
@@ -973,59 +978,53 @@ public class MainActivity extends AppCompatActivity {
         return 0.0;
     }
 
-    // FIX: Using Synchronous Cache Access completely stops async rendering bugs!
     public void syncCurrentChitContextFromCloud() {
         if (chitId == null) return;
-        if (!globalChitStartDatesCache.containsKey(chitId)) return;
 
-        frequencyType = globalChitFrequenciesCache.get(chitId);
-        totalInstallmentsCount = globalChitInstallmentsCountCache.containsKey(chitId) ? globalChitInstallmentsCountCache.get(chitId) : 0;
-        firstInstallmentDateStr = globalChitStartDatesCache.get(chitId);
-        baseChitInstallmentAmounts = globalChitAmountsCache.get(chitId);
-        
-        String chitName = "";
-        for (LedgerComponents.CloudChitItem item : globalChitsList) {
-            if (item.id.equals(chitId)) { chitName = item.name; break; }
-        }
-
-        CharSequence displayTitle = getChitNameWithYear(chitName, firstInstallmentDateStr, frequencyType, totalInstallmentsCount);
-
-        tvFundTitle.setText(displayTitle);
-        tvFundTitle.setOnClickListener(v -> generateAndShowSummary(chitId));
-
-        ViewGroup parent = (ViewGroup) tvFundTitle.getParent();
-        TextView summaryBadge = parent.findViewWithTag("summaryBadge");
-        if (summaryBadge == null) {
-            summaryBadge = new TextView(MainActivity.this);
-            summaryBadge.setTag("summaryBadge");
-            summaryBadge.setText("Full Summary");
-            summaryBadge.setTextSize(11);
-            summaryBadge.setTextColor(Color.parseColor("#475569")); 
-            summaryBadge.setBackgroundResource(R.drawable.badge_unpaid_bg); 
-            summaryBadge.setPadding(24, 12, 24, 12);
+        firestore.collection("chits").document(chitId).get().addOnSuccessListener(doc -> {
+            if (!doc.exists()) return;
             
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.setMargins(0, 0, 0, 12); 
-            summaryBadge.setLayoutParams(lp);
+            frequencyType = doc.getString("frequency");
+            totalInstallmentsCount = doc.getLong("installments").intValue();
+            firstInstallmentDateStr = doc.getString("startDate");
             
-            int insertIndex = parent.indexOfChild(tvFundTitle) + 1;
-            parent.addView(summaryBadge, insertIndex);
-        }
-        summaryBadge.setOnClickListener(v -> generateAndShowSummary(chitId));
+            ViewGroup parent = (ViewGroup) tvFundTitle.getParent();
+            if (parent != null && "headerWrapper".equals(parent.getTag())) {
+                ViewGroup grandParent = (ViewGroup) parent.getParent();
+                int index = grandParent.indexOfChild(parent);
+                parent.removeView(tvFundTitle);
+                grandParent.removeView(parent);
+                
+                LinearLayout.LayoutParams origLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                origLp.setMargins(0, 0, 0, (int)(12 * getResources().getDisplayMetrics().density));
+                tvFundTitle.setLayoutParams(origLp);
+                grandParent.addView(tvFundTitle, index);
+            }
+            
+            tvFundTitle.setText("Chit Fund Matrix: " + doc.getString("name") + "\n(Tap here for Full Summary)");
+            tvFundTitle.setOnClickListener(v -> generateAndShowSummary(chitId));
+            
+            baseChitInstallmentAmounts = (ArrayList<Double>) doc.get("amounts");
+            
+            globalMembersList = globalChitMembersCache.get(chitId);
+            if (globalMembersList == null) globalMembersList = new ArrayList<>();
 
-        globalMembersList = globalChitMembersCache.get(chitId);
-        if (globalMembersList == null) globalMembersList = new ArrayList<>();
+            ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList);
+            spMembers.setAdapter(membersAdapter);
+            
+            // FIX: Prevent spMembers from resetting if the user already selected a member
+            String currentMem = spMembers.getText().toString().trim();
+            if (!globalMembersList.isEmpty()) {
+                if (!globalMembersList.contains(currentMem)) {
+                    spMembers.setText(globalMembersList.get(0), false);
+                }
+            } else {
+                spMembers.setText("", false);
+            }
 
-        ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList);
-        spMembers.setAdapter(membersAdapter);
-        if (!globalMembersList.isEmpty()) {
-            spMembers.setText(globalMembersList.get(0), false);
-        } else {
-            spMembers.setText("", false);
-        }
-
-        resetInstallmentSelection();
-        refreshFundMatrixTable();
+            resetInstallmentSelection();
+            refreshFundMatrixTable();
+        });
     }
 
     public void resetInstallmentSelection() {
@@ -1034,6 +1033,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void refreshTransactionHistory() {
+        // FIX: Kills identical background tasks instantly to stop UI freezing and memory limits
+        if (historyListenerRegistration != null) {
+            historyListenerRegistration.remove();
+        }
+
         tlHistoryTable.removeAllViews();
         TableRow headRow = new TableRow(this);
         headRow.setBackgroundResource(R.drawable.table_header_bg);
@@ -1052,7 +1056,7 @@ public class MainActivity extends AppCompatActivity {
         }
         tlHistoryTable.addView(headRow);
 
-        firestore.collection("payments").orderBy("timestamp", Query.Direction.DESCENDING).addSnapshotListener((value, error) -> {
+        historyListenerRegistration = firestore.collection("payments").orderBy("timestamp", Query.Direction.DESCENDING).addSnapshotListener((value, error) -> {
             if (value == null) return;
             tlHistoryTable.removeAllViews();
             tlHistoryTable.addView(headRow);
@@ -1066,7 +1070,9 @@ public class MainActivity extends AppCompatActivity {
                 
                 String rawMemName = doc.getString("member_name");
 
-                double amountPaid = doc.getDouble("amount") != null ? doc.getDouble("amount") : 0.0;
+                Object amtObj = doc.get("amount");
+                double amountPaid = (amtObj instanceof Number) ? ((Number) amtObj).doubleValue() : 0.0;
+                
                 runningCashTotal += amountPaid;
                 transactionEntriesCount++;
 
@@ -1106,7 +1112,11 @@ public class MainActivity extends AppCompatActivity {
                 tr.addView(memLayout);
                 
                 LinearLayout badgeWrapper = new LinearLayout(this); badgeWrapper.setPadding(10, 6, 10, 6); badgeWrapper.setGravity(Gravity.CENTER);
-                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(14, 4, 14, 4); tvInst.setTextColor(Color.parseColor("#475569")); tvInst.setBackgroundResource(R.drawable.badge_unpaid_bg);
+                
+                Object instObj = doc.get("installment_num");
+                long logInstNum = (instObj instanceof Number) ? ((Number) instObj).longValue() : 0;
+                
+                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + logInstNum); tvInst.setPadding(14, 4, 14, 4); tvInst.setTextColor(Color.parseColor("#475569")); tvInst.setBackgroundResource(R.drawable.badge_unpaid_bg);
                 badgeWrapper.addView(tvInst); tr.addView(badgeWrapper);
                 
                 TextView tvAmt = new TextView(this); 
@@ -1389,17 +1399,26 @@ public class MainActivity extends AppCompatActivity {
                 }
                 tr.addView(memLayout);
                 
-                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + doc.getLong("installment_num")); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
+                Object instObj = doc.get("installment_num");
+                long logInstNum = (instObj instanceof Number) ? ((Number) instObj).longValue() : 0;
+
+                TextView tvInst = new TextView(this); tvInst.setText("Inst. " + logInstNum); tvInst.setPadding(20, 16, 20, 16); tvInst.setTextColor(Color.parseColor("#475569")); tr.addView(tvInst);
+                
+                Object advObj = doc.get("advance_amount");
+                double advAmount = (advObj instanceof Number) ? ((Number) advObj).doubleValue() : 0.0;
                 
                 TextView tvAdv = new TextView(this); 
-                tvAdv.setText("₹" + String.format(Locale.getDefault(), "%,.1f", doc.getDouble("advance_amount"))); 
+                tvAdv.setText("₹" + String.format(Locale.getDefault(), "%,.1f", advAmount)); 
                 tvAdv.setPadding(20, 16, 20, 16); 
                 tvAdv.setTypeface(null, Typeface.BOLD); 
                 tvAdv.setTextColor(Color.parseColor("#E11D48")); 
                 tvAdv.setGravity(Gravity.CENTER); 
                 tr.addView(tvAdv);
                 
-                TextView tvRate = new TextView(this); tvRate.setText("₹" + String.format(Locale.getDefault(), "%,.1f", doc.getDouble("new_amount"))); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tvRate.setGravity(Gravity.CENTER); tr.addView(tvRate);
+                Object newAmtObj = doc.get("new_amount");
+                double newAmt = (newAmtObj instanceof Number) ? ((Number) newAmtObj).doubleValue() : 0.0;
+                
+                TextView tvRate = new TextView(this); tvRate.setText("₹" + String.format(Locale.getDefault(), "%,.1f", newAmt)); tvRate.setPadding(20, 16, 20, 16); tvRate.setTypeface(null, Typeface.BOLD); tvRate.setTextColor(Color.parseColor("#047857")); tvRate.setGravity(Gravity.CENTER); tr.addView(tvRate);
 
                 final QueryDocumentSnapshot finalDoc = doc; 
                 tr.setOnLongClickListener(v -> {
