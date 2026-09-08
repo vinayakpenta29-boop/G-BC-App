@@ -546,6 +546,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // Completely un-nested flat listeners that protect against casting and memory leaks
+    // Completely un-nested flat listeners that protect against casting and memory leaks
     private void initGlobalDatabaseSynchronizers() {
         firestore.collection("chits").addSnapshotListener((value, error) -> {
             if (value != null) {
@@ -597,22 +598,27 @@ public class MainActivity extends AppCompatActivity {
                     String mName = aDoc.getString("member_name");
                     Object instObj = aDoc.get("installment_num");
                     
-                    if (cId != null && mName != null && instObj instanceof Number) {
-                        String compositeKey = cId + "_" + mName.trim();
-                        globalAdvanceStartCache.put(compositeKey, ((Number) instObj).intValue());
-                        
-                        Object newAmtObj = aDoc.get("new_amount");
-                        if (newAmtObj instanceof Number) {
-                            globalAdvanceRateCache.put(compositeKey, ((Number) newAmtObj).doubleValue());
-                        }
-                        globalAdvanceDateCache.put(compositeKey, aDoc.getString("date")); 
+                    if (cId != null && mName != null && instObj != null) {
+                        try {
+                            int instNum = Integer.parseInt(String.valueOf(instObj));
+                            String compositeKey = cId.trim() + "_" + mName.trim();
+                            globalAdvanceStartCache.put(compositeKey, instNum);
+                            
+                            Object newAmtObj = aDoc.get("new_amount");
+                            if (newAmtObj != null) {
+                                globalAdvanceRateCache.put(compositeKey, Double.parseDouble(String.valueOf(newAmtObj)));
+                            }
+                            globalAdvanceDateCache.put(compositeKey, aDoc.getString("date")); 
+                        } catch (Exception e) {}
                     }
                     
-                    Object advAmtObj = aDoc.get("advance_amount");
-                    double advAmount = (advAmtObj instanceof Number) ? ((Number) advAmtObj).doubleValue() : 0.0;
-                    if (cId != null) {
-                        globalChitTotalAdvancesCache.put(cId, globalChitTotalAdvancesCache.getOrDefault(cId, 0.0) + advAmount);
-                    }
+                    try {
+                        Object advAmtObj = aDoc.get("advance_amount");
+                        double advAmount = advAmtObj != null ? Double.parseDouble(String.valueOf(advAmtObj)) : 0.0;
+                        if (cId != null) {
+                            globalChitTotalAdvancesCache.put(cId.trim(), globalChitTotalAdvancesCache.getOrDefault(cId.trim(), 0.0) + advAmount);
+                        }
+                    } catch (Exception e) {}
                 }
                 triggerSafeUIRefresh();
             }
@@ -627,18 +633,23 @@ public class MainActivity extends AppCompatActivity {
                     Object instObj = pDoc.get("installment_num");
                     Object amtObj = pDoc.get("amount");
                     
-                    if (cId != null && mName != null && instObj instanceof Number && amtObj instanceof Number) {
-                        String compositeKey = cId + "_" + mName.trim() + "_" + ((Number) instObj).intValue();
-                        double amt = ((Number) amtObj).doubleValue();
-                        
-                        double currentSum = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
-                        globalPaymentsCache.put(compositeKey, currentSum + amt);
+                    // FIX: Safe parsing strictly prevents silent Firebase crash errors!
+                    if (cId != null && mName != null && instObj != null && amtObj != null) {
+                        try {
+                            int instNum = Integer.parseInt(String.valueOf(instObj));
+                            double amt = Double.parseDouble(String.valueOf(amtObj));
+                            String compositeKey = cId.trim() + "_" + mName.trim() + "_" + instNum;
+                            
+                            double currentSum = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
+                            globalPaymentsCache.put(compositeKey, currentSum + amt);
+                        } catch (Exception e) {}
                     }
                 }
                 triggerSafeUIRefresh();
             }
         });
     }
+
 
     private void rebuildGlobalDropdownsUI() {
         ArrayList<String> filterOptions = new ArrayList<>();
@@ -776,7 +787,8 @@ public class MainActivity extends AppCompatActivity {
                         double stepAmt = getSpecificCachedMemberInstallmentAmount(id, mName, step);
                         stepExpectedTotal += stepAmt;
 
-                        String payKey = id + "_" + mName + "_" + step;
+                        String payKey = id.trim() + "_" + mName.trim() + "_" + step;
+
                         double paidAmt = globalPaymentsCache.containsKey(payKey) ? globalPaymentsCache.get(payKey) : 0.0;
                         
                         if (paidAmt < stepAmt) {
@@ -970,20 +982,29 @@ public class MainActivity extends AppCompatActivity {
         tlGlobalSummaryTable.addView(footerRow);
     }
 
-    public double getSpecificCachedMemberInstallmentAmount(String targetChitId, String memberName, int installmentNum) {
-        String compositeKey = targetChitId + "_" + memberName;
+        public double getSpecificCachedMemberInstallmentAmount(String targetChitId, String memberName, int installmentNum) {
+        String compositeKey = targetChitId.trim() + "_" + memberName.trim();
         if (globalAdvanceStartCache.containsKey(compositeKey)) {
             int startInst = globalAdvanceStartCache.get(compositeKey);
             if (installmentNum > startInst && globalAdvanceRateCache.containsKey(compositeKey)) {
                 return globalAdvanceRateCache.get(compositeKey);
             }
         }
-        ArrayList<Double> amounts = globalChitAmountsCache.get(targetChitId);
+        
+        // FIX: Using raw ArrayList stops the ClassCastException when Firebase returns Longs instead of Doubles
+        @SuppressWarnings("rawtypes")
+        ArrayList amounts = globalChitAmountsCache.get(targetChitId);
         if (amounts != null && (installmentNum - 1) < amounts.size()) {
-            return amounts.get(installmentNum - 1);
+            Object amtObj = amounts.get(installmentNum - 1);
+            if (amtObj != null) {
+                try {
+                    return Double.parseDouble(String.valueOf(amtObj));
+                } catch (Exception e) {}
+            }
         }
         return 0.0;
     }
+
 
     // Completely synchronous cache reading: never hangs on slow connections
     public void syncCurrentChitContextFromCloud() {
@@ -1228,7 +1249,8 @@ public class MainActivity extends AppCompatActivity {
                     TextView tvStatusCell = new TextView(this); tvStatusCell.setTextSize(13); tvStatusCell.setPadding(16, 6, 16, 6); tvStatusCell.setTypeface(null, Typeface.BOLD);
                     
                     double expectedAmt = getSpecificCachedMemberInstallmentAmount(chitId, name, i);
-                    String compositeKey = chitId + "_" + name + "_" + i;
+                    String compositeKey = chitId.trim() + "_" + name.trim() + "_" + i;
+
                     double paidAmt = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
                     
                     boolean isFullyPaid = (paidAmt >= expectedAmt && expectedAmt > 0);
