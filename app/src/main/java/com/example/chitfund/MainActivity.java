@@ -68,8 +68,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvHistorySummary;
 
     public TableLayout tlHistoryTable;
-    
-    // NEW FEATURE: Kills ghost listeners to prevent app freezing!
     private ListenerRegistration historyListenerRegistration;
 
     private View tabContainerMatrix;
@@ -202,7 +200,7 @@ public class MainActivity extends AppCompatActivity {
                     tabContainerMatrix.setVisibility(View.VISIBLE);
                     tabContainerLedger.setVisibility(View.GONE);
                     tabContainerAdvances.setVisibility(View.GONE);
-                    refreshFundMatrixTable();
+                    syncCurrentChitContextFromCloud();
                 } else if (position == 2) {
                     tabContainerCollect.setVisibility(View.GONE);
                     tabContainerMatrix.setVisibility(View.GONE);
@@ -222,9 +220,10 @@ public class MainActivity extends AppCompatActivity {
             public void onTabReselected(TabLayout.Tab tab) {}
         });
 
+        // Tapping the dropdown immediately loads context without checking previous IDs
         spChitSelector.setOnItemClickListener((parent, view, position, id) -> {
             LedgerComponents.CloudChitItem selected = (LedgerComponents.CloudChitItem) parent.getItemAtPosition(position);
-            if (selected != null && !selected.id.equals(chitId)) {
+            if (selected != null) {
                 chitId = selected.id;
                 syncCurrentChitContextFromCloud();
             }
@@ -533,14 +532,20 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
-    // NEW HELPER: Safely triggers UI refresh only if data is loaded
+    // Refresh entire UI safely from memory
     public void triggerSafeUIRefresh() {
         if (globalChitsList.isEmpty()) return; 
+
+        if (chitId == null) {
+            chitId = globalChitsList.get(0).id;
+            spChitSelector.setText(globalChitsList.get(0).name, false);
+        }
+
         calculateGlobalMonthlyDuesEngine();
         syncCurrentChitContextFromCloud();
     }
 
-    // FIX: Un-nested asynchronous listeners to safely prevent Ghost Memory Leaks
+    // Completely un-nested flat listeners that protect against casting and memory leaks
     private void initGlobalDatabaseSynchronizers() {
         firestore.collection("chits").addSnapshotListener((value, error) -> {
             if (value != null) {
@@ -571,8 +576,10 @@ public class MainActivity extends AppCompatActivity {
                 for (QueryDocumentSnapshot mDoc : mVal) {
                     String cId = mDoc.getString("chitId");
                     String name = mDoc.getString("name");
-                    if (!globalChitMembersCache.containsKey(cId)) globalChitMembersCache.put(cId, new ArrayList<>());
-                    globalChitMembersCache.get(cId).add(name);
+                    if (cId != null && name != null) {
+                        if (!globalChitMembersCache.containsKey(cId)) globalChitMembersCache.put(cId, new ArrayList<>());
+                        globalChitMembersCache.get(cId).add(name.trim());
+                    }
                 }
                 triggerSafeUIRefresh();
             }
@@ -591,7 +598,7 @@ public class MainActivity extends AppCompatActivity {
                     Object instObj = aDoc.get("installment_num");
                     
                     if (cId != null && mName != null && instObj instanceof Number) {
-                        String compositeKey = cId + "_" + mName;
+                        String compositeKey = cId + "_" + mName.trim();
                         globalAdvanceStartCache.put(compositeKey, ((Number) instObj).intValue());
                         
                         Object newAmtObj = aDoc.get("new_amount");
@@ -603,7 +610,9 @@ public class MainActivity extends AppCompatActivity {
                     
                     Object advAmtObj = aDoc.get("advance_amount");
                     double advAmount = (advAmtObj instanceof Number) ? ((Number) advAmtObj).doubleValue() : 0.0;
-                    globalChitTotalAdvancesCache.put(cId, globalChitTotalAdvancesCache.getOrDefault(cId, 0.0) + advAmount);
+                    if (cId != null) {
+                        globalChitTotalAdvancesCache.put(cId, globalChitTotalAdvancesCache.getOrDefault(cId, 0.0) + advAmount);
+                    }
                 }
                 triggerSafeUIRefresh();
             }
@@ -616,12 +625,11 @@ public class MainActivity extends AppCompatActivity {
                     String cId = pDoc.getString("chitId");
                     String mName = pDoc.getString("member_name");
                     Object instObj = pDoc.get("installment_num");
+                    Object amtObj = pDoc.get("amount");
                     
-                    // FIX: Safe Number parsing strictly prevents silent Firebase crash errors!
-                    if (cId != null && mName != null && instObj instanceof Number) {
-                        String compositeKey = cId + "_" + mName + "_" + ((Number) instObj).intValue();
-                        Object amtObj = pDoc.get("amount");
-                        double amt = (amtObj instanceof Number) ? ((Number) amtObj).doubleValue() : 0.0;
+                    if (cId != null && mName != null && instObj instanceof Number && amtObj instanceof Number) {
+                        String compositeKey = cId + "_" + mName.trim() + "_" + ((Number) instObj).intValue();
+                        double amt = ((Number) amtObj).doubleValue();
                         
                         double currentSum = globalPaymentsCache.containsKey(compositeKey) ? globalPaymentsCache.get(compositeKey) : 0.0;
                         globalPaymentsCache.put(compositeKey, currentSum + amt);
@@ -644,7 +652,6 @@ public class MainActivity extends AppCompatActivity {
         if (!globalChitsList.isEmpty() && chitId == null) {
             spChitSelector.setText(globalChitsList.get(0).name, false);
             chitId = globalChitsList.get(0).id;
-            // Removed redundant refresh call; triggerSafeUIRefresh will handle it automatically
         }
     }
 
@@ -978,53 +985,44 @@ public class MainActivity extends AppCompatActivity {
         return 0.0;
     }
 
+    // Completely synchronous cache reading: never hangs on slow connections
     public void syncCurrentChitContextFromCloud() {
         if (chitId == null) return;
+        if (!globalChitStartDatesCache.containsKey(chitId)) return;
 
-        firestore.collection("chits").document(chitId).get().addOnSuccessListener(doc -> {
-            if (!doc.exists()) return;
-            
-            frequencyType = doc.getString("frequency");
-            totalInstallmentsCount = doc.getLong("installments").intValue();
-            firstInstallmentDateStr = doc.getString("startDate");
-            
-            ViewGroup parent = (ViewGroup) tvFundTitle.getParent();
-            if (parent != null && "headerWrapper".equals(parent.getTag())) {
-                ViewGroup grandParent = (ViewGroup) parent.getParent();
-                int index = grandParent.indexOfChild(parent);
-                parent.removeView(tvFundTitle);
-                grandParent.removeView(parent);
-                
-                LinearLayout.LayoutParams origLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                origLp.setMargins(0, 0, 0, (int)(12 * getResources().getDisplayMetrics().density));
-                tvFundTitle.setLayoutParams(origLp);
-                grandParent.addView(tvFundTitle, index);
+        frequencyType = globalChitFrequenciesCache.get(chitId);
+        Integer instCount = globalChitInstallmentsCountCache.get(chitId);
+        totalInstallmentsCount = (instCount != null) ? instCount : 0;
+        firstInstallmentDateStr = globalChitStartDatesCache.get(chitId);
+        baseChitInstallmentAmounts = globalChitAmountsCache.get(chitId);
+        if (baseChitInstallmentAmounts == null) baseChitInstallmentAmounts = new ArrayList<>();
+
+        String chitName = "";
+        for (LedgerComponents.CloudChitItem item : globalChitsList) {
+            if (item.id.equals(chitId)) {
+                chitName = item.name;
+                break;
             }
-            
-            tvFundTitle.setText("Chit Fund Matrix: " + doc.getString("name") + "\n(Tap here for Full Summary)");
+        }
+
+        if (tvFundTitle != null) {
+            tvFundTitle.setText("Chit Fund Matrix: " + chitName + "\n(Tap here for Full Summary)");
             tvFundTitle.setOnClickListener(v -> generateAndShowSummary(chitId));
-            
-            baseChitInstallmentAmounts = (ArrayList<Double>) doc.get("amounts");
-            
-            globalMembersList = globalChitMembersCache.get(chitId);
-            if (globalMembersList == null) globalMembersList = new ArrayList<>();
+        }
 
-            ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList);
-            spMembers.setAdapter(membersAdapter);
-            
-            // FIX: Prevent spMembers from resetting if the user already selected a member
-            String currentMem = spMembers.getText().toString().trim();
-            if (!globalMembersList.isEmpty()) {
-                if (!globalMembersList.contains(currentMem)) {
-                    spMembers.setText(globalMembersList.get(0), false);
-                }
-            } else {
-                spMembers.setText("", false);
-            }
+        globalMembersList = globalChitMembersCache.get(chitId);
+        if (globalMembersList == null) globalMembersList = new ArrayList<>();
 
-            resetInstallmentSelection();
-            refreshFundMatrixTable();
-        });
+        ArrayAdapter<String> membersAdapter = new ArrayAdapter<>(this, R.layout.list_item_member, globalMembersList);
+        spMembers.setAdapter(membersAdapter);
+        if (!globalMembersList.isEmpty()) {
+            spMembers.setText(globalMembersList.get(0), false);
+        } else {
+            spMembers.setText("", false);
+        }
+
+        resetInstallmentSelection();
+        refreshFundMatrixTable();
     }
 
     public void resetInstallmentSelection() {
@@ -1033,7 +1031,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void refreshTransactionHistory() {
-        // FIX: Kills identical background tasks instantly to stop UI freezing and memory limits
         if (historyListenerRegistration != null) {
             historyListenerRegistration.remove();
         }
@@ -1072,7 +1069,6 @@ public class MainActivity extends AppCompatActivity {
 
                 Object amtObj = doc.get("amount");
                 double amountPaid = (amtObj instanceof Number) ? ((Number) amtObj).doubleValue() : 0.0;
-                
                 runningCashTotal += amountPaid;
                 transactionEntriesCount++;
 
