@@ -21,15 +21,12 @@ import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
 public class DialogEngine {
     private MainActivity activity;
@@ -120,22 +117,13 @@ public class DialogEngine {
                     double paymentForThisStep = Math.min(remainingForThisStep, amountToDistribute);
                     amountToDistribute -= paymentForThisStep;
 
-                    Map<String, Object> paymentPayload = new HashMap<>();
-                    paymentPayload.put("chitId", activity.chitId);
-                    paymentPayload.put("installment_num", instNum);
-                    paymentPayload.put("member_name", TylerMember);
-                    paymentPayload.put("amount", paymentForThisStep);
-                    paymentPayload.put("date", currentDate);
-                    paymentPayload.put("timestamp", System.currentTimeMillis());
-                    paymentPayload.put("notes", noteText);
-
-                    activity.firestore.collection("payments").add(paymentPayload);
+                    activity.dbHelper.insertPayment(activity.chitId, instNum, TylerMember, paymentForThisStep, currentDate, System.currentTimeMillis(), noteText);
                 }
             }
 
-            Toast.makeText(activity, "Payments Saved & Distributed Successfully!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "Payments Saved & Distributed Locally!", Toast.LENGTH_SHORT).show();
             activity.resetInstallmentSelection();
-            activity.refreshFundMatrixTable();
+            activity.loadAllDataFromDatabase(); 
             activity.refreshTransactionHistory();
         });
         builder.setNegativeButton("Cancel", null);
@@ -157,9 +145,8 @@ public class DialogEngine {
         Calendar todayCal = Calendar.getInstance();
 
         for (int i = 1; i <= activity.totalInstallmentsCount; i++) {
-            
             double expectedAmt = activity.getSpecificCachedMemberInstallmentAmount(activity.chitId, member, i);
-            String compositeKey = activity.chitId + "_" + member + "_" + i;
+            String compositeKey = activity.chitId.trim() + "_" + member.trim() + "_" + i;
             double paidAmt = activity.globalPaymentsCache.containsKey(compositeKey) ? activity.globalPaymentsCache.get(compositeKey) : 0.0;
             double remainingAmt = expectedAmt - paidAmt;
 
@@ -299,28 +286,16 @@ public class DialogEngine {
             }
 
             String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-            Map<String, Object> advancePayload = new HashMap<>();
-            advancePayload.put("chitId", activity.chitId); advancePayload.put("installment_num", instNum);
-            advancePayload.put("member_name", memName); advancePayload.put("advance_amount", advAmt);
-            advancePayload.put("new_amount", newAmt); advancePayload.put("date", currentDate);
-            advancePayload.put("notes", noteText);
-
-            activity.firestore.collection("advances").add(advancePayload).addOnSuccessListener(ref -> {
-                Toast.makeText(activity, "Advance configuration saved to Cloud!", Toast.LENGTH_SHORT).show();
-                dialog.dismiss();
-            });
+            
+            activity.dbHelper.insertAdvance(activity.chitId, instNum, memName, advAmt, newAmt, currentDate, noteText);
+            Toast.makeText(activity, "Advance configuration saved Locally!", Toast.LENGTH_SHORT).show();
+            activity.loadAllDataFromDatabase();
+            activity.refreshAdvancesTable();
+            dialog.dismiss();
         });
     }
 
-    public void showEditAdvanceDialog(QueryDocumentSnapshot doc) {
-        String docId = doc.getId();
-        String currentChitId = doc.getString("chitId");
-        String currentMember = doc.getString("member_name");
-        long currentInst = doc.getLong("installment_num") != null ? doc.getLong("installment_num") : 0;
-        double currentAdvAmt = doc.getDouble("advance_amount") != null ? doc.getDouble("advance_amount") : 0.0;
-        double currentNewAmt = doc.getDouble("new_amount") != null ? doc.getDouble("new_amount") : 0.0;
-        String currentNotes = doc.getString("notes") != null ? doc.getString("notes") : "";
-
+    public void showEditAdvanceDialog(String advanceId, String currentChitId, String currentMember, long currentInst, double currentAdvAmt, double currentNewAmt, String currentNotes) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(activity);
         View view = LayoutInflater.from(activity).inflate(R.layout.dialog_log_advance, null);
 
@@ -387,19 +362,11 @@ public class DialogEngine {
                 return;
             }
 
-            Map<String, Object> updatePayload = new HashMap<>();
-            updatePayload.put("installment_num", instNum);
-            updatePayload.put("member_name", memName);
-            updatePayload.put("advance_amount", advAmt);
-            updatePayload.put("new_amount", newAmt);
-            updatePayload.put("notes", noteText);
-            
-            activity.firestore.collection("advances").document(docId).update(updatePayload).addOnSuccessListener(ref -> {
-                Toast.makeText(activity, "Advance record updated successfully!", Toast.LENGTH_SHORT).show();
-                dialog.dismiss();
-            }).addOnFailureListener(e -> {
-                Toast.makeText(activity, "Error updating record.", Toast.LENGTH_SHORT).show();
-            });
+            activity.dbHelper.updateAdvance(advanceId, instNum, memName, advAmt, newAmt, noteText);
+            Toast.makeText(activity, "Advance record updated locally!", Toast.LENGTH_SHORT).show();
+            activity.loadAllDataFromDatabase();
+            activity.refreshAdvancesTable();
+            dialog.dismiss();
         });
     }
 
@@ -492,24 +459,19 @@ public class DialogEngine {
                 for (TextInputEditText field : dynamicAmountFields) amountsArray.add(Double.parseDouble(field.getText().toString().trim()));
             }
 
-            Map<String, Object> chitPayload = new HashMap<>();
-            chitPayload.put("name", name); chitPayload.put("frequency", freq); chitPayload.put("installments", totalInst);
-            chitPayload.put("amount_type", amtType); chitPayload.put("startDate", date); chitPayload.put("amounts", amountsArray);
-
-            activity.firestore.collection("chits").add(chitPayload).addOnSuccessListener(docRef -> {
-                String newId = docRef.getId();
-                for (TextInputEditText field : dynamicMemberFields) {
-                    String mName = field.getText().toString().trim();
-                    if(!mName.isEmpty()){
-                        Map<String, Object> mPayload = new HashMap<>();
-                        mPayload.put("chitId", newId); mPayload.put("name", mName);
-                        activity.firestore.collection("members").add(mPayload);
-                    }
+            long newIdLong = activity.dbHelper.insertChit(name, freq, totalInst, amtType, date, amountsArray);
+            String newId = String.valueOf(newIdLong);
+            
+            for (TextInputEditText field : dynamicMemberFields) {
+                String mName = field.getText().toString().trim();
+                if(!mName.isEmpty()){
+                    activity.dbHelper.insertMember(newId, mName);
                 }
-                Toast.makeText(activity, "Chit Synchronized to Cloud!", Toast.LENGTH_SHORT).show();
-                dialog.dismiss(); activity.chitId = newId;
-                activity.syncCurrentChitContextFromCloud();
-            });
+            }
+            Toast.makeText(activity, "Chit Created Successfully (Offline)!", Toast.LENGTH_SHORT).show();
+            dialog.dismiss(); 
+            activity.chitId = newId;
+            activity.loadAllDataFromDatabase();
         });
     }
 
@@ -668,74 +630,4 @@ public class DialogEngine {
         });
     }
 
-    public void showDeleteChitSelectionDialog() {
-        if (activity.globalChitsList == null || activity.globalChitsList.isEmpty()) {
-            Toast.makeText(activity, "No Chit Fund groups available to delete.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        String[] chitNames = new String[activity.globalChitsList.size()];
-        for (int i = 0; i < activity.globalChitsList.size(); i++) {
-            chitNames[i] = activity.globalChitsList.get(i).name;
-        }
-
-        new MaterialAlertDialogBuilder(activity)
-                .setTitle("Select Chit Group to Delete")
-                .setItems(chitNames, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        LedgerComponents.CloudChitItem chosenChit = activity.globalChitsList.get(which);
-                        showFinalDeleteConfirmationDialog(chosenChit.id, chosenChit.name);
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void showFinalDeleteConfirmationDialog(final String targetedDeleteId, String chitName) {
-        new MaterialAlertDialogBuilder(activity)
-                .setTitle("Delete \"" + chitName + "\"?")
-                .setMessage("Are you sure you want to permanently delete this group? All ledger logs, member lists, payments, and advances will be completely wiped from the cloud.")
-                .setPositiveButton("Delete Permanently", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        executeCloudChitDeletion(targetedDeleteId);
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void executeCloudChitDeletion(final String targetedDeleteId) {
-        activity.firestore.collection("chits").document(targetedDeleteId).delete()
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(activity, "Chit Group deleted successfully!", Toast.LENGTH_SHORT).show();
-                    
-                    if (targetedDeleteId.equals(activity.chitId)) {
-                        activity.chitId = null;
-                        activity.globalMembersList.clear();
-                        activity.tlFundTable.removeAllViews();
-                        activity.tvFundTitle.setText("No active Chit Fund found. Create one using the menu!");
-                        activity.llFormContainer.setVisibility(View.GONE);
-                    }
-
-                    activity.firestore.collection("members").whereEqualTo("chitId", targetedDeleteId).get()
-                            .addOnSuccessListener(snapshots -> {
-                                for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
-                            });
-
-                    activity.firestore.collection("payments").whereEqualTo("chitId", targetedDeleteId).get()
-                            .addOnSuccessListener(snapshots -> {
-                                for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
-                            });
-
-                    activity.firestore.collection("advances").whereEqualTo("chitId", targetedDeleteId).get()
-                            .addOnSuccessListener(snapshots -> {
-                                for (QueryDocumentSnapshot doc : snapshots) { doc.getReference().delete(); }
-                            });
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
-    }
 }
